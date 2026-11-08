@@ -12,20 +12,11 @@
  */
 
 export type ProcessStatus =
-  | 'starting'
-  | 'running'
-  | 'restarting'
-  | 'stopping'
-  | 'stopped'
-  | 'failed';
+  'starting' | 'running' | 'restarting' | 'stopping' | 'stopped' | 'failed';
 
 /** Coarse classification of what kind of process this is. */
 export type ProcessKind =
-  | 'dev-server'
-  | 'watcher'
-  | 'task'
-  | 'agent'
-  | 'script';
+  'dev-server' | 'watcher' | 'task' | 'agent' | 'script';
 
 /** A process's cwd resolved to a known git repository (best-effort). */
 export interface ProcessRepo {

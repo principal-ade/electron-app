@@ -84,7 +84,8 @@ model: sonnet
 ---
 
 You are a code reviewer. When invoked, analyze the code and provide specific, actionable feedback on quality, security, and best practices.`,
-    prompt: 'You are a code reviewer. When invoked, analyze the code and provide specific, actionable feedback on quality, security, and best practices.',
+    prompt:
+      'You are a code reviewer. When invoked, analyze the code and provide specific, actionable feedback on quality, security, and best practices.',
     frontmatter: {
       name: 'code-reviewer',
       description: 'Reviews code for quality and best practices',
@@ -107,7 +108,8 @@ permissionMode: acceptEdits
 ---
 
 You are a test writing expert. When invoked, write comprehensive unit tests with good coverage and edge cases.`,
-    prompt: 'You are a test writing expert. When invoked, write comprehensive unit tests with good coverage and edge cases.',
+    prompt:
+      'You are a test writing expert. When invoked, write comprehensive unit tests with good coverage and edge cases.',
     frontmatter: {
       name: 'test-writer',
       description: 'Writes comprehensive unit tests for code',
@@ -124,7 +126,7 @@ You are a test writing expert. When invoked, write comprehensive unit tests with
 const createSkillContent = (
   title: string,
   description: string,
-  capabilities: string[]
+  capabilities: string[],
 ) => `# ${title}
 
 ${description}
@@ -170,12 +172,32 @@ export const Default: Story = {
           allFiles: [
             // Agents
             { name: 'AGENTS.md', relativePath: 'AGENTS.md', type: 'file' },
-            { name: 'AGENTS.md', relativePath: 'packages/web/AGENTS.md', type: 'file' },
-            { name: 'code-reviewer.md', relativePath: '.claude/agents/code-reviewer.md', type: 'file' },
-            { name: 'test-writer.md', relativePath: '.claude/agents/test-writer.md', type: 'file' },
+            {
+              name: 'AGENTS.md',
+              relativePath: 'packages/web/AGENTS.md',
+              type: 'file',
+            },
+            {
+              name: 'code-reviewer.md',
+              relativePath: '.claude/agents/code-reviewer.md',
+              type: 'file',
+            },
+            {
+              name: 'test-writer.md',
+              relativePath: '.claude/agents/test-writer.md',
+              type: 'file',
+            },
             // Skills
-            { name: 'SKILL.md', relativePath: '.agent/skills/legal-review/SKILL.md', type: 'file' },
-            { name: 'SKILL.md', relativePath: '.agent/skills/data-analysis/SKILL.md', type: 'file' },
+            {
+              name: 'SKILL.md',
+              relativePath: '.agent/skills/legal-review/SKILL.md',
+              type: 'file',
+            },
+            {
+              name: 'SKILL.md',
+              relativePath: '.agent/skills/data-analysis/SKILL.md',
+              type: 'file',
+            },
           ],
           sha: 'mock-sha',
         },
@@ -185,7 +207,7 @@ export const Default: Story = {
           readFile: async (path: string) => {
             // Handle agents
             if (path.includes('AGENTS.md') && !path.includes('.agent')) {
-              const agent = mockAgents.find(a => path.endsWith(a.path));
+              const agent = mockAgents.find((a) => path.endsWith(a.path));
               return agent?.content || '';
             }
             if (path.includes('code-reviewer.md')) {
@@ -199,14 +221,18 @@ export const Default: Story = {
               return createSkillContent(
                 'Legal Review',
                 'Review legal documents and contracts for compliance',
-                ['Contract analysis', 'Compliance checking', 'Risk assessment']
+                ['Contract analysis', 'Compliance checking', 'Risk assessment'],
               );
             }
             if (path.includes('data-analysis/SKILL.md')) {
               return createSkillContent(
                 'Data Analysis',
                 'Analyze and visualize data sets',
-                ['Statistical analysis', 'Data visualization', 'Report generation']
+                [
+                  'Statistical analysis',
+                  'Data visualization',
+                  'Report generation',
+                ],
               );
             }
             return '';
@@ -236,7 +262,11 @@ export const AgentsOnly: Story = {
         fileTree: {
           allFiles: [
             { name: 'AGENTS.md', relativePath: 'AGENTS.md', type: 'file' },
-            { name: 'code-reviewer.md', relativePath: '.claude/agents/code-reviewer.md', type: 'file' },
+            {
+              name: 'code-reviewer.md',
+              relativePath: '.claude/agents/code-reviewer.md',
+              type: 'file',
+            },
           ],
           sha: 'mock-sha',
         },
@@ -273,8 +303,16 @@ export const SkillsOnly: Story = {
       mockSlices={{
         fileTree: {
           allFiles: [
-            { name: 'SKILL.md', relativePath: '.agent/skills/legal-review/SKILL.md', type: 'file' },
-            { name: 'SKILL.md', relativePath: '.agent/skills/data-analysis/SKILL.md', type: 'file' },
+            {
+              name: 'SKILL.md',
+              relativePath: '.agent/skills/legal-review/SKILL.md',
+              type: 'file',
+            },
+            {
+              name: 'SKILL.md',
+              relativePath: '.agent/skills/data-analysis/SKILL.md',
+              type: 'file',
+            },
           ],
           sha: 'mock-sha',
         },
@@ -286,13 +324,17 @@ export const SkillsOnly: Story = {
               return createSkillContent(
                 'Legal Review',
                 'Review legal documents and contracts for compliance',
-                ['Contract analysis', 'Compliance checking', 'Risk assessment']
+                ['Contract analysis', 'Compliance checking', 'Risk assessment'],
               );
             }
             return createSkillContent(
               'Data Analysis',
               'Analyze and visualize data sets',
-              ['Statistical analysis', 'Data visualization', 'Report generation']
+              [
+                'Statistical analysis',
+                'Data visualization',
+                'Report generation',
+              ],
             );
           },
         },
@@ -378,7 +420,8 @@ model: sonnet
 ---
 
 You are a code reviewer. When invoked, analyze the code and provide specific, actionable feedback on quality, security, and best practices.`,
-    prompt: 'You are a code reviewer. When invoked, analyze the code and provide specific, actionable feedback on quality, security, and best practices.',
+    prompt:
+      'You are a code reviewer. When invoked, analyze the code and provide specific, actionable feedback on quality, security, and best practices.',
     frontmatter: {
       name: 'code-reviewer',
       description: 'Reviews code for quality and best practices',
@@ -401,7 +444,8 @@ permissionMode: acceptEdits
 ---
 
 You are a test writing expert. When invoked, write comprehensive unit tests with good coverage and edge cases.`,
-    prompt: 'You are a test writing expert. When invoked, write comprehensive unit tests with good coverage and edge cases.',
+    prompt:
+      'You are a test writing expert. When invoked, write comprehensive unit tests with good coverage and edge cases.',
     frontmatter: {
       name: 'test-writer',
       description: 'Writes comprehensive unit tests for code',
@@ -425,10 +469,12 @@ permissionMode: bypassPermissions
 ---
 
 You are a refactoring expert. Analyze code structure and suggest improvements for maintainability, readability, and performance.`,
-    prompt: 'You are a refactoring expert. Analyze code structure and suggest improvements for maintainability, readability, and performance.',
+    prompt:
+      'You are a refactoring expert. Analyze code structure and suggest improvements for maintainability, readability, and performance.',
     frontmatter: {
       name: 'refactor-assistant',
-      description: 'Helps refactor code for better maintainability and performance',
+      description:
+        'Helps refactor code for better maintainability and performance',
       tools: 'Read, Write, Glob, Grep, Bash',
       model: 'opus',
       permissionMode: 'bypassPermissions',
@@ -448,7 +494,8 @@ model: haiku
 ---
 
 You are a documentation expert. Generate clear, comprehensive documentation from source code including JSDoc comments, README files, and API docs.`,
-    prompt: 'You are a documentation expert. Generate clear, comprehensive documentation from source code including JSDoc comments, README files, and API docs.',
+    prompt:
+      'You are a documentation expert. Generate clear, comprehensive documentation from source code including JSDoc comments, README files, and API docs.',
     frontmatter: {
       name: 'doc-generator',
       description: 'Generates documentation from code',
@@ -470,10 +517,12 @@ model: opus
 ---
 
 You are a security expert. Analyze code for vulnerabilities, check for OWASP Top 10 issues, and recommend security best practices.`,
-    prompt: 'You are a security expert. Analyze code for vulnerabilities, check for OWASP Top 10 issues, and recommend security best practices.',
+    prompt:
+      'You are a security expert. Analyze code for vulnerabilities, check for OWASP Top 10 issues, and recommend security best practices.',
     frontmatter: {
       name: 'security-auditor',
-      description: 'Audits code for security vulnerabilities and OWASP compliance',
+      description:
+        'Audits code for security vulnerabilities and OWASP compliance',
       tools: 'Read, Glob, Grep, WebFetch',
       model: 'opus',
     },
@@ -492,7 +541,8 @@ model: sonnet
 ---
 
 You are an API design expert. Help design clean, consistent, and well-documented APIs following REST or GraphQL best practices.`,
-    prompt: 'You are an API design expert. Help design clean, consistent, and well-documented APIs following REST or GraphQL best practices.',
+    prompt:
+      'You are an API design expert. Help design clean, consistent, and well-documented APIs following REST or GraphQL best practices.',
     frontmatter: {
       name: 'api-designer',
       description: 'Designs RESTful and GraphQL APIs following best practices',
@@ -515,7 +565,8 @@ permissionMode: acceptEdits
 ---
 
 You are a performance optimization expert. Profile applications, identify bottlenecks, and suggest optimizations for speed and resource usage.`,
-    prompt: 'You are a performance optimization expert. Profile applications, identify bottlenecks, and suggest optimizations for speed and resource usage.',
+    prompt:
+      'You are a performance optimization expert. Profile applications, identify bottlenecks, and suggest optimizations for speed and resource usage.',
     frontmatter: {
       name: 'performance-optimizer',
       description: 'Analyzes and optimizes application performance',
@@ -535,13 +586,41 @@ export const MultipleSubagents: Story = {
         fileTree: {
           allFiles: [
             { name: 'AGENTS.md', relativePath: 'AGENTS.md', type: 'file' },
-            { name: 'code-reviewer.md', relativePath: '.claude/agents/code-reviewer.md', type: 'file' },
-            { name: 'test-writer.md', relativePath: '.claude/agents/test-writer.md', type: 'file' },
-            { name: 'refactor-assistant.md', relativePath: '.claude/agents/refactor-assistant.md', type: 'file' },
-            { name: 'doc-generator.md', relativePath: '.claude/agents/doc-generator.md', type: 'file' },
-            { name: 'security-auditor.md', relativePath: '~/.claude/agents/security-auditor.md', type: 'file' },
-            { name: 'api-designer.md', relativePath: '~/.claude/agents/api-designer.md', type: 'file' },
-            { name: 'performance-optimizer.md', relativePath: '~/.claude/agents/performance-optimizer.md', type: 'file' },
+            {
+              name: 'code-reviewer.md',
+              relativePath: '.claude/agents/code-reviewer.md',
+              type: 'file',
+            },
+            {
+              name: 'test-writer.md',
+              relativePath: '.claude/agents/test-writer.md',
+              type: 'file',
+            },
+            {
+              name: 'refactor-assistant.md',
+              relativePath: '.claude/agents/refactor-assistant.md',
+              type: 'file',
+            },
+            {
+              name: 'doc-generator.md',
+              relativePath: '.claude/agents/doc-generator.md',
+              type: 'file',
+            },
+            {
+              name: 'security-auditor.md',
+              relativePath: '~/.claude/agents/security-auditor.md',
+              type: 'file',
+            },
+            {
+              name: 'api-designer.md',
+              relativePath: '~/.claude/agents/api-designer.md',
+              type: 'file',
+            },
+            {
+              name: 'performance-optimizer.md',
+              relativePath: '~/.claude/agents/performance-optimizer.md',
+              type: 'file',
+            },
           ],
           sha: 'mock-sha',
         },
@@ -552,7 +631,7 @@ export const MultipleSubagents: Story = {
             if (path.includes('AGENTS.md')) {
               return mockAgents[0].content;
             }
-            const subagent = manySubagents.find(s => path.includes(s.name));
+            const subagent = manySubagents.find((s) => path.includes(s.name));
             return subagent?.content || '';
           },
         },
@@ -580,7 +659,7 @@ const createGlobalSkill = (
   path: string,
   description: string,
   capabilities: string[],
-  source: 'global-claude' | 'global-universal'
+  source: 'global-claude' | 'global-universal',
 ) => ({
   id,
   name,
@@ -594,7 +673,11 @@ const createGlobalSkill = (
   hasReferences: false,
   hasAssets: false,
   priority: source === 'global-universal' ? 2 : 4,
-  frontmatterValidation: { isValid: true, hasStructure: true, missingFields: [] },
+  frontmatterValidation: {
+    isValid: true,
+    hasStructure: true,
+    missingFields: [],
+  },
 });
 
 /**
@@ -618,7 +701,7 @@ export const GlobalSkillsOnly: Story = {
               '~/.claude/skills/commit/SKILL.md',
               'Generate conventional commit messages',
               ['Git integration', 'Conventional commits'],
-              'global-claude'
+              'global-claude',
             ),
             createGlobalSkill(
               'global-review',
@@ -626,7 +709,7 @@ export const GlobalSkillsOnly: Story = {
               '~/.agent/skills/review/SKILL.md',
               'Review pull requests and provide feedback',
               ['Code review', 'PR comments'],
-              'global-universal'
+              'global-universal',
             ),
           ],
         },
@@ -663,8 +746,16 @@ export const SubagentsOnly: Story = {
       mockSlices={{
         fileTree: {
           allFiles: [
-            { name: 'code-reviewer.md', relativePath: '.claude/agents/code-reviewer.md', type: 'file' },
-            { name: 'test-writer.md', relativePath: '.claude/agents/test-writer.md', type: 'file' },
+            {
+              name: 'code-reviewer.md',
+              relativePath: '.claude/agents/code-reviewer.md',
+              type: 'file',
+            },
+            {
+              name: 'test-writer.md',
+              relativePath: '.claude/agents/test-writer.md',
+              type: 'file',
+            },
           ],
           sha: 'mock-sha',
         },
@@ -710,7 +801,11 @@ export const MainAgentsOnly: Story = {
         fileTree: {
           allFiles: [
             { name: 'AGENTS.md', relativePath: 'AGENTS.md', type: 'file' },
-            { name: 'AGENTS.md', relativePath: 'packages/web/AGENTS.md', type: 'file' },
+            {
+              name: 'AGENTS.md',
+              relativePath: 'packages/web/AGENTS.md',
+              type: 'file',
+            },
           ],
           sha: 'mock-sha',
         },
@@ -718,7 +813,7 @@ export const MainAgentsOnly: Story = {
       mockAdapters={{
         fileSystem: {
           readFile: async (path: string) => {
-            const agent = mockAgents.find(a => path.endsWith(a.path));
+            const agent = mockAgents.find((a) => path.endsWith(a.path));
             return agent?.content || '';
           },
         },
@@ -749,7 +844,11 @@ export const MixedSkills: Story = {
       mockSlices={{
         fileTree: {
           allFiles: [
-            { name: 'SKILL.md', relativePath: '.agent/skills/legal-review/SKILL.md', type: 'file' },
+            {
+              name: 'SKILL.md',
+              relativePath: '.agent/skills/legal-review/SKILL.md',
+              type: 'file',
+            },
           ],
           sha: 'mock-sha',
         },
@@ -761,7 +860,7 @@ export const MixedSkills: Story = {
               '~/.claude/skills/commit/SKILL.md',
               'Generate conventional commit messages',
               ['Git integration', 'Conventional commits'],
-              'global-claude'
+              'global-claude',
             ),
           ],
         },
@@ -773,7 +872,7 @@ export const MixedSkills: Story = {
               return createSkillContent(
                 'Legal Review',
                 'Review legal documents and contracts for compliance',
-                ['Contract analysis', 'Compliance checking', 'Risk assessment']
+                ['Contract analysis', 'Compliance checking', 'Risk assessment'],
               );
             }
             return '';

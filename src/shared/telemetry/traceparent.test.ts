@@ -26,7 +26,9 @@ describe('parseTraceparent', () => {
   });
 
   it('is case- and whitespace-insensitive', () => {
-    expect(parseTraceparent(` 00-${TRACE_ID.toUpperCase()}-${SPAN_ID}-01 `)).toMatchObject({
+    expect(
+      parseTraceparent(` 00-${TRACE_ID.toUpperCase()}-${SPAN_ID}-01 `),
+    ).toMatchObject({
       traceId: TRACE_ID,
       spanId: SPAN_ID,
     });

@@ -34,7 +34,9 @@ export interface GithubIdentityInput {
   createdAt?: string;
 }
 
-export function buildGithubMetadata(input: GithubIdentityInput): GithubRepository {
+export function buildGithubMetadata(
+  input: GithubIdentityInput,
+): GithubRepository {
   return {
     id: `${input.owner}/${input.name}`,
     owner: input.owner,
@@ -64,7 +66,9 @@ interface LocalClone {
  * Read the renderer-side `localClones` array from an entry, falling back to
  * a single-clone array derived from `entry.path` when the extension is absent.
  */
-export function extractLocalClones(entry: AlexandriaEntry): LocalClone[] | undefined {
+export function extractLocalClones(
+  entry: AlexandriaEntry,
+): LocalClone[] | undefined {
   const maybeClones = (entry as { localClones?: unknown }).localClones;
   if (Array.isArray(maybeClones)) return maybeClones as LocalClone[];
   return entry.path ? [{ path: entry.path, addedAt: Date.now() }] : undefined;
@@ -103,7 +107,11 @@ export function payloadFromLocalEntry(
     entry.github?.purl ??
     (entry.remoteUrl ? extractPurlFromRemoteUrl(entry.remoteUrl) : null) ??
     (entry.github
-      ? createPurl({ type: 'github', namespace: entry.github.owner, name: entry.github.name })
+      ? createPurl({
+          type: 'github',
+          namespace: entry.github.owner,
+          name: entry.github.name,
+        })
       : null);
   if (!purl) {
     throw new Error(
@@ -127,7 +135,11 @@ export function payloadFromGithub(
       ? extractLocalClones(localEntry)
       : undefined;
   return {
-    purl: createPurl({ type: 'github', namespace: identity.owner, name: identity.name }),
+    purl: createPurl({
+      type: 'github',
+      namespace: identity.owner,
+      name: identity.name,
+    }),
     github: buildGithubMetadata(identity),
     localEntry,
     localClones,

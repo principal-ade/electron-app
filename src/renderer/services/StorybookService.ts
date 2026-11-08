@@ -63,9 +63,9 @@ export function findStorybookPackages(
       : repositoryPath;
 
     // Check for "storybook" script
-    const hasScript = packageData.availableCommands?.some(
-      (cmd) => cmd.name === 'storybook',
-    ) ?? false;
+    const hasScript =
+      packageData.availableCommands?.some((cmd) => cmd.name === 'storybook') ??
+      false;
 
     // Check for @storybook/* packages in dependencies
     const allDeps = {
@@ -138,7 +138,9 @@ export function getStorybookCommand(
   }
 
   console.info(`[StorybookService] Generated command: ${command}`);
-  console.info(`[StorybookService] Will run in directory: ${storybookPackage.path}`);
+  console.info(
+    `[StorybookService] Will run in directory: ${storybookPackage.path}`,
+  );
   return command;
 }
 

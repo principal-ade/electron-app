@@ -73,7 +73,14 @@ export const SlidePane: React.FC<SlidePaneProps> = ({
   }, [leaving]);
 
   return (
-    <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+    <div
+      style={{
+        position: 'relative',
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden',
+      }}
+    >
       {leaving && (
         <div
           key={`leave-${leaving.id}`}

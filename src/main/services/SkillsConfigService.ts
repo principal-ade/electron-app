@@ -2,7 +2,10 @@ import { app } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
-import type { SkillsRepoConfig, GlobalSkillDirectory } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import type {
+  SkillsRepoConfig,
+  GlobalSkillDirectory,
+} from '../../shared/main-process-api-interfaces/FileSystemAPI';
 
 /**
  * Default configuration values
@@ -63,7 +66,9 @@ export class SkillsConfigService {
 
       // Migration: Convert old single-directory config to new format
       if (!this.config.version || this.config.version < 1) {
-        console.log('[SkillsConfig] Migrating config from version 0 to version 1');
+        console.log(
+          '[SkillsConfig] Migrating config from version 0 to version 1',
+        );
         const homeDir = app.getPath('home');
         const userDataPath = app.getPath('userData');
 
@@ -76,7 +81,12 @@ export class SkillsConfigService {
               displayName: 'Agent Skills',
               enabled: true,
               isCustom: false,
-              localClonePath: path.join(userDataPath, 'agent-skills', 'clones', 'agent'),
+              localClonePath: path.join(
+                userDataPath,
+                'agent-skills',
+                'clones',
+                'agent',
+              ),
               lastSyncedAt: this.config.lastSyncedAt,
             },
             {
@@ -85,7 +95,12 @@ export class SkillsConfigService {
               displayName: 'Claude Skills',
               enabled: true,
               isCustom: false,
-              localClonePath: path.join(userDataPath, 'agent-skills', 'clones', 'claude'),
+              localClonePath: path.join(
+                userDataPath,
+                'agent-skills',
+                'clones',
+                'claude',
+              ),
             },
           ];
         } else {
@@ -111,7 +126,9 @@ export class SkillsConfigService {
             seenPaths.add(dir.path);
             uniqueDirs.push(dir);
           } else {
-            console.log(`[SkillsConfig] Removing duplicate directory: ${dir.path}`);
+            console.log(
+              `[SkillsConfig] Removing duplicate directory: ${dir.path}`,
+            );
           }
         }
 
@@ -146,7 +163,9 @@ export class SkillsConfigService {
    * Update the configuration
    * Merges with existing config and saves to disk
    */
-  async updateConfig(updates: Partial<SkillsRepoConfig>): Promise<SkillsRepoConfig> {
+  async updateConfig(
+    updates: Partial<SkillsRepoConfig>,
+  ): Promise<SkillsRepoConfig> {
     const currentConfig = await this.getConfig();
     this.config = { ...currentConfig, ...updates };
 
@@ -154,7 +173,7 @@ export class SkillsConfigService {
       await fs.writeFile(
         this.configPath,
         JSON.stringify(this.config, null, 2),
-        'utf-8'
+        'utf-8',
       );
       console.log('[SkillsConfig] Config saved to disk');
       return this.config;
@@ -209,7 +228,7 @@ export class SkillsConfigService {
       await fs.writeFile(
         this.configPath,
         JSON.stringify(this.config, null, 2),
-        'utf-8'
+        'utf-8',
       );
       console.log('[SkillsConfig] Config reset to defaults');
       return this.config;
@@ -231,17 +250,21 @@ export class SkillsConfigService {
    */
   async getDirectory(id: string): Promise<GlobalSkillDirectory | null> {
     const config = await this.getConfig();
-    return config.directories.find(d => d.id === id) || null;
+    return config.directories.find((d) => d.id === id) || null;
   }
 
   /**
    * Add a new directory to the configuration
    */
-  async addDirectory(directory: Omit<GlobalSkillDirectory, 'id' | 'localClonePath'>): Promise<GlobalSkillDirectory> {
+  async addDirectory(
+    directory: Omit<GlobalSkillDirectory, 'id' | 'localClonePath'>,
+  ): Promise<GlobalSkillDirectory> {
     const config = await this.getConfig();
 
     // Check if directory with this path already exists
-    const existingDir = config.directories.find(d => d.path === directory.path);
+    const existingDir = config.directories.find(
+      (d) => d.path === directory.path,
+    );
     if (existingDir) {
       console.log(`[SkillsConfig] Directory already exists: ${directory.path}`);
       return existingDir;
@@ -249,8 +272,15 @@ export class SkillsConfigService {
 
     // Auto-generate localClonePath
     const userDataPath = app.getPath('userData');
-    const cloneDirName = directory.displayName.toLowerCase().replace(/\s+/g, '-');
-    const localClonePath = path.join(userDataPath, 'agent-skills', 'clones', cloneDirName);
+    const cloneDirName = directory.displayName
+      .toLowerCase()
+      .replace(/\s+/g, '-');
+    const localClonePath = path.join(
+      userDataPath,
+      'agent-skills',
+      'clones',
+      cloneDirName,
+    );
 
     const newDir: GlobalSkillDirectory = {
       id: randomUUID(),
@@ -268,9 +298,12 @@ export class SkillsConfigService {
   /**
    * Update an existing directory
    */
-  async updateDirectory(id: string, updates: Partial<GlobalSkillDirectory>): Promise<GlobalSkillDirectory> {
+  async updateDirectory(
+    id: string,
+    updates: Partial<GlobalSkillDirectory>,
+  ): Promise<GlobalSkillDirectory> {
     const config = await this.getConfig();
-    const index = config.directories.findIndex(d => d.id === id);
+    const index = config.directories.findIndex((d) => d.id === id);
 
     if (index === -1) {
       throw new Error(`Directory ${id} not found`);
@@ -279,7 +312,9 @@ export class SkillsConfigService {
     config.directories[index] = { ...config.directories[index], ...updates };
     await this.updateConfig(config);
 
-    console.log(`[SkillsConfig] Updated directory: ${config.directories[index].displayName}`);
+    console.log(
+      `[SkillsConfig] Updated directory: ${config.directories[index].displayName}`,
+    );
     return config.directories[index];
   }
 
@@ -289,7 +324,7 @@ export class SkillsConfigService {
   async removeDirectory(id: string): Promise<boolean> {
     const config = await this.getConfig();
     const initialLength = config.directories.length;
-    config.directories = config.directories.filter(d => d.id !== id);
+    config.directories = config.directories.filter((d) => d.id !== id);
 
     if (config.directories.length < initialLength) {
       await this.updateConfig(config);
@@ -305,6 +340,6 @@ export class SkillsConfigService {
    */
   async getEnabledDirectories(): Promise<GlobalSkillDirectory[]> {
     const config = await this.getConfig();
-    return config.directories.filter(d => d.enabled);
+    return config.directories.filter((d) => d.enabled);
   }
 }

@@ -15,7 +15,12 @@ function error(input: string) {
 
 test.each([
   ['pkg:github/principal-ai/skills', 'github.com', 'principal-ai', 'skills'],
-  ['pkg:github/principal-ai/skills@v1.2.3', 'github.com', 'principal-ai', 'skills'],
+  [
+    'pkg:github/principal-ai/skills@v1.2.3',
+    'github.com',
+    'principal-ai',
+    'skills',
+  ],
   ['pkg:gitlab/acme/web', 'gitlab.com', 'acme', 'web'],
   ['pkg:bitbucket/acme/api', 'bitbucket.org', 'acme', 'api'],
   ['acme/web', 'github.com', 'acme', 'web'],
@@ -67,7 +72,12 @@ test('rejects path traversal in slugs and purls', () => {
   expect(error('pkg:github/acme/..')).toContain('invalid owner or repo name');
   expect(error('../acme')).toContain('invalid owner or repo name');
   // Nothing traversal-shaped survives: the destination is derived from these.
-  for (const input of ['../acme', 'acme/..', '/etc/passwd', 'pkg:github/../../x']) {
+  for (const input of [
+    '../acme',
+    'acme/..',
+    '/etc/passwd',
+    'pkg:github/../../x',
+  ]) {
     expect(parseCloneTarget(input).ok).toBe(false);
   }
 });

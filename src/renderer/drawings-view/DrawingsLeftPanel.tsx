@@ -329,153 +329,156 @@ export const DrawingsLeftPanel: React.FC<DrawingsLeftPanelProps> = ({
 
       {/* List body */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-        {listLoading && drawings.length === 0 ? (
-          showLoading ? emptyState('Loading…') : null
-        ) : filtered.length === 0 ? (
-          emptyState(
-            filterText
-              ? 'No drawings match this filter.'
-              : 'No drawings yet. Use + to create one.',
-          )
-        ) : (
-          filtered.map((item) => {
-            const hovered = hoveredId === item.id;
-            return (
-              <div
-                key={item.id}
-                onMouseEnter={() => setHoveredId(item.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: spacing.sm,
-                  width: '100%',
-                  padding: `${spacing.sm * 1.5}px ${spacing.sm * 2}px`,
-                  backgroundColor:
-                    hovered ? theme.colors.backgroundSecondary : 'transparent',
-                  border: 'none',
-                  borderBottom: `1px solid ${theme.colors.border}`,
-                  transition: 'background-color 0.15s ease',
-                }}
-              >
-                <button
-                  type="button"
-                  draggable
-                  onDragStart={(event) => {
-                    if (!event.dataTransfer) return;
-                    event.dataTransfer.effectAllowed = 'copy';
-                    event.dataTransfer.setData(
-                      'text/plain',
-                      drawingContextDragText(item.path, item.name),
-                    );
-                  }}
-                  onClick={() => handleOpen(item)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: spacing.sm,
-                    flex: 1,
-                    minWidth: 0,
-                    padding: 0,
-                    background: 'transparent',
-                    border: 'none',
-                    color: theme.colors.text,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
+        {listLoading && drawings.length === 0
+          ? showLoading
+            ? emptyState('Loading…')
+            : null
+          : filtered.length === 0
+            ? emptyState(
+                filterText
+                  ? 'No drawings match this filter.'
+                  : 'No drawings yet. Use + to create one.',
+              )
+            : filtered.map((item) => {
+                const hovered = hoveredId === item.id;
+                return (
+                  <div
+                    key={item.id}
+                    onMouseEnter={() => setHoveredId(item.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: spacing.sm,
+                      width: '100%',
+                      padding: `${spacing.sm * 1.5}px ${spacing.sm * 2}px`,
+                      backgroundColor: hovered
+                        ? theme.colors.backgroundSecondary
+                        : 'transparent',
+                      border: 'none',
+                      borderBottom: `1px solid ${theme.colors.border}`,
+                      transition: 'background-color 0.15s ease',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      draggable
+                      onDragStart={(event) => {
+                        if (!event.dataTransfer) return;
+                        event.dataTransfer.effectAllowed = 'copy';
+                        event.dataTransfer.setData(
+                          'text/plain',
+                          drawingContextDragText(item.path, item.name),
+                        );
+                      }}
+                      onClick={() => handleOpen(item)}
                       style={{
-                        fontFamily: theme.fonts.body,
-                        fontSize: theme.fontSizes[2],
-                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: spacing.sm,
+                        flex: 1,
+                        minWidth: 0,
+                        padding: 0,
+                        background: 'transparent',
+                        border: 'none',
                         color: theme.colors.text,
-                        marginBottom: 2,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        textAlign: 'left',
                       }}
                     >
-                      {item.name}
-                    </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontFamily: theme.fonts.body,
+                            fontSize: theme.fontSizes[2],
+                            fontWeight: 500,
+                            color: theme.colors.text,
+                            marginBottom: 2,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: spacing.sm,
+                            fontFamily: theme.fonts.monospace,
+                            fontSize: theme.fontSizes[1],
+                            color: theme.colors.textMuted,
+                          }}
+                        >
+                          <span style={{ flex: 1, minWidth: 0 }}>Drawing</span>
+                          {item.lastModified && (
+                            <span style={{ flexShrink: 0 }}>
+                              {formatDate(item.lastModified)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
                     <div
                       style={{
                         display: 'flex',
-                        alignItems: 'baseline',
-                        gap: spacing.sm,
-                        fontFamily: theme.fonts.monospace,
-                        fontSize: theme.fontSizes[1],
-                        color: theme.colors.textMuted,
+                        alignItems: 'center',
+                        gap: 2,
+                        flexShrink: 0,
                       }}
                     >
-                      <span style={{ flex: 1, minWidth: 0 }}>Drawing</span>
-                      {item.lastModified && (
-                        <span style={{ flexShrink: 0 }}>
-                          {formatDate(item.lastModified)}
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(event) => handleCopyPath(item, event)}
+                        title={
+                          copiedId === item.id
+                            ? 'Path copied'
+                            : 'Copy file path'
+                        }
+                        aria-label={`Copy path for ${item.name}`}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: spacing.xs,
+                          border: 'none',
+                          background: 'transparent',
+                          color:
+                            copiedId === item.id
+                              ? theme.colors.primary
+                              : theme.colors.textSecondary,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {copiedId === item.id ? (
+                          <Check size={14} />
+                        ) : (
+                          <Copy size={14} />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => handleDelete(item, event)}
+                        title="Delete drawing"
+                        aria-label={`Delete ${item.name}`}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: spacing.xs,
+                          border: 'none',
+                          background: 'transparent',
+                          color: theme.colors.textSecondary,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
-                </button>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    flexShrink: 0,
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={(event) => handleCopyPath(item, event)}
-                    title={
-                      copiedId === item.id ? 'Path copied' : 'Copy file path'
-                    }
-                    aria-label={`Copy path for ${item.name}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: spacing.xs,
-                      border: 'none',
-                      background: 'transparent',
-                      color:
-                        copiedId === item.id
-                          ? theme.colors.primary
-                          : theme.colors.textSecondary,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {copiedId === item.id ? (
-                      <Check size={14} />
-                    ) : (
-                      <Copy size={14} />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => handleDelete(item, event)}
-                    title="Delete drawing"
-                    aria-label={`Delete ${item.name}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: spacing.xs,
-                      border: 'none',
-                      background: 'transparent',
-                      color: theme.colors.textSecondary,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
+                );
+              })}
       </div>
     </div>
   );

@@ -79,7 +79,9 @@ export async function registerWithMonitoring(
 }
 
 /** Unregister a repository from the monitoring daemon. */
-export async function unregisterFromMonitoring(repoPath: string): Promise<void> {
+export async function unregisterFromMonitoring(
+  repoPath: string,
+): Promise<void> {
   try {
     const { getManager } = require('../repository-monitoring/ipcHandlers');
     const {
@@ -135,11 +137,11 @@ export async function registerRepository(
   const entry = await registry.registerRepository(path, remoteUrl);
 
   try {
-    (deps.broadcastAdded ??
+    (
+      deps.broadcastAdded ??
       ((added: AlexandriaEntry) =>
-        broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_ADDED, added)))(
-      entry,
-    );
+        broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_ADDED, added))
+    )(entry);
   } catch (error) {
     console.error('[Alexandria] Failed to broadcast REPOSITORY_ADDED:', error);
   }

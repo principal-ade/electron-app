@@ -358,8 +358,7 @@ export const SkillsSurfaceProvider: React.FC<{
   useEffect(() => {
     const unsubscribe = events.on('skill:selected', (event) => {
       const payload = event.payload as
-        | { skill?: Skill; skillId?: string }
-        | undefined;
+        { skill?: Skill; skillId?: string } | undefined;
       const skill =
         payload?.skill ??
         (payload?.skillId

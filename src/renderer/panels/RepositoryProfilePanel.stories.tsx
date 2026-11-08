@@ -5,7 +5,10 @@ import type {
   PanelEventEmitter,
   PanelEvent,
 } from '@principal-ade/panel-framework-core';
-import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+import {
+  PathsFileTreeBuilder,
+  type FileTree,
+} from '@principal-ai/repository-abstraction';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { RepositoryProfilePanel } from './RepositoryProfilePanel';
 import type {
@@ -24,10 +27,15 @@ class MockEventEmitter implements PanelEventEmitter {
   emit<T>(event: PanelEvent<T>): void {
     console.info('[Mock Event]:', event);
     const eventListeners = this.listeners.get(event.type) || [];
-    eventListeners.forEach((listener) => listener(event as PanelEvent<unknown>));
+    eventListeners.forEach((listener) =>
+      listener(event as PanelEvent<unknown>),
+    );
   }
 
-  on<T>(eventType: string, handler: (event: PanelEvent<T>) => void): () => void {
+  on<T>(
+    eventType: string,
+    handler: (event: PanelEvent<T>) => void,
+  ): () => void {
     const listeners = this.listeners.get(eventType) || [];
     const wrappedHandler = handler as EventHandler;
     listeners.push(wrappedHandler);
@@ -52,7 +60,9 @@ class MockEventEmitter implements PanelEventEmitter {
 }
 
 // Generate mock activity data for heatmap (full year - 365 days)
-const generateMockActivityData = (intensity: 'low' | 'medium' | 'high' = 'medium'): Map<string, number> => {
+const generateMockActivityData = (
+  intensity: 'low' | 'medium' | 'high' = 'medium',
+): Map<string, number> => {
   const activityMap = new Map<string, number>();
   const today = new Date();
   const daysToGenerate = 365; // Full year
@@ -121,7 +131,7 @@ const createMockFileTree = (repoName: string): FileTree => {
 
 // Generate mock repository profile data
 const createMockRepositoryProfile = (
-  overrides: Partial<RepositoryProfileData> = {}
+  overrides: Partial<RepositoryProfileData> = {},
 ): RepositoryProfileData => {
   const defaultProfile: RepositoryProfileData = {
     name: 'awesome-project',
@@ -129,7 +139,8 @@ const createMockRepositoryProfile = (
     owner: 'octocat',
     ownerAvatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
     ownerType: 'User',
-    description: 'A really awesome project that does amazing things. Built with TypeScript, React, and love.',
+    description:
+      'A really awesome project that does amazing things. Built with TypeScript, React, and love.',
     language: 'TypeScript',
     stars: 1247,
     forks: 234,
@@ -160,7 +171,7 @@ const createMockActions = (
     lineCounts?: Record<string, number>;
     simulateDelay?: number;
     simulateError?: boolean;
-  } = {}
+  } = {},
 ): RepositoryProfilePanelActions => {
   const {
     localFileTree,
@@ -176,24 +187,29 @@ const createMockActions = (
     getLocalFileTree: async (repoPath: string) => {
       console.info('[Mock Action] getLocalFileTree:', repoPath);
       if (simulateDelay) {
-        await new Promise(resolve => setTimeout(resolve, simulateDelay));
+        await new Promise((resolve) => setTimeout(resolve, simulateDelay));
       }
       if (simulateError) {
-        return Promise.reject({ message: 'Failed to load local file tree', name: 'Error' });
+        return Promise.reject({
+          message: 'Failed to load local file tree',
+          name: 'Error',
+        });
       }
-      return localFileTree ?? createMockFileTree(repoPath.split('/').pop() || 'repo');
+      return (
+        localFileTree ?? createMockFileTree(repoPath.split('/').pop() || 'repo')
+      );
     },
     getRemoteFileTree: async (owner: string, name: string) => {
       console.info('[Mock Action] getRemoteFileTree:', owner, name);
       if (simulateDelay) {
-        await new Promise(resolve => setTimeout(resolve, simulateDelay));
+        await new Promise((resolve) => setTimeout(resolve, simulateDelay));
       }
       return remoteFileTree ?? createMockFileTree(name);
     },
     getLineCounts: async (repoPath: string) => {
       console.info('[Mock Action] getLineCounts:', repoPath);
       if (simulateDelay) {
-        await new Promise(resolve => setTimeout(resolve, simulateDelay / 2));
+        await new Promise((resolve) => setTimeout(resolve, simulateDelay / 2));
       }
       return lineCounts;
     },
@@ -223,17 +239,23 @@ const MockRepositoryProfilePanel: React.FC<{
     clearSlice: () => {},
   } as unknown as RepositoryProfilePanelContext;
 
-  const mockActions = customActions || createMockActions({
-    localFileTree: repositoryData?.localClones?.[0]?.path ? createMockFileTree(repositoryData.name) : null,
-    remoteFileTree: repositoryData?.github ? createMockFileTree(repositoryData.name) : null,
-    lineCounts: {
-      [`${repositoryData?.name}/src/index.ts`]: 45,
-      [`${repositoryData?.name}/src/app.ts`]: 128,
-      [`${repositoryData?.name}/src/components/Button.tsx`]: 32,
-      [`${repositoryData?.name}/src/components/Input.tsx`]: 56,
-      [`${repositoryData?.name}/tests/app.test.ts`]: 89,
-    },
-  });
+  const mockActions =
+    customActions ||
+    createMockActions({
+      localFileTree: repositoryData?.localClones?.[0]?.path
+        ? createMockFileTree(repositoryData.name)
+        : null,
+      remoteFileTree: repositoryData?.github
+        ? createMockFileTree(repositoryData.name)
+        : null,
+      lineCounts: {
+        [`${repositoryData?.name}/src/index.ts`]: 45,
+        [`${repositoryData?.name}/src/app.ts`]: 128,
+        [`${repositoryData?.name}/src/components/Button.tsx`]: 32,
+        [`${repositoryData?.name}/src/components/Input.tsx`]: 56,
+        [`${repositoryData?.name}/tests/app.test.ts`]: 89,
+      },
+    });
 
   const mockEvents = React.useMemo(() => new MockEventEmitter(), []);
 
@@ -241,14 +263,20 @@ const MockRepositoryProfilePanel: React.FC<{
   React.useEffect(() => {
     const unsubscribers = [
       mockEvents.on('repository-profile:open-requested', (event) => {
-        console.info('[Mock Event Handler] Open repository requested:', event.payload);
+        console.info(
+          '[Mock Event Handler] Open repository requested:',
+          event.payload,
+        );
       }),
       mockEvents.on('repository-profile:delete-requested', (event) => {
-        console.info('[Mock Event Handler] Delete repository requested:', event.payload);
+        console.info(
+          '[Mock Event Handler] Delete repository requested:',
+          event.payload,
+        );
       }),
     ];
 
-    return () => unsubscribers.forEach(unsub => unsub());
+    return () => unsubscribers.forEach((unsub) => unsub());
   }, [mockEvents]);
 
   return (
@@ -289,7 +317,9 @@ const meta: Meta<typeof RepositoryProfilePanel> = {
   decorators: [
     (Story) => (
       <AuthProvider>
-        <div style={{ width: '100vw', height: '100vh', boxSizing: 'border-box' }}>
+        <div
+          style={{ width: '100vw', height: '100vh', boxSizing: 'border-box' }}
+        >
           <div style={{ width: '100%', height: '100%' }}>
             <Story />
           </div>
@@ -305,7 +335,11 @@ type Story = StoryObj<typeof meta>;
 
 // Default story with complete profile
 export const Default = {
-  render: () => <RepositoryProfilePanelStory repositoryData={createMockRepositoryProfile()} />,
+  render: () => (
+    <RepositoryProfilePanelStory
+      repositoryData={createMockRepositoryProfile()}
+    />
+  ),
 } as unknown as Story;
 
 // Local repository (has local path and GitHub)
@@ -316,10 +350,16 @@ export const LocalRepository = {
         name: 'my-local-project',
         fullName: 'johndoe/my-local-project',
         owner: 'johndoe',
-        description: 'A local development project on my machine. Synced with GitHub.',
+        description:
+          'A local development project on my machine. Synced with GitHub.',
         language: 'TypeScript',
         isLocal: true,
-        localClones: [{ path: '/Users/johndoe/projects/my-local-project', addedAt: Date.now() }],
+        localClones: [
+          {
+            path: '/Users/johndoe/projects/my-local-project',
+            addedAt: Date.now(),
+          },
+        ],
         activityData: generateMockActivityData('high'),
         stars: 23,
         forks: 4,
@@ -373,7 +413,9 @@ export const LocalOnly = {
         description: 'A private local project, not on GitHub.',
         language: 'Python',
         isLocal: true,
-        localClones: [{ path: '/Users/me/private-project', addedAt: Date.now() }],
+        localClones: [
+          { path: '/Users/me/private-project', addedAt: Date.now() },
+        ],
         activityData: generateMockActivityData('medium'),
         stars: 0,
         forks: 0,
@@ -397,7 +439,8 @@ export const HighActivity = {
         name: 'super-framework',
         fullName: 'framework-org/super-framework',
         owner: 'framework-org',
-        description: 'The most powerful web framework in the universe. Used by millions of developers worldwide.',
+        description:
+          'The most powerful web framework in the universe. Used by millions of developers worldwide.',
         language: 'JavaScript',
         activityData: generateMockActivityData('high'),
         stars: 85432,
@@ -432,7 +475,9 @@ export const MinimalRepository = {
         totalCommits: 42,
         size: 234,
         openIssues: 2,
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
+        createdAt: new Date(
+          Date.now() - 30 * 24 * 60 * 60 * 1000,
+        ).toISOString(), // 30 days ago
         github: {
           owner: 'newdev',
           name: 'starter-kit',
@@ -474,7 +519,8 @@ export const LargeMonorepo = {
         name: 'monorepo',
         fullName: 'bigtech/monorepo',
         owner: 'bigtech',
-        description: 'Our entire codebase in one giant repository. Contains 500+ packages and services.',
+        description:
+          'Our entire codebase in one giant repository. Contains 500+ packages and services.',
         language: 'TypeScript',
         activityData: generateMockActivityData('high'),
         stars: 234,
@@ -531,7 +577,8 @@ export const CompleteProfile = {
         owner: 'principal-ade',
         ownerAvatarUrl: 'https://avatars.githubusercontent.com/u/12345?v=4',
         ownerType: 'Organization',
-        description: 'The official desktop application for Principal ADE. Built with Electron, React, and TypeScript. Provides a powerful development environment with AI assistance.',
+        description:
+          'The official desktop application for Principal ADE. Built with Electron, React, and TypeScript. Provides a powerful development environment with AI assistance.',
         language: 'TypeScript',
         activityData: generateMockActivityData('high'),
         stars: 3421,
@@ -542,7 +589,9 @@ export const CompleteProfile = {
         openIssues: 89,
         htmlUrl: 'https://github.com/principal-ade/desktop-app',
         isLocal: true,
-        localClones: [{ path: '/Users/dev/principal-ade/desktop-app', addedAt: Date.now() }],
+        localClones: [
+          { path: '/Users/dev/principal-ade/desktop-app', addedAt: Date.now() },
+        ],
         updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
         github: {
           owner: 'principal-ade',
@@ -561,13 +610,23 @@ export const MultipleClones = {
         name: 'multi-clone-repo',
         fullName: 'dev/multi-clone-repo',
         owner: 'dev',
-        description: 'A repository cloned to multiple locations on this machine.',
+        description:
+          'A repository cloned to multiple locations on this machine.',
         language: 'TypeScript',
         isLocal: true,
         localClones: [
-          { path: '/Users/dev/work/multi-clone-repo', addedAt: Date.now() - 1000000 },
-          { path: '/Users/dev/personal/multi-clone-repo', addedAt: Date.now() - 500000 },
-          { path: '/Users/dev/experiments/multi-clone-repo', addedAt: Date.now() },
+          {
+            path: '/Users/dev/work/multi-clone-repo',
+            addedAt: Date.now() - 1000000,
+          },
+          {
+            path: '/Users/dev/personal/multi-clone-repo',
+            addedAt: Date.now() - 500000,
+          },
+          {
+            path: '/Users/dev/experiments/multi-clone-repo',
+            addedAt: Date.now(),
+          },
         ],
         activityData: generateMockActivityData('high'),
         stars: 42,
@@ -591,7 +650,8 @@ export const RustProject = {
         name: 'blazing-fast-cli',
         fullName: 'rustacean/blazing-fast-cli',
         owner: 'rustacean',
-        description: 'A blazingly fast command-line tool written in Rust. Zero dependencies, maximum performance.',
+        description:
+          'A blazingly fast command-line tool written in Rust. Zero dependencies, maximum performance.',
         language: 'Rust',
         activityData: generateMockActivityData('medium'),
         stars: 8765,
@@ -613,7 +673,8 @@ export const GoProject = {
         name: 'cloud-orchestrator',
         fullName: 'gopher-inc/cloud-orchestrator',
         owner: 'gopher-inc',
-        description: 'Orchestrate cloud infrastructure with ease. Built for scale and reliability.',
+        description:
+          'Orchestrate cloud infrastructure with ease. Built for scale and reliability.',
         language: 'Go',
         activityData: generateMockActivityData('high'),
         stars: 12456,

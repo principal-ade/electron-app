@@ -39,10 +39,7 @@ try {
   });
   console.info('[Preload-QuickOpen] mainProcess.userPreferences API exposed');
 } catch (error) {
-  console.error(
-    '[Preload-QuickOpen] Failed to expose mainProcess API:',
-    error,
-  );
+  console.error('[Preload-QuickOpen] Failed to expose mainProcess API:', error);
 }
 
 // Expose Quick Open specific electronAPI

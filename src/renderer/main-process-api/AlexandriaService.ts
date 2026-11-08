@@ -85,7 +85,9 @@ export class AlexandriaService {
 
   static async updateLastOpened(path: string): Promise<void> {
     const tracer = getTracer('principal-ade-principal-window');
-    const span = tracer.startSpan('alexandria.service.update_last_opened_called');
+    const span = tracer.startSpan(
+      'alexandria.service.update_last_opened_called',
+    );
     span.setAttribute('repository_path', path);
 
     try {

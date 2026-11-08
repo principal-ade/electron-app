@@ -33,7 +33,10 @@ import {
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { getSkillLockFileService } from '../skills/skillLockFile';
 import { hasSkillEntrypoint } from '../skills/skillDownload';
-import { normalizeGitHubSource, SkillLockAPIEvent } from '../../shared/main-process-api-interfaces/SkillLockAPI';
+import {
+  normalizeGitHubSource,
+  SkillLockAPIEvent,
+} from '../../shared/main-process-api-interfaces/SkillLockAPI';
 import { createSkillSymlink } from '../skills/symlinkUtils';
 import { sendToAllWindows } from '../window/modernWindowManager';
 import type { IModernApplicationWindow } from '../window/types';
@@ -191,7 +194,14 @@ interface CacheEntry {
 function buildActivityCards(
   owner: string,
   repoName: string,
-  commits: Array<{ sha: string; message: string; authorLogin: string; authorAvatarUrl?: string; committedAt: string; url: string }>
+  commits: Array<{
+    sha: string;
+    message: string;
+    authorLogin: string;
+    authorAvatarUrl?: string;
+    committedAt: string;
+    url: string;
+  }>,
 ): CommitActivityCard[] {
   const cardMap = new Map<string, CommitActivityCard>();
 
@@ -216,11 +226,14 @@ function buildActivityCards(
       };
       cardMap.set(itemId, card);
     }
-    if (!card.commits.some(c => c.sha === commit.sha)) {
+    if (!card.commits.some((c) => c.sha === commit.sha)) {
       card.commits.push({
         sha: commit.sha,
         message: commit.message,
-        author: { login: commit.authorLogin, avatarUrl: commit.authorAvatarUrl },
+        author: {
+          login: commit.authorLogin,
+          avatarUrl: commit.authorAvatarUrl,
+        },
         committedAt: commit.committedAt,
         url: commit.url,
       });
@@ -493,7 +506,12 @@ export class GitHubAdapter {
       if (!response.ok) {
         const error = `GitHub API error (unauthenticated): ${response.status} ${response.statusText}`;
         console.error('[GitHub]', error);
-        return { success: false, error, status: response.status, statusText: response.statusText };
+        return {
+          success: false,
+          error,
+          status: response.status,
+          statusText: response.statusText,
+        };
       }
 
       const data = await response.json();
@@ -515,9 +533,17 @@ export class GitHubAdapter {
 
   // DELETED: detectRepository, getGitRemotes, parseGitRemoteUrl - unused (0 calls)
 
-  async checkAuthStatus(): Promise<{ isAuthenticated: boolean; method: string; username?: string }> {
+  async checkAuthStatus(): Promise<{
+    isAuthenticated: boolean;
+    method: string;
+    username?: string;
+  }> {
     try {
-      const authStatusResult = await this.executeCommand(['gh', 'auth', 'status']);
+      const authStatusResult = await this.executeCommand([
+        'gh',
+        'auth',
+        'status',
+      ]);
       if (!authStatusResult.success) {
         return { isAuthenticated: false, method: 'none' };
       }
@@ -525,7 +551,11 @@ export class GitHubAdapter {
       if (userResult.success) {
         try {
           const userData = JSON.parse(userResult.stdout);
-          return { isAuthenticated: true, method: 'cli', username: userData.login };
+          return {
+            isAuthenticated: true,
+            method: 'cli',
+            username: userData.login,
+          };
         } catch {
           return { isAuthenticated: true, method: 'cli' };
         }
@@ -881,11 +911,7 @@ export class GitHubAdapter {
           '[GitHub:getMarkdownDocuments] gh tree failed, falling back to authenticated API',
           { stderr: listResult.stderr },
         );
-        const treeResult = await this.getTree(
-          owner,
-          repo,
-          defaultBranch,
-        );
+        const treeResult = await this.getTree(owner, repo, defaultBranch);
         if (treeResult.success && treeResult.data?.tree) {
           console.debug('[GitHub:getMarkdownDocuments] https tree success', {
             entries: treeResult.data.tree.length,
@@ -955,30 +981,32 @@ export class GitHubAdapter {
                 headers: { 'User-Agent': 'Principle-MD' },
               };
 
-              const info: GitHubCommitInfoResponse = await new Promise((resolve) => {
-                const req = https.request(options, (res: IncomingMessage) => {
-                  let data = '';
-                  res.on('data', (chunk: Buffer) => (data += chunk));
-                  res.on('end', () => {
-                    if (
-                      res.statusCode &&
-                      res.statusCode >= 200 &&
-                      res.statusCode < 300
-                    ) {
-                      try {
-                        const arr = JSON.parse(data);
-                        resolve(Array.isArray(arr) ? arr[0] : null);
-                      } catch {
+              const info: GitHubCommitInfoResponse = await new Promise(
+                (resolve) => {
+                  const req = https.request(options, (res: IncomingMessage) => {
+                    let data = '';
+                    res.on('data', (chunk: Buffer) => (data += chunk));
+                    res.on('end', () => {
+                      if (
+                        res.statusCode &&
+                        res.statusCode >= 200 &&
+                        res.statusCode < 300
+                      ) {
+                        try {
+                          const arr = JSON.parse(data);
+                          resolve(Array.isArray(arr) ? arr[0] : null);
+                        } catch {
+                          resolve(null);
+                        }
+                      } else {
                         resolve(null);
                       }
-                    } else {
-                      resolve(null);
-                    }
+                    });
                   });
-                });
-                req.on('error', () => resolve(null));
-                req.end();
-              });
+                  req.on('error', () => resolve(null));
+                  req.end();
+                },
+              );
 
               if (info?.commit?.author?.date) {
                 gitLastModified = new Date(info.commit.author.date);
@@ -1222,13 +1250,15 @@ export class GitHubAdapter {
   /**
    * Get repository tree with authentication support for private repos
    */
-  async getTree(owner: string, repo: string, ref: string): Promise<
+  async getTree(
+    owner: string,
+    repo: string,
+    ref: string,
+  ): Promise<
     | { success: true; data: GitHubTreeResponse }
     | { success: false; error: string }
   > {
-    console.log(
-      `[GitHub] Getting tree for ${owner}/${repo} on branch ${ref}`,
-    );
+    console.log(`[GitHub] Getting tree for ${owner}/${repo} on branch ${ref}`);
 
     // Always use authenticated API call (works for both public and private repos)
     const result = await this.makeGitHubAPICall(
@@ -1244,7 +1274,6 @@ export class GitHubAdapter {
       error: result.error || 'Failed to fetch repository tree',
     };
   }
-
 
   // DELETED: createIssue - unused (0 calls)
 
@@ -1311,7 +1340,10 @@ export class GitHubAdapter {
           id: repo.id as number,
           name: repo.name as string,
           full_name: repo.full_name as string,
-          owner: { login: repo.owner.login as string, avatar_url: repo.owner.avatar_url as string },
+          owner: {
+            login: repo.owner.login as string,
+            avatar_url: repo.owner.avatar_url as string,
+          },
           private: repo.private as boolean,
           html_url: repo.html_url as string,
           description: repo.description as string | null,
@@ -1379,7 +1411,10 @@ export class GitHubAdapter {
           id: repo.id as number,
           name: repo.name as string,
           full_name: repo.full_name as string,
-          owner: { login: repo.owner.login as string, avatar_url: repo.owner.avatar_url as string },
+          owner: {
+            login: repo.owner.login as string,
+            avatar_url: repo.owner.avatar_url as string,
+          },
           private: repo.private as boolean,
           html_url: repo.html_url as string,
           description: repo.description as string | null,
@@ -1456,7 +1491,10 @@ export class GitHubAdapter {
           id: repo.id as number,
           name: repo.name as string,
           full_name: repo.full_name as string,
-          owner: { login: repo.owner.login as string, avatar_url: repo.owner.avatar_url as string },
+          owner: {
+            login: repo.owner.login as string,
+            avatar_url: repo.owner.avatar_url as string,
+          },
           private: repo.private as boolean,
           html_url: repo.html_url as string,
           description: repo.description as string | null,
@@ -1483,7 +1521,9 @@ export class GitHubAdapter {
 
   // Get user's organizations
   async getUserOrganizations(): Promise<GitHubOrganization[]> {
-    const mapOrg = (org: RawGitHubOrganizationResponse): GitHubOrganization => ({
+    const mapOrg = (
+      org: RawGitHubOrganizationResponse,
+    ): GitHubOrganization => ({
       login: org.login as string,
       id: org.id as number,
       avatar_url: org.avatar_url as string,
@@ -1519,7 +1559,9 @@ export class GitHubAdapter {
               `/orgs/${org.login}`,
             ]);
             if (cli.success && cli.stdout) {
-              const raw = JSON.parse(cli.stdout) as RawGitHubOrganizationResponse;
+              const raw = JSON.parse(
+                cli.stdout,
+              ) as RawGitHubOrganizationResponse;
               const name =
                 typeof raw.name === 'string' && raw.name.trim()
                   ? (raw.name as string)
@@ -1797,7 +1839,9 @@ export class GitHubAdapter {
 
     if (apiResult.success && apiResult.data) {
       const commits = apiResult.data as GitHubCommit[];
-      console.log(`[GitHub] Successfully fetched ${commits.length} commits for ${owner}/${repo}`);
+      console.log(
+        `[GitHub] Successfully fetched ${commits.length} commits for ${owner}/${repo}`,
+      );
       return commits;
     }
 
@@ -1806,7 +1850,9 @@ export class GitHubAdapter {
       const result = await this.executeCommand(['gh', 'api', endpoint]);
       if (result.success && result.stdout) {
         const commits = JSON.parse(result.stdout) as GitHubCommit[];
-        console.log(`[GitHub] Successfully fetched ${commits.length} commits via CLI for ${owner}/${repo}`);
+        console.log(
+          `[GitHub] Successfully fetched ${commits.length} commits via CLI for ${owner}/${repo}`,
+        );
         return commits;
       }
     } catch (error) {
@@ -1820,7 +1866,11 @@ export class GitHubAdapter {
   async getIssues(
     owner: string,
     repo: string,
-    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+    options?: {
+      state?: 'open' | 'closed' | 'all';
+      perPage?: number;
+      page?: number;
+    },
   ): Promise<unknown[]> {
     const state = options?.state || 'open';
     const perPage = options?.perPage || 30;
@@ -1836,7 +1886,11 @@ export class GitHubAdapter {
   }
 
   /** Fetch a single issue. */
-  async getIssue(owner: string, repo: string, number: number): Promise<unknown | null> {
+  async getIssue(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<unknown | null> {
     const endpoint = `/repos/${owner}/${repo}/issues/${number}`;
     const apiResult = await this.makeGitHubAPICall(endpoint);
     return apiResult.success && apiResult.data ? apiResult.data : null;
@@ -1846,7 +1900,11 @@ export class GitHubAdapter {
   async getPullRequests(
     owner: string,
     repo: string,
-    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+    options?: {
+      state?: 'open' | 'closed' | 'all';
+      perPage?: number;
+      page?: number;
+    },
   ): Promise<unknown[]> {
     const state = options?.state || 'open';
     const perPage = options?.perPage || 30;
@@ -1922,8 +1980,7 @@ export class GitHubAdapter {
     const endpoint = `/repos/${owner}/${repo}/commits/${sha}/status`;
     const apiResult = await this.makeGitHubAPICall(endpoint);
     const data = apiResult.data as
-      | { state?: unknown; statuses?: unknown }
-      | undefined;
+      { state?: unknown; statuses?: unknown } | undefined;
     if (apiResult.success && typeof data?.state === 'string') {
       return {
         state: data.state,
@@ -1951,15 +2008,23 @@ export class GitHubAdapter {
   async getRepositoryContributors(
     owner: string,
     repo: string,
-  ): Promise<Array<{ login: string; contributions: number; avatar_url: string }>> {
+  ): Promise<
+    Array<{ login: string; contributions: number; avatar_url: string }>
+  > {
     const endpoint = `/repos/${owner}/${repo}/contributors`;
 
     console.log(`[GitHub] Fetching contributors for ${owner}/${repo}`);
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
-      const contributors = apiResult.data as Array<{ login: string; contributions: number; avatar_url: string }>;
-      console.log(`[GitHub] Successfully fetched ${contributors.length} contributors for ${owner}/${repo}`);
+      const contributors = apiResult.data as Array<{
+        login: string;
+        contributions: number;
+        avatar_url: string;
+      }>;
+      console.log(
+        `[GitHub] Successfully fetched ${contributors.length} contributors for ${owner}/${repo}`,
+      );
       return contributors;
     }
 
@@ -1967,8 +2032,14 @@ export class GitHubAdapter {
     try {
       const result = await this.executeCommand(['gh', 'api', endpoint]);
       if (result.success && result.stdout) {
-        const contributors = JSON.parse(result.stdout) as Array<{ login: string; contributions: number; avatar_url: string }>;
-        console.log(`[GitHub] Successfully fetched ${contributors.length} contributors via CLI for ${owner}/${repo}`);
+        const contributors = JSON.parse(result.stdout) as Array<{
+          login: string;
+          contributions: number;
+          avatar_url: string;
+        }>;
+        console.log(
+          `[GitHub] Successfully fetched ${contributors.length} contributors via CLI for ${owner}/${repo}`,
+        );
         return contributors;
       }
     } catch (error) {
@@ -2000,7 +2071,10 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
-      const raw = apiResult.data as Array<{ login: string; avatar_url: string }>;
+      const raw = apiResult.data as Array<{
+        login: string;
+        avatar_url: string;
+      }>;
       const collaborators = raw.map((c) => ({
         login: c.login,
         avatar_url: c.avatar_url,
@@ -2018,11 +2092,21 @@ export class GitHubAdapter {
 
     // Fallback to CLI for transient API failures.
     try {
-      const result = await this.executeCommand(['gh', 'api', `/repos/${owner}/${repo}/collaborators`]);
+      const result = await this.executeCommand([
+        'gh',
+        'api',
+        `/repos/${owner}/${repo}/collaborators`,
+      ]);
       if (result.success && result.stdout) {
-        const raw = JSON.parse(result.stdout) as Array<{ login: string; avatar_url: string }>;
+        const raw = JSON.parse(result.stdout) as Array<{
+          login: string;
+          avatar_url: string;
+        }>;
         return {
-          collaborators: raw.map((c) => ({ login: c.login, avatar_url: c.avatar_url })),
+          collaborators: raw.map((c) => ({
+            login: c.login,
+            avatar_url: c.avatar_url,
+          })),
           forbidden: false,
         };
       }
@@ -2036,11 +2120,18 @@ export class GitHubAdapter {
   async isFollowingUser(username: string): Promise<boolean> {
     const token = await this.getGitHubToken();
     if (!token) return false;
-    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    const authHeader = token.startsWith('gho_')
+      ? `token ${token}`
+      : `Bearer ${token}`;
     try {
       const response = await fetch(
         `https://api.github.com/user/following/${username}`,
-        { headers: { Authorization: authHeader, Accept: 'application/vnd.github.v3+json' } },
+        {
+          headers: {
+            Authorization: authHeader,
+            Accept: 'application/vnd.github.v3+json',
+          },
+        },
       );
       return response.status === 204;
     } catch (err) {
@@ -2052,7 +2143,9 @@ export class GitHubAdapter {
   async followUser(username: string): Promise<void> {
     const token = await this.getGitHubToken();
     if (!token) throw new Error('No GitHub token available');
-    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    const authHeader = token.startsWith('gho_')
+      ? `token ${token}`
+      : `Bearer ${token}`;
     const response = await fetch(
       `https://api.github.com/user/following/${username}`,
       {
@@ -2072,7 +2165,9 @@ export class GitHubAdapter {
   async unfollowUser(username: string): Promise<void> {
     const token = await this.getGitHubToken();
     if (!token) throw new Error('No GitHub token available');
-    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    const authHeader = token.startsWith('gho_')
+      ? `token ${token}`
+      : `Bearer ${token}`;
     const response = await fetch(
       `https://api.github.com/user/following/${username}`,
       {
@@ -2139,7 +2234,10 @@ export class GitHubAdapter {
   /**
    * Search for GitHub users
    */
-  async searchUsers(query: string, options?: { perPage?: number }): Promise<SearchUsersResponse> {
+  async searchUsers(
+    query: string,
+    options?: { perPage?: number },
+  ): Promise<SearchUsersResponse> {
     const queryParams = new URLSearchParams();
     queryParams.set('q', query);
     if (options?.perPage) {
@@ -2150,7 +2248,10 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
-      const data = apiResult.data as { total_count: number; items: GitHubUser[] };
+      const data = apiResult.data as {
+        total_count: number;
+        items: GitHubUser[];
+      };
       return {
         users: data.items || [],
         totalCount: data.total_count || 0,
@@ -2163,7 +2264,10 @@ export class GitHubAdapter {
   /**
    * Search for GitHub repositories
    */
-  async searchRepos(query: string, options?: { perPage?: number }): Promise<SearchReposResponse> {
+  async searchRepos(
+    query: string,
+    options?: { perPage?: number },
+  ): Promise<SearchReposResponse> {
     const queryParams = new URLSearchParams();
     queryParams.set('q', query);
     if (options?.perPage) {
@@ -2174,7 +2278,10 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
-      const data = apiResult.data as { total_count: number; items: GitHubRepository[] };
+      const data = apiResult.data as {
+        total_count: number;
+        items: GitHubRepository[];
+      };
       return {
         repos: data.items || [],
         totalCount: data.total_count || 0,
@@ -2187,7 +2294,9 @@ export class GitHubAdapter {
   /**
    * Get a specific user's public organizations
    */
-  async getUserOrganizationsForUser(username: string): Promise<GitHubOrganization[]> {
+  async getUserOrganizationsForUser(
+    username: string,
+  ): Promise<GitHubOrganization[]> {
     const endpoint = `/users/${username}/orgs`;
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
@@ -2244,11 +2353,18 @@ export class GitHubAdapter {
   async isRepositoryStarred(owner: string, repo: string): Promise<boolean> {
     const token = await this.getGitHubToken();
     if (!token) return false;
-    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    const authHeader = token.startsWith('gho_')
+      ? `token ${token}`
+      : `Bearer ${token}`;
     try {
       const response = await fetch(
         `https://api.github.com/user/starred/${owner}/${repo}`,
-        { headers: { Authorization: authHeader, Accept: 'application/vnd.github.v3+json' } },
+        {
+          headers: {
+            Authorization: authHeader,
+            Accept: 'application/vnd.github.v3+json',
+          },
+        },
       );
       return response.status === 204;
     } catch (err) {
@@ -2260,7 +2376,9 @@ export class GitHubAdapter {
   async starRepository(owner: string, repo: string): Promise<void> {
     const token = await this.getGitHubToken();
     if (!token) throw new Error('No GitHub token available');
-    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    const authHeader = token.startsWith('gho_')
+      ? `token ${token}`
+      : `Bearer ${token}`;
     const response = await fetch(
       `https://api.github.com/user/starred/${owner}/${repo}`,
       {
@@ -2280,7 +2398,9 @@ export class GitHubAdapter {
   async unstarRepository(owner: string, repo: string): Promise<void> {
     const token = await this.getGitHubToken();
     if (!token) throw new Error('No GitHub token available');
-    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    const authHeader = token.startsWith('gho_')
+      ? `token ${token}`
+      : `Bearer ${token}`;
     const response = await fetch(
       `https://api.github.com/user/starred/${owner}/${repo}`,
       {
@@ -2434,7 +2554,9 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && Array.isArray(apiResult.data)) {
-      const licenses = (apiResult.data as RawGitHubLicenseTemplateResponse[]).map((license) => ({
+      const licenses = (
+        apiResult.data as RawGitHubLicenseTemplateResponse[]
+      ).map((license) => ({
         key: license.key as string,
         name: license.name as string,
         spdx_id: license.spdx_id as string,
@@ -2452,7 +2574,9 @@ export class GitHubAdapter {
       if (result.success && result.stdout) {
         const templates = JSON.parse(result.stdout);
         if (Array.isArray(templates)) {
-          const licenses = (templates as RawGitHubLicenseTemplateResponse[]).map((license) => ({
+          const licenses = (
+            templates as RawGitHubLicenseTemplateResponse[]
+          ).map((license) => ({
             key: license.key as string,
             name: license.name as string,
             spdx_id: license.spdx_id as string,
@@ -2478,7 +2602,10 @@ export class GitHubAdapter {
    * Get repository info including permissions
    * Returns null if repo not found or user doesn't have access
    */
-  async getRepository(owner: string, repo: string): Promise<GitHubRepositoryWithPermissions | null> {
+  async getRepository(
+    owner: string,
+    repo: string,
+  ): Promise<GitHubRepositoryWithPermissions | null> {
     console.log(`[GitHub] Fetching repository info for ${owner}/${repo}`);
 
     const endpoint = `/repos/${owner}/${repo}`;
@@ -2486,10 +2613,13 @@ export class GitHubAdapter {
 
     if (apiResult.success && apiResult.data) {
       const repo = apiResult.data as GitHubRepositoryWithPermissions;
-      console.log(`[GitHub] Successfully fetched repository ${owner}/${repo.name}`, {
-        permissions: repo.permissions,
-        fork: repo.fork,
-      });
+      console.log(
+        `[GitHub] Successfully fetched repository ${owner}/${repo.name}`,
+        {
+          permissions: repo.permissions,
+          fork: repo.fork,
+        },
+      );
       return repo;
     }
 
@@ -2497,7 +2627,9 @@ export class GitHubAdapter {
     try {
       const result = await this.executeCommand(['gh', 'api', endpoint]);
       if (result.success && result.stdout) {
-        const repoData = JSON.parse(result.stdout) as GitHubRepositoryWithPermissions;
+        const repoData = JSON.parse(
+          result.stdout,
+        ) as GitHubRepositoryWithPermissions;
         console.log(
           `[GitHub] Successfully fetched repository ${owner}/${repo} via CLI`,
         );
@@ -2568,7 +2700,10 @@ export class GitHubAdapter {
           const forkName = options?.name || repo;
           // Wait a moment for GitHub to create the fork
           await new Promise((resolve) => setTimeout(resolve, 2000));
-          return this.getRepository(forkOwner, forkName) as Promise<GitHubRepositoryCreated | null>;
+          return this.getRepository(
+            forkOwner,
+            forkName,
+          ) as Promise<GitHubRepositoryCreated | null>;
         }
       }
     } catch (error) {
@@ -2608,7 +2743,14 @@ export class GitHubAdapter {
    */
   private changedFilesCache = new Map<
     string,
-    Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>
+    Map<
+      string,
+      {
+        status: 'added' | 'modified' | 'deleted' | 'renamed';
+        additions: number;
+        deletions: number;
+      }
+    >
   >();
 
   /**
@@ -2626,7 +2768,9 @@ export class GitHubAdapter {
       return cached.data;
     }
 
-    console.log(`[GitHub] Fetching commit heat map for ${owner}/${repo} (${days} days)`);
+    console.log(
+      `[GitHub] Fetching commit heat map for ${owner}/${repo} (${days} days)`,
+    );
 
     const sinceDate = new Date();
     sinceDate.setDate(sinceDate.getDate() - days);
@@ -2644,7 +2788,10 @@ export class GitHubAdapter {
       const result = await this.makeGitHubAPICall(endpoint);
 
       if (!result.success || !Array.isArray(result.data)) {
-        console.error(`[GitHub] Failed to fetch commits page ${page}:`, result.error);
+        console.error(
+          `[GitHub] Failed to fetch commits page ${page}:`,
+          result.error,
+        );
         break;
       }
 
@@ -2676,7 +2823,9 @@ export class GitHubAdapter {
 
     // Cache the result
     this.commitHeatMapCache.set(cacheKey, { data, timestamp: Date.now() });
-    console.log(`[GitHub] Cached heat map data: ${data.length} days with commits`);
+    console.log(
+      `[GitHub] Cached heat map data: ${data.length} days with commits`,
+    );
 
     return data;
   }
@@ -2708,7 +2857,10 @@ export class GitHubAdapter {
       const result = await this.makeGitHubAPICall(endpoint);
 
       if (!result.success || !Array.isArray(result.data)) {
-        console.error(`[GitHub] Failed to fetch commits page ${page}:`, result.error);
+        console.error(
+          `[GitHub] Failed to fetch commits page ${page}:`,
+          result.error,
+        );
         break;
       }
 
@@ -2746,7 +2898,11 @@ export class GitHubAdapter {
     const endpoint = `/repos/${owner}/${repo}/commits?per_page=1`;
     const result = await this.makeGitHubAPICall(endpoint);
 
-    if (!result.success || !Array.isArray(result.data) || result.data.length === 0) {
+    if (
+      !result.success ||
+      !Array.isArray(result.data) ||
+      result.data.length === 0
+    ) {
       console.error(`[GitHub] Failed to fetch latest commit:`, result.error);
       return null;
     }
@@ -2769,7 +2925,9 @@ export class GitHubAdapter {
       return cached;
     }
 
-    console.log(`[GitHub] Fetching file tree at commit ${sha} for ${owner}/${repo}`);
+    console.log(
+      `[GitHub] Fetching file tree at commit ${sha} for ${owner}/${repo}`,
+    );
 
     const endpoint = `/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`;
     const result = await this.makeGitHubAPICall(endpoint);
@@ -2808,7 +2966,16 @@ export class GitHubAdapter {
     owner: string,
     repo: string,
     sha: string,
-  ): Promise<Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>> {
+  ): Promise<
+    Map<
+      string,
+      {
+        status: 'added' | 'modified' | 'deleted' | 'renamed';
+        additions: number;
+        deletions: number;
+      }
+    >
+  > {
     const cacheKey = `${owner}/${repo}/${sha}`;
     const cached = this.changedFilesCache.get(cacheKey);
     if (cached) {
@@ -2816,7 +2983,9 @@ export class GitHubAdapter {
       return cached;
     }
 
-    console.log(`[GitHub] Fetching changed files for commit ${sha} in ${owner}/${repo}`);
+    console.log(
+      `[GitHub] Fetching changed files for commit ${sha} in ${owner}/${repo}`,
+    );
 
     // Fetch the full commit info which includes files
     const endpoint = `/repos/${owner}/${repo}/commits/${sha}`;
@@ -2837,7 +3006,14 @@ export class GitHubAdapter {
       }>;
     };
 
-    const changedFiles = new Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>();
+    const changedFiles = new Map<
+      string,
+      {
+        status: 'added' | 'modified' | 'deleted' | 'renamed';
+        additions: number;
+        deletions: number;
+      }
+    >();
 
     if (commitData.files) {
       for (const file of commitData.files) {
@@ -2875,11 +3051,18 @@ export class GitHubAdapter {
     return changedFiles;
   }
 
-  async getCommitDiff(owner: string, repo: string, sha: string): Promise<string> {
+  async getCommitDiff(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<string> {
     console.log(`[GitHub] Fetching diff for commit ${sha} in ${owner}/${repo}`);
-    const result = await this.makeGitHubAPICall(`/repos/${owner}/${repo}/commits/${sha}`, {
-      headers: { Accept: 'application/vnd.github.v3.diff' },
-    });
+    const result = await this.makeGitHubAPICall(
+      `/repos/${owner}/${repo}/commits/${sha}`,
+      {
+        headers: { Accept: 'application/vnd.github.v3.diff' },
+      },
+    );
     if (!result.success || typeof result.data !== 'string') {
       console.error('[GitHub] Failed to fetch commit diff:', result.error);
       return '';
@@ -2906,7 +3089,10 @@ export class GitHubAdapter {
     const result = await this.makeGitHubAPICall(endpoint);
 
     if (!result.success || !Array.isArray(result.data)) {
-      console.error('[GitHub] Failed to resolve author profiles:', result.error);
+      console.error(
+        '[GitHub] Failed to resolve author profiles:',
+        result.error,
+      );
       return {};
     }
 
@@ -2966,13 +3152,21 @@ export class GitHubAdapter {
     }));
   }
 
-  async getRepoActivity(owner: string, repo: string, days = 7): Promise<CommitActivityCard[]> {
+  async getRepoActivity(
+    owner: string,
+    repo: string,
+    days = 7,
+  ): Promise<CommitActivityCard[]> {
     const token = await this.getGitHubToken();
     const authHeader = token
-      ? token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`
+      ? token.startsWith('gho_')
+        ? `token ${token}`
+        : `Bearer ${token}`
       : undefined;
 
-    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    const since = new Date(
+      Date.now() - days * 24 * 60 * 60 * 1000,
+    ).toISOString();
     const url = `https://api.github.com/repos/${owner}/${repo}/commits?since=${since}&per_page=100`;
 
     const response = await fetch(url, {
@@ -2984,27 +3178,37 @@ export class GitHubAdapter {
 
     if (!response.ok) return [];
 
-    const commits = await response.json() as Array<{
+    const commits = (await response.json()) as Array<{
       sha: string;
       commit: { message: string; author: { date: string } };
       author: { login: string; avatar_url: string } | null;
       html_url: string;
     }>;
 
-    return buildActivityCards(owner, repo, commits.map(c => ({
-      sha: c.sha,
-      message: c.commit.message,
-      authorLogin: c.author?.login ?? 'unknown',
-      authorAvatarUrl: c.author?.avatar_url,
-      committedAt: c.commit.author.date,
-      url: c.html_url,
-    })));
+    return buildActivityCards(
+      owner,
+      repo,
+      commits.map((c) => ({
+        sha: c.sha,
+        message: c.commit.message,
+        authorLogin: c.author?.login ?? 'unknown',
+        authorAvatarUrl: c.author?.avatar_url,
+        committedAt: c.commit.author.date,
+        url: c.html_url,
+      })),
+    );
   }
 
-  async getOwnerActivity(login: string, type: 'User' | 'Organization', days = 7): Promise<CommitActivityCard[]> {
+  async getOwnerActivity(
+    login: string,
+    type: 'User' | 'Organization',
+    days = 7,
+  ): Promise<CommitActivityCard[]> {
     const token = await this.getGitHubToken();
     const authHeader = token
-      ? token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`
+      ? token.startsWith('gho_')
+        ? `token ${token}`
+        : `Bearer ${token}`
       : undefined;
 
     const headers = {
@@ -3012,7 +3216,9 @@ export class GitHubAdapter {
       ...(authHeader ? { Authorization: authHeader } : {}),
     };
 
-    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    const since = new Date(
+      Date.now() - days * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
     if (type === 'Organization') {
       return this._getOrgActivityViaEvents(login, headers, since);
@@ -3027,11 +3233,14 @@ export class GitHubAdapter {
     headers: Record<string, string>,
     since: string,
   ): Promise<CommitActivityCard[]> {
-    const response = await fetch(`https://api.github.com/orgs/${login}/events?per_page=100`, { headers });
+    const response = await fetch(
+      `https://api.github.com/orgs/${login}/events?per_page=100`,
+      { headers },
+    );
     if (!response.ok) return [];
 
     const cutoff = new Date(since);
-    const events = await response.json() as Array<{
+    const events = (await response.json()) as Array<{
       type: string;
       repo: { name: string };
       payload: {
@@ -3049,10 +3258,21 @@ export class GitHubAdapter {
       created_at: string;
     }>;
 
-    const repoCommits = new Map<string, Array<{ sha: string; message: string; authorLogin: string; authorAvatarUrl?: string; committedAt: string; url: string }>>();
+    const repoCommits = new Map<
+      string,
+      Array<{
+        sha: string;
+        message: string;
+        authorLogin: string;
+        authorAvatarUrl?: string;
+        committedAt: string;
+        url: string;
+      }>
+    >();
 
     for (const event of events) {
-      if (event.type !== 'PushEvent' && event.type !== 'PullRequestEvent') continue;
+      if (event.type !== 'PushEvent' && event.type !== 'PullRequestEvent')
+        continue;
       if (new Date(event.created_at) < cutoff) continue;
 
       const [repoOwner, repoName] = event.repo.name.split('/');
@@ -3097,8 +3317,10 @@ export class GitHubAdapter {
       if (!repoOwner || !repoName) continue;
       allCards.push(...buildActivityCards(repoOwner, repoName, commits));
     }
-    return allCards.sort((a, b) =>
-      new Date(b.latestCommitAt).getTime() - new Date(a.latestCommitAt).getTime()
+    return allCards.sort(
+      (a, b) =>
+        new Date(b.latestCommitAt).getTime() -
+        new Date(a.latestCommitAt).getTime(),
     );
   }
 
@@ -3109,7 +3331,9 @@ export class GitHubAdapter {
   ): Promise<CommitActivityCard[]> {
     if (!token) return [];
 
-    const authHeader = token.startsWith('gho_') ? `token ${token}` : `Bearer ${token}`;
+    const authHeader = token.startsWith('gho_')
+      ? `token ${token}`
+      : `Bearer ${token}`;
 
     // Step 1: GraphQL to find which repos the user committed to
     const query = `
@@ -3137,7 +3361,7 @@ export class GitHubAdapter {
 
     if (!gqlResponse.ok) return [];
 
-    const gqlData = await gqlResponse.json() as {
+    const gqlData = (await gqlResponse.json()) as {
       data?: {
         user?: {
           contributionsCollection?: {
@@ -3150,7 +3374,9 @@ export class GitHubAdapter {
       errors?: unknown[];
     };
 
-    const repos = gqlData.data?.user?.contributionsCollection?.commitContributionsByRepository ?? [];
+    const repos =
+      gqlData.data?.user?.contributionsCollection
+        ?.commitContributionsByRepository ?? [];
     if (repos.length === 0) return [];
 
     // Step 2: Fetch actual commits per repo filtered by author
@@ -3167,28 +3393,36 @@ export class GitHubAdapter {
       const res = await fetch(url, { headers: restHeaders });
       if (!res.ok) return [];
 
-      const commits = await res.json() as Array<{
+      const commits = (await res.json()) as Array<{
         sha: string;
         commit: { message: string; author: { date: string } };
         author: { login: string; avatar_url: string } | null;
         html_url: string;
       }>;
 
-      return buildActivityCards(owner, repo, commits.map(c => ({
-        sha: c.sha,
-        message: c.commit.message,
-        authorLogin: c.author?.login ?? login,
-        authorAvatarUrl: c.author?.avatar_url,
-        committedAt: c.commit.author.date,
-        url: c.html_url,
-      })));
+      return buildActivityCards(
+        owner,
+        repo,
+        commits.map((c) => ({
+          sha: c.sha,
+          message: c.commit.message,
+          authorLogin: c.author?.login ?? login,
+          authorAvatarUrl: c.author?.avatar_url,
+          committedAt: c.commit.author.date,
+          url: c.html_url,
+        })),
+      );
     };
 
-    const results = await Promise.all(repos.map(r => fetchRepoCommits(r.repository.nameWithOwner)));
+    const results = await Promise.all(
+      repos.map((r) => fetchRepoCommits(r.repository.nameWithOwner)),
+    );
     const allCards = results.flat();
 
-    return allCards.sort((a, b) =>
-      new Date(b.latestCommitAt).getTime() - new Date(a.latestCommitAt).getTime()
+    return allCards.sort(
+      (a, b) =>
+        new Date(b.latestCommitAt).getTime() -
+        new Date(a.latestCommitAt).getTime(),
     );
   }
 }
@@ -3315,8 +3549,12 @@ export function registerGitHubIpcHandlers(
         }
 
         // Don't fallback for 404 (not found) or 403 (forbidden) - user doesn't have access
-        if ('status' in result && (result.status === 404 || result.status === 403)) {
-          const statusText = 'statusText' in result ? result.statusText : undefined;
+        if (
+          'status' in result &&
+          (result.status === 404 || result.status === 403)
+        ) {
+          const statusText =
+            'statusText' in result ? result.statusText : undefined;
           console.warn(
             `[GitHub] Skipping git CLI fallback for ${owner}/${repo}@${treeRef}: ${result.status} ${statusText || 'Access denied'}`,
           );
@@ -3537,7 +3775,12 @@ export function registerGitHubIpcHandlers(
 
   ipcMain.handle(
     GitHubAPIEvent.GET_REPOSITORY_COMMITS,
-    async (event, owner: string, repo: string, options?: { perPage?: number; page?: number }) => {
+    async (
+      event,
+      owner: string,
+      repo: string,
+      options?: { perPage?: number; page?: number },
+    ) => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {
         console.error('[GitHub] No adapter found for GET_REPOSITORY_COMMITS');
@@ -3553,7 +3796,11 @@ export function registerGitHubIpcHandlers(
       event,
       owner: string,
       repo: string,
-      options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+      options?: {
+        state?: 'open' | 'closed' | 'all';
+        perPage?: number;
+        page?: number;
+      },
     ) => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {
@@ -3582,7 +3829,11 @@ export function registerGitHubIpcHandlers(
       event,
       owner: string,
       repo: string,
-      options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+      options?: {
+        state?: 'open' | 'closed' | 'all';
+        perPage?: number;
+        page?: number;
+      },
     ) => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {
@@ -3634,7 +3885,9 @@ export function registerGitHubIpcHandlers(
     async (event, owner: string, repo: string) => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_REPOSITORY_CONTRIBUTORS');
+        console.error(
+          '[GitHub] No adapter found for GET_REPOSITORY_CONTRIBUTORS',
+        );
         return [];
       }
       return adapter.getRepositoryContributors(owner, repo);
@@ -3833,7 +4086,10 @@ export function registerGitHubIpcHandlers(
 
   ipcMain.handle(
     GitHubAPIEvent.INSTALL_SKILL,
-    async (event, options: InstallSkillOptions): Promise<InstallSkillResult> => {
+    async (
+      event,
+      options: InstallSkillOptions,
+    ): Promise<InstallSkillResult> => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {
         console.error('[GitHub] No adapter found for INSTALL_SKILL');
@@ -3844,7 +4100,15 @@ export function registerGitHubIpcHandlers(
       }
 
       try {
-        const { githubUrl, skillPath, destination, repositoryPath, skillName, fileList, skillTreeSha } = options;
+        const {
+          githubUrl,
+          skillPath,
+          destination,
+          repositoryPath,
+          skillName,
+          fileList,
+          skillTreeSha,
+        } = options;
 
         console.log('[GitHub] installSkill called with:', {
           githubUrl,
@@ -3878,7 +4142,9 @@ export function registerGitHubIpcHandlers(
         // Remove any leading repo path like "/owner/repo/"
         const repoPrefix = `/${owner}/${repo}/`;
         if (normalizedSkillPath.startsWith(repoPrefix)) {
-          normalizedSkillPath = normalizedSkillPath.substring(repoPrefix.length);
+          normalizedSkillPath = normalizedSkillPath.substring(
+            repoPrefix.length,
+          );
         }
 
         // Remove leading slash
@@ -3893,7 +4159,8 @@ export function registerGitHubIpcHandlers(
         if (!fileList || fileList.length === 0) {
           return {
             success: false,
-            error: 'File list is required for skill installation. The main process does not have the expertise to determine skill structure.',
+            error:
+              'File list is required for skill installation. The main process does not have the expertise to determine skill structure.',
           };
         }
 
@@ -3905,7 +4172,12 @@ export function registerGitHubIpcHandlers(
         // Download each file
         const downloadedFiles: Array<{ path: string; content: string }> = [];
         for (const filePath of fileList) {
-          const content = await adapter.getFileContent(owner, repo, filePath, branch);
+          const content = await adapter.getFileContent(
+            owner,
+            repo,
+            filePath,
+            branch,
+          );
           if (content) {
             downloadedFiles.push({
               path: filePath,
@@ -3930,7 +4202,12 @@ export function registerGitHubIpcHandlers(
         const isGlobalInstall = destination.startsWith('global-');
 
         // Canonical path is always ~/.agents/skills/{skillName} for global installs
-        const canonicalPath = path.join(homeDir, '.agents', 'skills', extractedSkillName);
+        const canonicalPath = path.join(
+          homeDir,
+          '.agents',
+          'skills',
+          extractedSkillName,
+        );
 
         let destPath: string;
         let agentSymlinkPath: string | undefined;
@@ -3944,16 +4221,37 @@ export function registerGitHubIpcHandlers(
           if (destination !== 'global-universal') {
             switch (destination) {
               case 'global-claude':
-                agentSymlinkPath = path.join(homeDir, '.claude', 'skills', extractedSkillName);
+                agentSymlinkPath = path.join(
+                  homeDir,
+                  '.claude',
+                  'skills',
+                  extractedSkillName,
+                );
                 break;
               case 'global-opencode':
-                agentSymlinkPath = path.join(homeDir, '.config', 'opencode', 'skill', extractedSkillName);
+                agentSymlinkPath = path.join(
+                  homeDir,
+                  '.config',
+                  'opencode',
+                  'skill',
+                  extractedSkillName,
+                );
                 break;
               case 'global-cursor':
-                agentSymlinkPath = path.join(homeDir, '.cursor', 'skills', extractedSkillName);
+                agentSymlinkPath = path.join(
+                  homeDir,
+                  '.cursor',
+                  'skills',
+                  extractedSkillName,
+                );
                 break;
               case 'global-windsurf':
-                agentSymlinkPath = path.join(homeDir, '.windsurf', 'skills', extractedSkillName);
+                agentSymlinkPath = path.join(
+                  homeDir,
+                  '.windsurf',
+                  'skills',
+                  extractedSkillName,
+                );
                 break;
               default:
                 return {
@@ -3973,10 +4271,20 @@ export function registerGitHubIpcHandlers(
 
           switch (destination) {
             case 'project-universal':
-              destPath = path.join(repositoryPath, '.agents', 'skills', extractedSkillName);
+              destPath = path.join(
+                repositoryPath,
+                '.agents',
+                'skills',
+                extractedSkillName,
+              );
               break;
             case 'project-claude':
-              destPath = path.join(repositoryPath, '.claude', 'skills', extractedSkillName);
+              destPath = path.join(
+                repositoryPath,
+                '.claude',
+                'skills',
+                extractedSkillName,
+              );
               break;
             default:
               return {
@@ -4009,11 +4317,15 @@ export function registerGitHubIpcHandlers(
             relativePath = relativePath.substring(skillPathWithSlash.length);
           } else if (relativePath === normalizedSkillPath) {
             // Handle case where file.path might be exactly skillPath (shouldn't happen with blobs)
-            console.warn(`[GitHub] File path equals skill path, skipping: ${file.path}`);
+            console.warn(
+              `[GitHub] File path equals skill path, skipping: ${file.path}`,
+            );
             continue;
           } else {
             // This shouldn't happen since we filtered by startsWith, but handle it
-            console.warn(`[GitHub] File path doesn't start with skill path: ${file.path}`);
+            console.warn(
+              `[GitHub] File path doesn't start with skill path: ${file.path}`,
+            );
             continue;
           }
 
@@ -4022,7 +4334,9 @@ export function registerGitHubIpcHandlers(
 
           // Skip if no relative path (defensive check)
           if (!relativePath) {
-            console.warn(`[GitHub] Skipping file with empty relative path: ${file.path}`);
+            console.warn(
+              `[GitHub] Skipping file with empty relative path: ${file.path}`,
+            );
             continue;
           }
 
@@ -4042,7 +4356,9 @@ export function registerGitHubIpcHandlers(
 
         // Create symlink from agent directory to canonical (for global installs)
         if (isGlobalInstall && agentSymlinkPath) {
-          console.log(`[GitHub] Creating symlink: ${agentSymlinkPath} -> ${canonicalPath}`);
+          console.log(
+            `[GitHub] Creating symlink: ${agentSymlinkPath} -> ${canonicalPath}`,
+          );
           await createSkillSymlink(canonicalPath, agentSymlinkPath);
           console.log(`[GitHub] Symlink created successfully`);
         }
@@ -4068,7 +4384,9 @@ export function registerGitHubIpcHandlers(
 
         console.log(`[GitHub] Skill installed successfully to: ${destPath}`);
         if (agentSymlinkPath) {
-          console.log(`[GitHub] Symlinked to agent directory: ${agentSymlinkPath}`);
+          console.log(
+            `[GitHub] Symlinked to agent directory: ${agentSymlinkPath}`,
+          );
         }
 
         // Broadcast to all windows that a skill was installed
@@ -4104,7 +4422,9 @@ export function registerGitHubIpcHandlers(
     async (event, owner: string, repo: string, days?: number) => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_COMMIT_DATES_FOR_HEATMAP');
+        console.error(
+          '[GitHub] No adapter found for GET_COMMIT_DATES_FOR_HEATMAP',
+        );
         return [];
       }
       return adapter.getCommitDatesForHeatMap(owner, repo, days);
@@ -4113,10 +4433,18 @@ export function registerGitHubIpcHandlers(
 
   ipcMain.handle(
     GitHubAPIEvent.GET_COMMITS_IN_DATE_RANGE,
-    async (event, owner: string, repo: string, startDate: string, endDate: string) => {
+    async (
+      event,
+      owner: string,
+      repo: string,
+      startDate: string,
+      endDate: string,
+    ) => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_COMMITS_IN_DATE_RANGE');
+        console.error(
+          '[GitHub] No adapter found for GET_COMMITS_IN_DATE_RANGE',
+        );
         return [];
       }
       return adapter.getCommitsInDateRange(owner, repo, startDate, endDate);
@@ -4152,11 +4480,17 @@ export function registerGitHubIpcHandlers(
     async (event, owner: string, repo: string, sha: string) => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_CHANGED_FILES_FOR_COMMIT');
+        console.error(
+          '[GitHub] No adapter found for GET_CHANGED_FILES_FOR_COMMIT',
+        );
         return {};
       }
       // Convert Map to plain object for IPC serialization
-      const changedFilesMap = await adapter.getChangedFilesForCommit(owner, repo, sha);
+      const changedFilesMap = await adapter.getChangedFilesForCommit(
+        owner,
+        repo,
+        sha,
+      );
       return Object.fromEntries(changedFilesMap);
     },
   );

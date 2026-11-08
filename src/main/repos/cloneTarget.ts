@@ -17,8 +17,7 @@ export interface CloneTarget {
 }
 
 export type CloneTargetResult =
-  | { ok: true; target: CloneTarget }
-  | { ok: false; error: string };
+  { ok: true; target: CloneTarget } | { ok: false; error: string };
 
 /** PURL types that name a clonable host. */
 const PURL_HOSTS: Record<string, string> = {
@@ -131,7 +130,12 @@ export function parseCloneTarget(input: string): CloneTargetResult {
     }
     return {
       ok: true,
-      target: { host, owner, repo, cloneUrl: `git@${host}:${owner}/${repo}.git` },
+      target: {
+        host,
+        owner,
+        repo,
+        cloneUrl: `git@${host}:${owner}/${repo}.git`,
+      },
     };
   }
 

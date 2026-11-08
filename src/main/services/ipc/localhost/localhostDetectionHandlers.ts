@@ -291,10 +291,7 @@ export function registerLocalhostDetectionHandlers() {
   // Kill server by PID
   ipcMain.handle(
     LocalhostDetectionEvents.KILL_SERVER,
-    async (
-      _,
-      pid: number,
-    ): Promise<{ success: boolean; error?: string }> => {
+    async (_, pid: number): Promise<{ success: boolean; error?: string }> => {
       try {
         // Use kill command to terminate the process
         await execAsync(`kill ${pid}`);

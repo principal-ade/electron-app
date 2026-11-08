@@ -3,7 +3,10 @@ import type { Theme } from '@principal-ade/industry-theme';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import { Triangle, ChevronDown } from 'lucide-react';
 import { findAvailablePort, waitForPortReady } from '../../utils/portDetection';
-import { NextjsService, type NextjsPackage } from '../../services/NextjsService';
+import {
+  NextjsService,
+  type NextjsPackage,
+} from '../../services/NextjsService';
 import { TerminalService } from '../../main-process-api/TerminalService';
 
 /**
@@ -23,9 +26,17 @@ export interface NextjsSidebarButtonProps {
   /** Current panel layout */
   currentLayout?: { left: string; middle: string; right: string };
   /** Callback to change panel layout */
-  onLayoutChange?: (layout: { left: string; middle: string; right: string }) => void;
+  onLayoutChange?: (layout: {
+    left: string;
+    middle: string;
+    right: string;
+  }) => void;
   /** Callback to change panel sizes */
-  onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
+  onPanelSizesChange?: (sizes: {
+    left: number;
+    middle: number;
+    right: number;
+  }) => void;
   /** Panel event emitter for inter-panel communication */
   events?: {
     emit: (event: {
@@ -61,17 +72,23 @@ export const NextjsSidebarButton: React.FC<NextjsSidebarButtonProps> = ({
   const [nextjsSessionId, setNextjsSessionId] = useState<string | null>(null);
   const [nextjsPort, setNextjsPort] = useState<number | null>(null);
   const [nextjsPackages, setNextjsPackages] = useState<NextjsPackage[]>([]);
-  const [selectedPackage, setSelectedPackage] = useState<NextjsPackage | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<NextjsPackage | null>(
+    null,
+  );
   const [showPackageDropdown, setShowPackageDropdown] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Build the expected nextjs context for this repository
-  const nextjsContext = repositoryOwner && repositoryName
-    ? `terminal:${repositoryOwner}/${repositoryName}:nextjs`
-    : null;
+  const nextjsContext =
+    repositoryOwner && repositoryName
+      ? `terminal:${repositoryOwner}/${repositoryName}:nextjs`
+      : null;
 
   // Check for existing Next.js session on mount and when context changes
   useEffect(() => {
@@ -81,21 +98,30 @@ export const NextjsSidebarButton: React.FC<NextjsSidebarButtonProps> = ({
       try {
         const sessions = await TerminalService.list();
         const existingSession = sessions.find(
-          (s) => s.context === nextjsContext && s.status === 'active'
+          (s) => s.context === nextjsContext && s.status === 'active',
         );
 
         if (existingSession) {
-          console.info('[NextjsSidebarButton] Found existing Next.js session:', existingSession.id);
+          console.info(
+            '[NextjsSidebarButton] Found existing Next.js session:',
+            existingSession.id,
+          );
           setNextjsSessionId(existingSession.id);
           setNextjsStatus('running');
           // Restore port from session metadata
           if (existingSession.metadata?.port) {
             setNextjsPort(existingSession.metadata.port);
-            console.info('[NextjsSidebarButton] Restored port from metadata:', existingSession.metadata.port);
+            console.info(
+              '[NextjsSidebarButton] Restored port from metadata:',
+              existingSession.metadata.port,
+            );
           }
         }
       } catch (error) {
-        console.error('[NextjsSidebarButton] Error checking for existing session:', error);
+        console.error(
+          '[NextjsSidebarButton] Error checking for existing session:',
+          error,
+        );
       }
     };
 
@@ -110,9 +136,15 @@ export const NextjsSidebarButton: React.FC<NextjsSidebarButtonProps> = ({
 
     const setupExitListener = async () => {
       unsubscribe = await TerminalService.onExit((exitEvent) => {
-        console.info('[NextjsSidebarButton] Terminal exit event received:', exitEvent);
+        console.info(
+          '[NextjsSidebarButton] Terminal exit event received:',
+          exitEvent,
+        );
         if (exitEvent.sessionId === nextjsSessionId) {
-          console.info('[NextjsSidebarButton] Next.js session exited:', exitEvent.sessionId);
+          console.info(
+            '[NextjsSidebarButton] Next.js session exited:',
+            exitEvent.sessionId,
+          );
           setNextjsStatus('idle');
           setNextjsSessionId(null);
           setNextjsPort(null);
@@ -136,7 +168,10 @@ export const NextjsSidebarButton: React.FC<NextjsSidebarButtonProps> = ({
         packages,
         repositoryPath,
       );
-      console.info('[NextjsSidebarButton] Found Next.js packages:', foundPackages);
+      console.info(
+        '[NextjsSidebarButton] Found Next.js packages:',
+        foundPackages,
+      );
       setNextjsPackages(foundPackages);
 
       // Auto-select first package if only one exists
@@ -170,8 +205,10 @@ export const NextjsSidebarButton: React.FC<NextjsSidebarButtonProps> = ({
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      const isOutsideContainer = containerRef.current && !containerRef.current.contains(target);
-      const isOutsideDropdown = dropdownRef.current && !dropdownRef.current.contains(target);
+      const isOutsideContainer =
+        containerRef.current && !containerRef.current.contains(target);
+      const isOutsideDropdown =
+        dropdownRef.current && !dropdownRef.current.contains(target);
 
       if (isOutsideContainer && isOutsideDropdown) {
         setShowPackageDropdown(false);
@@ -225,7 +262,10 @@ export const NextjsSidebarButton: React.FC<NextjsSidebarButtonProps> = ({
       setNextjsStatus('starting');
       setSelectedPackage(targetPackage);
 
-      console.info('[NextjsSidebarButton] Starting Next.js for package:', targetPackage.name);
+      console.info(
+        '[NextjsSidebarButton] Starting Next.js for package:',
+        targetPackage.name,
+      );
 
       // Find available port (Next.js default range: 3000-3020)
       const port = await findAvailablePort(3000, 3020);
@@ -305,7 +345,8 @@ export const NextjsSidebarButton: React.FC<NextjsSidebarButtonProps> = ({
   // Derived state (must be before any conditional returns)
   const isRunning = nextjsStatus === 'running';
   const isStarting = nextjsStatus === 'starting';
-  const isShowingNextjs = currentLayout?.right === 'localhostBrowser' && isRunning;
+  const isShowingNextjs =
+    currentLayout?.right === 'localhostBrowser' && isRunning;
   const buttonColor = isRunning
     ? theme.colors.success
     : theme.colors.textSecondary;
@@ -430,7 +471,9 @@ export const NextjsSidebarButton: React.FC<NextjsSidebarButtonProps> = ({
           style={{
             fontFamily: theme.fonts.body,
             fontSize: theme.fontSizes[0],
-            fontWeight: isRunning ? theme.fontWeights.semibold : theme.fontWeights.body,
+            fontWeight: isRunning
+              ? theme.fontWeights.semibold
+              : theme.fontWeights.body,
             lineHeight: theme.lineHeights.tight,
             textAlign: 'center',
             maxWidth: '100%',
@@ -483,7 +526,8 @@ export const NextjsSidebarButton: React.FC<NextjsSidebarButtonProps> = ({
                 fontWeight: theme.fontWeights.medium,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
@@ -504,56 +548,60 @@ export const NextjsSidebarButton: React.FC<NextjsSidebarButtonProps> = ({
             </button>
           )}
           {/* Show package options when not running */}
-          {!isRunning && nextjsPackages.map((pkg) => (
-            <button
-              key={pkg.path}
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowPackageDropdown(false);
-                handleNextjsClick(pkg);
-              }}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: 'none',
-                background:
-                  selectedPackage?.path === pkg.path
-                    ? theme.colors.primary + '20'
-                    : 'transparent',
-                color: theme.colors.text,
-                cursor: 'pointer',
-                textAlign: 'left',
-                fontSize: `${theme.fontSizes[1]}px`,
-                borderBottom:
-                  nextjsPackages[nextjsPackages.length - 1] !== pkg
-                    ? `1px solid ${theme.colors.border}`
-                    : 'none',
-              }}
-              onMouseEnter={(e) => {
-                if (selectedPackage?.path !== pkg.path) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (selectedPackage?.path !== pkg.path) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }
-              }}
-            >
-              <div style={{ fontWeight: theme.fontWeights.medium }}>
-                {pkg.name}
-              </div>
-              <div
+          {!isRunning &&
+            nextjsPackages.map((pkg) => (
+              <button
+                key={pkg.path}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPackageDropdown(false);
+                  handleNextjsClick(pkg);
+                }}
                 style={{
-                  fontSize: `${theme.fontSizes[0]}px`,
-                  color: theme.colors.textTertiary,
-                  marginTop: '2px',
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: 'none',
+                  background:
+                    selectedPackage?.path === pkg.path
+                      ? theme.colors.primary + '20'
+                      : 'transparent',
+                  color: theme.colors.text,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  borderBottom:
+                    nextjsPackages[nextjsPackages.length - 1] !== pkg
+                      ? `1px solid ${theme.colors.border}`
+                      : 'none',
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedPackage?.path !== pkg.path) {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedPackage?.path !== pkg.path) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
                 }}
               >
-                {pkg.path.replace(repositoryPath || '', '').replace(/^\//, '') || '/'}
-              </div>
-            </button>
-          ))}
+                <div style={{ fontWeight: theme.fontWeights.medium }}>
+                  {pkg.name}
+                </div>
+                <div
+                  style={{
+                    fontSize: `${theme.fontSizes[0]}px`,
+                    color: theme.colors.textTertiary,
+                    marginTop: '2px',
+                  }}
+                >
+                  {pkg.path
+                    .replace(repositoryPath || '', '')
+                    .replace(/^\//, '') || '/'}
+                </div>
+              </button>
+            ))}
         </div>
       )}
     </div>

@@ -28,14 +28,25 @@ export const RailPaneHeader: React.FC<{
   // extends the header ("‹ CONTRIBUTORS › @handle") instead of replacing it. The
   // label stays the back target; the crumb marks where you are.
   crumb?: React.ReactNode;
-}> = ({ icon, label, count, onClose, onBack, backContent, closeAsBack, crumb }) => {
+}> = ({
+  icon,
+  label,
+  count,
+  onClose,
+  onBack,
+  backContent,
+  closeAsBack,
+  crumb,
+}) => {
   const { theme } = useTheme();
 
   if (closeAsBack) {
     // Back goes up one level: a nested `onBack` (e.g. the selected contributor)
     // returns to this pane's list, otherwise `onClose` returns to the overview.
     const goBack = onBack ?? onClose;
-    const backLabel = onBack ? `Back to ${label.toLowerCase()}` : 'Back to overview';
+    const backLabel = onBack
+      ? `Back to ${label.toLowerCase()}`
+      : 'Back to overview';
     return (
       <div
         className="px-3 py-2 border-b sticky top-0 z-10 shrink-0 flex items-center gap-1.5"
@@ -66,7 +77,10 @@ export const RailPaneHeader: React.FC<{
           </span>
           {count !== undefined && crumb === undefined && (
             <span
-              style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}
+              style={{
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textMuted,
+              }}
             >
               {count}
             </span>
@@ -134,7 +148,10 @@ export const RailPaneHeader: React.FC<{
           </span>
           {count !== undefined && (
             <span
-              style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}
+              style={{
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textMuted,
+              }}
             >
               {count}
             </span>

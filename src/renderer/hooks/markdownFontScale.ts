@@ -71,7 +71,11 @@ const subscribeDefault = (listener: () => void) => {
 
 /** The shared default, re-rendering when any surface changes it. */
 export const useDefaultFontScale = (): number =>
-  useSyncExternalStore(subscribeDefault, getDefaultFontScale, getDefaultFontScale);
+  useSyncExternalStore(
+    subscribeDefault,
+    getDefaultFontScale,
+    getDefaultFontScale,
+  );
 
 interface FontScaleShortcutHandlers {
   increase: () => void;

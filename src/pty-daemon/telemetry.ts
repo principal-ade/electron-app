@@ -9,11 +9,24 @@
  * - Each node/step is an EVENT attached to that span via span.addEvent()
  */
 
-import { BasicTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import {
+  BasicTracerProvider,
+  BatchSpanProcessor,
+} from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
-import { trace, Tracer, SpanStatusCode, Span, context, Context } from '@opentelemetry/api';
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+} from '@opentelemetry/semantic-conventions';
+import {
+  trace,
+  Tracer,
+  SpanStatusCode,
+  Span,
+  context,
+  Context,
+} from '@opentelemetry/api';
 import { resolveTelemetrySettings } from '../telemetry/config';
 
 class DaemonTelemetryProvider {
@@ -46,7 +59,11 @@ class DaemonTelemetryProvider {
     // Check if collector is available
     const collectorAvailable = await this.checkCollectorHealth(endpoint);
     if (!collectorAvailable) {
-      console.warn('[DaemonTelemetry] Collector not available at', endpoint, '- telemetry disabled');
+      console.warn(
+        '[DaemonTelemetry] Collector not available at',
+        endpoint,
+        '- telemetry disabled',
+      );
       return;
     }
 
@@ -78,7 +95,10 @@ class DaemonTelemetryProvider {
       trace.setGlobalTracerProvider(this.provider);
 
       this.isInitialized = true;
-      console.info('[DaemonTelemetry] Daemon telemetry initialized, endpoint:', endpoint);
+      console.info(
+        '[DaemonTelemetry] Daemon telemetry initialized, endpoint:',
+        endpoint,
+      );
     } catch (error) {
       console.error('[DaemonTelemetry] Failed to initialize:', error);
       this.provider = null;
@@ -137,13 +157,19 @@ class DaemonTelemetryProvider {
         'process.pid': process.pid,
       },
     });
-    this.activeStartupContext = trace.setSpan(context.active(), this.activeStartupSpan);
+    this.activeStartupContext = trace.setSpan(
+      context.active(),
+      this.activeStartupSpan,
+    );
   }
 
   /**
    * Add an event to the active startup workflow span
    */
-  addStartupEvent(name: string, attributes: Record<string, string | number | boolean>): void {
+  addStartupEvent(
+    name: string,
+    attributes: Record<string, string | number | boolean>,
+  ): void {
     if (!this.activeStartupSpan) {
       return;
     }
@@ -213,8 +239,8 @@ export function addPhaseEvent(
   reason?: string,
 ): void {
   daemonTelemetry.addStartupEvent('terminal.daemon.phase', {
-    'phase': phase,
-    'reason': reason || '',
+    phase: phase,
+    reason: reason || '',
     'uptime.ms': daemonTelemetry.getUptimeMs(),
   });
 }
@@ -227,7 +253,7 @@ export function addServerEvent(
   clientsCount: number,
 ): void {
   daemonTelemetry.addStartupEvent('terminal.daemon.server_event', {
-    'event': event,
+    event: event,
     'clients.count': clientsCount,
   });
 }
@@ -241,7 +267,7 @@ export function addSessionActionEvent(
   sessionsCount: number,
 ): void {
   daemonTelemetry.addStartupEvent('terminal.daemon.session_action', {
-    'action': action,
+    action: action,
     'session.id': sessionId,
     'sessions.count': sessionsCount,
   });
@@ -256,10 +282,10 @@ export function addSocketConnectionEvent(
   error?: string,
 ): void {
   daemonTelemetry.addStartupEvent('terminal.socket.connection', {
-    'state': state,
+    state: state,
     'client.id': clientId,
-    'attempt': 1,
-    'error': error || '',
+    attempt: 1,
+    error: error || '',
   });
 }
 
@@ -276,7 +302,7 @@ export function addIdleEvent(
     'idle.duration.ms': idleDurationMs,
     'sessions.count': sessionsCount,
     'clients.count': clientsCount,
-    'action': action,
+    action: action,
   });
 }
 
@@ -289,7 +315,7 @@ export function addHealthCheckEvent(
   missedCount: number,
 ): void {
   daemonTelemetry.addStartupEvent('terminal.health.check', {
-    'direction': direction,
+    direction: direction,
     'latency.ms': latencyMs,
     'missed.count': missedCount,
   });
@@ -308,11 +334,11 @@ export function addErrorEvent(
   const span = daemonTelemetry.getActiveStartupSpan();
   if (span) {
     span.addEvent('terminal.error', {
-      'source': source,
+      source: source,
       'error.message': errorMessage,
       'error.code': errorCode || '',
       'session.id': sessionId || '',
-      'recoverable': recoverable ?? false,
+      recoverable: recoverable ?? false,
     });
     span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage });
   }
@@ -336,7 +362,13 @@ export function addPtySpawnAttemptEvent(
     const path = require('path');
     // node-pty spawn-helper is relative to the node-pty module
     const nodePtyPath = require.resolve('node-pty');
-    spawnHelperPath = path.join(path.dirname(nodePtyPath), '..', 'build', 'Release', 'spawn-helper');
+    spawnHelperPath = path.join(
+      path.dirname(nodePtyPath),
+      '..',
+      'build',
+      'Release',
+      'spawn-helper',
+    );
   } catch {
     spawnHelperPath = 'resolve-failed';
   }
@@ -350,9 +382,9 @@ export function addPtySpawnAttemptEvent(
   span.addEvent('terminal.pty.spawn_attempt', {
     'session.id': sessionId,
     'shell.path': shellPath,
-    'cwd': cwd,
-    'cols': cols,
-    'rows': rows,
+    cwd: cwd,
+    cols: cols,
+    rows: rows,
     'env.keys': envKeys.join(','),
     'process.cwd': process.cwd(),
     'process.execPath': process.execPath,
@@ -366,7 +398,6 @@ export function addPtySpawnAttemptEvent(
     })(),
   });
   span.end();
-
 }
 
 /**
@@ -378,13 +409,16 @@ export function addPtySpawnedEvent(
   parentContext?: Context,
 ): void {
   const tracer = getTracer();
-  const span = tracer.startSpan('terminal.pty.spawned', undefined, parentContext);
+  const span = tracer.startSpan(
+    'terminal.pty.spawned',
+    undefined,
+    parentContext,
+  );
   span.addEvent('terminal.pty.spawned', {
     'session.id': sessionId,
-    'pid': pid,
+    pid: pid,
   });
   span.end();
-
 }
 
 /**
@@ -407,7 +441,7 @@ export function addPtySpawnFailedEvent(
     'session.id': sessionId,
     'error.message': errorMessage,
     'shell.path': shellPath,
-    'cwd': cwd,
+    cwd: cwd,
     'process.cwd': process.cwd(),
     'process.execPath': process.execPath,
     'process.env.PATH': process.env.PATH || '',
@@ -416,5 +450,4 @@ export function addPtySpawnFailedEvent(
   });
   span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage });
   span.end();
-
 }

@@ -48,4 +48,3 @@ export interface ThemeSchemaResponse {
   currentValues?: Theme;
   availableThemes?: ThemeInfo[];
 }
-

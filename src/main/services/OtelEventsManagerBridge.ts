@@ -67,10 +67,12 @@ export class OtelEventsManagerBridge {
   private syncedWorkspaces: Set<string> = new Set();
 
   // Debounce timers for workspace sync
-  private workspaceSyncTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private workspaceSyncTimers: Map<string, ReturnType<typeof setTimeout>> =
+    new Map();
 
   private constructor() {
-    this.baseUrl = process.env.OTEL_EVENTS_MANAGER_URL || DEFAULT_EVENTS_MANAGER_URL;
+    this.baseUrl =
+      process.env.OTEL_EVENTS_MANAGER_URL || DEFAULT_EVENTS_MANAGER_URL;
   }
 
   /**
@@ -87,7 +89,9 @@ export class OtelEventsManagerBridge {
    * Initialize the bridge and start health checking
    */
   async initialize(): Promise<void> {
-    console.log(`[OtelEventsManagerBridge] Initializing with base URL: ${this.baseUrl}`);
+    console.log(
+      `[OtelEventsManagerBridge] Initializing with base URL: ${this.baseUrl}`,
+    );
 
     // Initial health check
     await this.checkHealth();
@@ -157,7 +161,9 @@ export class OtelEventsManagerBridge {
   /**
    * Execute the actual workspace push (after debounce)
    */
-  private async executePushWorkspace(workspace: WorkspaceSyncPayload): Promise<SyncResult> {
+  private async executePushWorkspace(
+    workspace: WorkspaceSyncPayload,
+  ): Promise<SyncResult> {
     const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('otel.events_manager.workspace_sync');
 
@@ -184,18 +190,24 @@ export class OtelEventsManagerBridge {
         'scopes.count': scopeNames.length,
       });
 
-      const response = await fetch(`${this.baseUrl}${ENDPOINTS.REGISTRY_SYNC}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `${this.baseUrl}${ENDPOINTS.REGISTRY_SYNC}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(request),
         },
-        body: JSON.stringify(request),
-      });
+      );
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
         span.setStatus({ code: SpanStatusCode.ERROR, message: errorText });
-        return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${errorText}`,
+        };
       }
 
       const result = (await response.json()) as SyncResult;
@@ -222,7 +234,10 @@ export class OtelEventsManagerBridge {
       span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage });
 
       if (!app.isPackaged) {
-        console.debug('[OtelEventsManagerBridge] Workspace sync failed:', errorMessage);
+        console.debug(
+          '[OtelEventsManagerBridge] Workspace sync failed:',
+          errorMessage,
+        );
       }
 
       return { success: false, error: errorMessage };
@@ -257,17 +272,22 @@ export class OtelEventsManagerBridge {
         timestamp: Date.now(),
       };
 
-      const response = await fetch(`${this.baseUrl}${ENDPOINTS.REGISTRY_SYNC}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `${this.baseUrl}${ENDPOINTS.REGISTRY_SYNC}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(request),
         },
-        body: JSON.stringify(request),
-      });
+      );
 
       if (response.ok) {
         this.syncedWorkspaces.delete(workspaceId);
-        console.log(`[OtelEventsManagerBridge] Workspace removed: ${workspaceId}`);
+        console.log(
+          `[OtelEventsManagerBridge] Workspace removed: ${workspaceId}`,
+        );
       }
     } catch (err) {
       if (!app.isPackaged) {
@@ -327,7 +347,9 @@ export class OtelEventsManagerBridge {
    */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
-    console.log(`[OtelEventsManagerBridge] ${enabled ? 'Enabled' : 'Disabled'}`);
+    console.log(
+      `[OtelEventsManagerBridge] ${enabled ? 'Enabled' : 'Disabled'}`,
+    );
   }
 
   /**

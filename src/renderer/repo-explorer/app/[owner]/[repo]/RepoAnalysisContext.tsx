@@ -121,7 +121,12 @@ interface RepoAnalysisContextValue {
   selectedEmails: string[];
   setSelectedEmails: (emails: string[] | null) => void;
   /** Contributors sorted by lines owned (desc), with a per-author line total. */
-  contributors: Array<{ name: string; email: string; commits: number; lines: number }>;
+  contributors: Array<{
+    name: string;
+    email: string;
+    commits: number;
+    lines: number;
+  }>;
   /** Highlight layers for the selected contributor, or null when none picked. */
   contributionLayers: HighlightLayer[] | null;
   /** True while the paginated /ownership fetch is in flight. */
@@ -130,7 +135,9 @@ interface RepoAnalysisContextValue {
   contributorsLoading: boolean;
 }
 
-const RepoAnalysisContext = createContext<RepoAnalysisContextValue | null>(null);
+const RepoAnalysisContext = createContext<RepoAnalysisContextValue | null>(
+  null,
+);
 
 export function RepoAnalysisProvider({
   owner,
@@ -186,7 +193,10 @@ export function RepoAnalysisProvider({
   // Shared by `run` (after firing the POST) and the mount effect (resuming a run
   // that was already in flight when the page loaded).
   const pollUntilComplete = useCallback(
-    async (baselineGeneratedAt: string | null, baselineErrorAt: string | null) => {
+    async (
+      baselineGeneratedAt: string | null,
+      baselineErrorAt: string | null,
+    ) => {
       const myEpoch = epochRef.current;
       // Sized for a large repo's cold clone + full blame sweep (e.g. opencode
       // ≈ 11 min); matches the server's `inProgress` window.
@@ -206,7 +216,9 @@ export function RepoAnalysisProvider({
           lastError?: RepoAnalysisMeta['lastError'];
         };
         try {
-          const res = await unsupportedAnalysisFetch(`/api/repo-analysis/${owner}/${repo}`);
+          const res = await unsupportedAnalysisFetch(
+            `/api/repo-analysis/${owner}/${repo}`,
+          );
           if (!res.ok) continue; // transient (e.g. a momentary 5xx) — keep polling
           data = await res.json();
         } catch {
@@ -222,10 +234,17 @@ export function RepoAnalysisProvider({
             stale: Boolean(data.stale),
             lastError: data.lastError,
           });
-          setState({ kind: 'error', message: data.lastError.message || 'Analysis failed' });
+          setState({
+            kind: 'error',
+            message: data.lastError.message || 'Analysis failed',
+          });
           return;
         }
-        if (data.cached && data.generatedAt && data.generatedAt !== baselineGeneratedAt) {
+        if (
+          data.cached &&
+          data.generatedAt &&
+          data.generatedAt !== baselineGeneratedAt
+        ) {
           applyResult(data as RepoAnalysisPayload);
           return;
         }
@@ -238,7 +257,7 @@ export function RepoAnalysisProvider({
           'Analysis is taking longer than expected. It may still be running — refresh in a minute.',
       });
     },
-    [owner, repo, applyResult]
+    [owner, repo, applyResult],
   );
 
   // Kick off a refresh and reflect its outcome, WITHOUT depending on the POST's
@@ -258,9 +277,12 @@ export function RepoAnalysisProvider({
     setState({ kind: 'running' });
 
     try {
-      const res = await unsupportedAnalysisFetch(`/api/repo-analysis/${owner}/${repo}`, {
-        method: 'POST',
-      });
+      const res = await unsupportedAnalysisFetch(
+        `/api/repo-analysis/${owner}/${repo}`,
+        {
+          method: 'POST',
+        },
+      );
       const text = await res.text();
       if (res.status === 200 && text) {
         // Fast path: a completed analysis returned inline. (The normal path is a
@@ -303,7 +325,9 @@ export function RepoAnalysisProvider({
 
     (async () => {
       try {
-        const res = await unsupportedAnalysisFetch(`/api/repo-analysis/${owner}/${repo}`);
+        const res = await unsupportedAnalysisFetch(
+          `/api/repo-analysis/${owner}/${repo}`,
+        );
         if (cancelled) return;
         const data = await res.json();
         if (cancelled || !res.ok) return;
@@ -327,7 +351,7 @@ export function RepoAnalysisProvider({
           setState({ kind: 'running' });
           void pollUntilComplete(
             data.cached ? (data.generatedAt ?? null) : null,
-            data.lastError?.failedAt ?? null
+            data.lastError?.failedAt ?? null,
           );
         } else if (!data.lastError && (!data.cached || data.stale)) {
           // Auto-build on load: either this repo has never been analyzed, or its
@@ -405,8 +429,13 @@ export function RepoAnalysisProvider({
       return;
     }
     const analysisSha = analysis.sha;
-    let cursor = analysis.contributorsNextCursor ?? analysis.precomputedContributors?.length ?? 0;
-    const seen = new Set((analysis.precomputedContributors ?? []).map((c) => c.key));
+    let cursor =
+      analysis.contributorsNextCursor ??
+      analysis.precomputedContributors?.length ??
+      0;
+    const seen = new Set(
+      (analysis.precomputedContributors ?? []).map((c) => c.key),
+    );
     let cancelled = false;
     setContributorsLoading(true);
     const fetchContributors = async () => {
@@ -469,9 +498,7 @@ export function RepoAnalysisProvider({
   }, []);
 
   const setSelectedEmails = useCallback((emails: string[] | null) => {
-    setSelectedEmailsRaw(
-      emails ? emails.map((e) => e.toLowerCase()) : [],
-    );
+    setSelectedEmailsRaw(emails ? emails.map((e) => e.toLowerCase()) : []);
   }, []);
   const setSelectedEmail = useCallback(
     (email: string | null) => setSelectedEmails(email ? [email] : null),
@@ -505,9 +532,10 @@ export function RepoAnalysisProvider({
     // Hydrate with eagerly-loaded personOwnership so highlight layers
     // resolve even though the main API response strips it for payload size.
     // totalLines is also stripped — layer builder falls back to absolute intensity.
-    const hydrated = Object.keys(personOwnershipRef.current).length > 0
-      ? { ...analysis, personOwnership: personOwnershipRef.current }
-      : analysis;
+    const hydrated =
+      Object.keys(personOwnershipRef.current).length > 0
+        ? { ...analysis, personOwnership: personOwnershipRef.current }
+        : analysis;
     const layers = buildMergedContributionLayers(hydrated, selectedEmails);
     return layers.length > 0 ? layers : null;
     // selectedEmailsKey stands in for the array identity.
@@ -531,7 +559,21 @@ export function RepoAnalysisProvider({
       contributorsLoading,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [analysis, state, meta, run, clear, selectedEmail, setSelectedEmail, selectedEmailsKey, setSelectedEmails, contributors, contributionLayers, ownershipLoading, contributorsLoading],
+    [
+      analysis,
+      state,
+      meta,
+      run,
+      clear,
+      selectedEmail,
+      setSelectedEmail,
+      selectedEmailsKey,
+      setSelectedEmails,
+      contributors,
+      contributionLayers,
+      ownershipLoading,
+      contributorsLoading,
+    ],
   );
 
   return (
@@ -544,7 +586,9 @@ export function RepoAnalysisProvider({
 export function useRepoAnalysis(): RepoAnalysisContextValue {
   const ctx = useContext(RepoAnalysisContext);
   if (!ctx) {
-    throw new Error('useRepoAnalysis must be used within a RepoAnalysisProvider');
+    throw new Error(
+      'useRepoAnalysis must be used within a RepoAnalysisProvider',
+    );
   }
   return ctx;
 }

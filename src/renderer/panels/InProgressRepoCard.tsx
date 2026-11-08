@@ -9,7 +9,13 @@
  * commits) rather than opening a modal.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   ArrowDown,
@@ -50,11 +56,7 @@ function diffBarWidthPct(lines: number): number {
 }
 
 export type InProgressFileStatus =
-  | 'added'
-  | 'modified'
-  | 'deleted'
-  | 'renamed'
-  | 'untracked';
+  'added' | 'modified' | 'deleted' | 'renamed' | 'untracked';
 
 export interface InProgressChangedFile {
   path: string;
@@ -126,7 +128,10 @@ function formatRelativeTime(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const statusToHighlight: Record<InProgressFileStatus, 'added' | 'modified' | 'removed'> = {
+const statusToHighlight: Record<
+  InProgressFileStatus,
+  'added' | 'modified' | 'removed'
+> = {
   added: 'added',
   untracked: 'added',
   modified: 'modified',
@@ -235,7 +240,9 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
   );
   const [aheadCommits, setAheadCommits] = useState<InProgressAheadCommit[]>([]);
   const [aheadCommitsLoaded, setAheadCommitsLoaded] = useState(false);
-  const [behindCommits, setBehindCommits] = useState<InProgressAheadCommit[]>([]);
+  const [behindCommits, setBehindCommits] = useState<InProgressAheadCommit[]>(
+    [],
+  );
   const [behindCommitsLoaded, setBehindCommitsLoaded] = useState(false);
   // Changed-files overlay view: file tree (default) or a flat list.
   const [changesView, setChangesView] = useState<'list' | 'tree'>('tree');
@@ -335,7 +342,10 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
       })
       .catch((err) => {
         if (cancelled) return;
-        console.warn(`[InProgressRepoCard] Failed to build city for ${summary.repoName}:`, err);
+        console.warn(
+          `[InProgressRepoCard] Failed to build city for ${summary.repoName}:`,
+          err,
+        );
         setCityData(null);
       })
       .finally(() => {
@@ -356,7 +366,10 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
         if (!cancelled) setChangedFiles(files);
       })
       .catch((err) => {
-        console.warn(`[InProgressRepoCard] Failed to fetch working changes:`, err);
+        console.warn(
+          `[InProgressRepoCard] Failed to fetch working changes:`,
+          err,
+        );
         if (!cancelled) setChangedFiles([]);
       });
 
@@ -377,7 +390,10 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
         setAheadCommitsLoaded(true);
       })
       .catch((err) => {
-        console.warn(`[InProgressRepoCard] Failed to fetch ahead commits:`, err);
+        console.warn(
+          `[InProgressRepoCard] Failed to fetch ahead commits:`,
+          err,
+        );
         if (cancelled) return;
         setAheadCommits([]);
         setAheadCommitsLoaded(true);
@@ -398,7 +414,10 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
         setBehindCommitsLoaded(true);
       })
       .catch((err) => {
-        console.warn(`[InProgressRepoCard] Failed to fetch behind commits:`, err);
+        console.warn(
+          `[InProgressRepoCard] Failed to fetch behind commits:`,
+          err,
+        );
         if (cancelled) return;
         setBehindCommits([]);
         setBehindCommitsLoaded(true);
@@ -576,7 +595,10 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
         setPushError(result.message || 'Push failed');
       }
     } catch (err) {
-      console.warn(`[InProgressRepoCard] Failed to push ${summary.repoName}:`, err);
+      console.warn(
+        `[InProgressRepoCard] Failed to push ${summary.repoName}:`,
+        err,
+      );
       setPushError(err instanceof Error ? err.message : 'Push failed');
     } finally {
       setPushing(false);
@@ -585,8 +607,10 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
 
   const totalLines = totals.additions + totals.deletions;
   const budget = diffBarWidthPct(totalLines);
-  const addedWidth = totalLines > 0 ? (totals.additions / totalLines) * budget : 0;
-  const removedWidth = totalLines > 0 ? (totals.deletions / totalLines) * budget : 0;
+  const addedWidth =
+    totalLines > 0 ? (totals.additions / totalLines) * budget : 0;
+  const removedWidth =
+    totalLines > 0 ? (totals.deletions / totalLines) * budget : 0;
 
   return (
     <div
@@ -671,33 +695,33 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
               gap: 0,
             }}
           >
-              <h4
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenProfile();
-                }}
-                onMouseEnter={() => setNameHovered(true)}
-                onMouseLeave={() => setNameHovered(false)}
-                style={{
-                  margin: 0,
-                  minWidth: 0,
-                  fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
-                  fontSize: theme.fontSizes[2],
-                  fontWeight: theme.fontWeights.semibold,
-                  lineHeight: '20px',
-                  color:
-                    nameClickable && nameHovered
-                      ? theme.colors.primary
-                      : theme.colors.text,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  cursor: nameClickable ? 'pointer' : 'default',
-                  transition: 'color 0.15s ease',
-                }}
-              >
-                {summary.repoName}
-              </h4>
+            <h4
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenProfile();
+              }}
+              onMouseEnter={() => setNameHovered(true)}
+              onMouseLeave={() => setNameHovered(false)}
+              style={{
+                margin: 0,
+                minWidth: 0,
+                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.semibold,
+                lineHeight: '20px',
+                color:
+                  nameClickable && nameHovered
+                    ? theme.colors.primary
+                    : theme.colors.text,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                cursor: nameClickable ? 'pointer' : 'default',
+                transition: 'color 0.15s ease',
+              }}
+            >
+              {summary.repoName}
+            </h4>
 
             <div
               style={{
@@ -716,7 +740,9 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                   type="button"
                   onClick={() =>
                     branchTarget &&
-                    setOverlay((o) => (o === branchTarget ? null : branchTarget))
+                    setOverlay((o) =>
+                      o === branchTarget ? null : branchTarget,
+                    )
                   }
                   onMouseEnter={() => setMetaHovered('branch')}
                   onMouseLeave={() => setMetaHovered(null)}
@@ -809,7 +835,9 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
                   synced with remote
                 </span>
               )}
-              {summary.lastEditAt && <span>{formatRelativeTime(summary.lastEditAt)}</span>}
+              {summary.lastEditAt && (
+                <span>{formatRelativeTime(summary.lastEditAt)}</span>
+              )}
             </div>
           </div>
 
@@ -818,7 +846,10 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
               tall
               variant="primary"
               disabled={pushing}
-              title={pushError ?? `Push ${aheadCount} commit${aheadCount !== 1 ? 's' : ''} to remote`}
+              title={
+                pushError ??
+                `Push ${aheadCount} commit${aheadCount !== 1 ? 's' : ''} to remote`
+              }
               onClick={handlePush}
             >
               {pushing ? 'Pushing…' : 'Push'}
@@ -960,47 +991,56 @@ export const InProgressRepoCard: React.FC<InProgressRepoCardProps> = ({
           onMouseLeave={() => setMapPointerInside(false)}
         >
           {cityLoading ? (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: spacing.sm,
-              color: theme.colors.textMuted,
-            }}
-          >
-            <FolderGit2 size={32} style={{ opacity: 0.5 }} />
-            <span style={{ fontSize: theme.fontSizes[0] }}>Loading...</span>
-          </div>
-        ) : cityData ? (
-          <ArchitectureMapHighlightLayers
-            cityData={cityData}
-            highlightLayers={mapHighlightLayers}
-            onHoverInfo={handleMapHover}
-            onBuildingClick={(building) => handleMapFileClick(building.path, 'file')}
-            fullSize
-            showFileNames={false}
-            canvasBackgroundColor={theme.colors.background}
-            maxCanvasSize={1024}
-          />
-        ) : (
-          <FolderGit2 size={48} color={theme.colors.textMuted} style={{ opacity: 0.3 }} />
-        )}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: spacing.sm,
+                color: theme.colors.textMuted,
+              }}
+            >
+              <FolderGit2 size={32} style={{ opacity: 0.5 }} />
+              <span style={{ fontSize: theme.fontSizes[0] }}>Loading...</span>
+            </div>
+          ) : cityData ? (
+            <ArchitectureMapHighlightLayers
+              cityData={cityData}
+              highlightLayers={mapHighlightLayers}
+              onHoverInfo={handleMapHover}
+              onBuildingClick={(building) =>
+                handleMapFileClick(building.path, 'file')
+              }
+              fullSize
+              showFileNames={false}
+              canvasBackgroundColor={theme.colors.background}
+              maxCanvasSize={1024}
+            />
+          ) : (
+            <FolderGit2
+              size={48}
+              color={theme.colors.textMuted}
+              style={{ opacity: 0.3 }}
+            />
+          )}
 
-        {showSearchList && searchMatches.length > 0 && (
-          <MapSearchList
-            matches={searchMatches}
-            rootPath={summary.repoPath}
-            onOpen={emitOpenFile}
-          />
-        )}
+          {showSearchList && searchMatches.length > 0 && (
+            <MapSearchList
+              matches={searchMatches}
+              rootPath={summary.repoPath}
+              onOpen={emitOpenFile}
+            />
+          )}
         </div>
 
         {overlay === 'changes' && (
           <CardOverlay
             title={`${totals.fileCount} changed file${totals.fileCount !== 1 ? 's' : ''}`}
             headerRight={
-              <ChangesViewSwitch value={changesView} onChange={setChangesView} />
+              <ChangesViewSwitch
+                value={changesView}
+                onChange={setChangesView}
+              />
             }
           >
             {changesView === 'tree' ? (
@@ -1571,7 +1611,13 @@ function CommitList({
 }
 
 /** Commit author avatar — the resolved GitHub image, else a colored initials badge. */
-function CommitAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string }) {
+function CommitAvatar({
+  name,
+  avatarUrl,
+}: {
+  name: string;
+  avatarUrl?: string;
+}) {
   if (avatarUrl) {
     return (
       <img

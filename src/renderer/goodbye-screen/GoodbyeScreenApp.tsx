@@ -24,7 +24,9 @@ const ANIMATION_DURATION = 2500;
 export const GoodbyeScreenApp: React.FC = () => {
   const { theme } = useTheme();
   const [data, setData] = useState<GoodbyeScreenData | null>(null);
-  const [animationPhase, setAnimationPhase] = useState<'enter' | 'display' | 'exit'>('enter');
+  const [animationPhase, setAnimationPhase] = useState<
+    'enter' | 'display' | 'exit'
+  >('enter');
 
   // Handle animation completion
   const onAnimationComplete = useCallback(() => {

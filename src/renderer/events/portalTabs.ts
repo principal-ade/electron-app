@@ -258,7 +258,9 @@ export type FeedTab =
  * Whitespace-only counts as unset. Mirrors `customTabLabel` in
  * `@industry-theme/xterm-terminal-panel`.
  */
-export function customTabLabel(tab: { customLabel?: string }): string | undefined {
+export function customTabLabel(tab: {
+  customLabel?: string;
+}): string | undefined {
   const trimmed = tab.customLabel?.trim();
   return trimmed ? trimmed : undefined;
 }

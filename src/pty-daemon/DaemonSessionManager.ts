@@ -97,13 +97,10 @@ export class DaemonSessionManager extends EventEmitter {
       // Determine shell to use
       const shellPath = shell || this.getDefaultShell();
 
-      // Merge environment. The daemon inherits the Electron main process env,
-      // which in development carries NODE_OPTIONS="-r ts-node/register" and
-      // TS_NODE_PROJECT=tsconfig.node.json. Those would be re-added on top of
-      // the client's cleaned env and break `node`/`npm` runs in the shell, so
-      // strip them again here.
+      // The client sends the environment intended for the shell. Do not merge
+      // the daemon's own process.env here: it contains Electron/runtime values
+      // (and may contain credentials) that must not leak into user commands.
       const ptyEnv = stripTsNodeEnv({
-        ...process.env,
         ...env,
         TERM: TERM_TYPE,
       });

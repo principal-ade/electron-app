@@ -62,8 +62,13 @@ export function useSkillsPendingChanges(): UseSkillsPendingChangesReturn {
         setPendingChanges(changesMap);
       }
     } catch (err) {
-      console.error('[useSkillsPendingChanges] Error loading pending changes:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load pending changes');
+      console.error(
+        '[useSkillsPendingChanges] Error loading pending changes:',
+        err,
+      );
+      setError(
+        err instanceof Error ? err.message : 'Failed to load pending changes',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -76,16 +81,17 @@ export function useSkillsPendingChanges(): UseSkillsPendingChangesReturn {
 
   // Listen for pending changes updates from main process
   useEffect(() => {
-    const handlePendingChangesUpdated = (
-      event: {
-        directoryId: string;
-        changes: {
-          changes: Array<{ path: string; type: string }>;
-          lastDetected: Date;
-        };
-      },
-    ) => {
-      console.info('[useSkillsPendingChanges] Received pending changes update:', event);
+    const handlePendingChangesUpdated = (event: {
+      directoryId: string;
+      changes: {
+        changes: Array<{ path: string; type: string }>;
+        lastDetected: Date;
+      };
+    }) => {
+      console.info(
+        '[useSkillsPendingChanges] Received pending changes update:',
+        event,
+      );
 
       setPendingChanges((prev) => {
         const next = new Map(prev);
@@ -99,7 +105,9 @@ export function useSkillsPendingChanges(): UseSkillsPendingChangesReturn {
     };
 
     // Subscribe to pending changes updates
-    const unsubscribe = FileSystemService.onPendingChangesUpdated(handlePendingChangesUpdated);
+    const unsubscribe = FileSystemService.onPendingChangesUpdated(
+      handlePendingChangesUpdated,
+    );
 
     return () => {
       unsubscribe();
@@ -125,8 +133,15 @@ export function useSkillsPendingChanges(): UseSkillsPendingChangesReturn {
 
         return false;
       } catch (err) {
-        console.error('[useSkillsPendingChanges] Error clearing pending changes:', err);
-        setError(err instanceof Error ? err.message : 'Failed to clear pending changes');
+        console.error(
+          '[useSkillsPendingChanges] Error clearing pending changes:',
+          err,
+        );
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to clear pending changes',
+        );
         return false;
       }
     },

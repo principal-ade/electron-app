@@ -66,7 +66,12 @@ export const presenceAPI: PresenceAPI = {
     ipcRenderer.invoke(PresenceEvent.REPORT_ACTIVE_REPO, owner, repo),
 
   reportRepositoryStatus: (owner, repo, gitStatus) =>
-    ipcRenderer.invoke(PresenceEvent.REPORT_REPO_STATUS, owner, repo, gitStatus),
+    ipcRenderer.invoke(
+      PresenceEvent.REPORT_REPO_STATUS,
+      owner,
+      repo,
+      gitStatus,
+    ),
 
   updateStatus: (status, message) =>
     ipcRenderer.invoke(PresenceEvent.UPDATE_STATUS, status, message),

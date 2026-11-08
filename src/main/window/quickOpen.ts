@@ -227,7 +227,6 @@ class QuickOpen {
         localPath: getRepositoryLocalPath(id),
       }));
 
-
       // Load registered repositories from Alexandria.
       const {
         AlexandriaRegistryService,
@@ -294,9 +293,7 @@ class QuickOpen {
         return bTime - aTime;
       });
 
-      log.info(
-        `[Quick Open] Loaded ${items.length} repositories`,
-      );
+      log.info(`[Quick Open] Loaded ${items.length} repositories`);
 
       // Send items to renderer
       if (this.quickOpenWindow && !this.quickOpenWindow.isDestroyed()) {

@@ -45,9 +45,9 @@ describe('parseGitRemoteUrl', () => {
 
   describe('ssh:// URLs', () => {
     it('parses ssh://git@host/owner/repo.git', () => {
-      expect(
-        parseGitRemoteUrl('ssh://git@github.com/acme/widget.git'),
-      ).toEqual({ owner: 'acme', repo: 'widget', host: 'github.com' });
+      expect(parseGitRemoteUrl('ssh://git@github.com/acme/widget.git')).toEqual(
+        { owner: 'acme', repo: 'widget', host: 'github.com' },
+      );
     });
 
     it('tolerates a port', () => {

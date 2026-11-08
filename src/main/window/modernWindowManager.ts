@@ -72,7 +72,8 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     const constructorSpan = tracer.startSpan('window.constructor', {
       attributes: {
         'window.type': windowType,
-        'window.primaryType': metadata?.primaryType ?? PrimaryWindowType.UNKNOWN,
+        'window.primaryType':
+          metadata?.primaryType ?? PrimaryWindowType.UNKNOWN,
         'window.displayName': metadata?.displayName ?? 'Untitled Window',
       },
     });
@@ -230,7 +231,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
             );
           });
       }
-
     });
   }
 
@@ -676,7 +676,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         const win = BrowserWindow.fromWebContents(event.sender);
         return win ? win.isMaximized() : false;
       });
-
     }
 
     // Always set up window-specific maximize state change listeners

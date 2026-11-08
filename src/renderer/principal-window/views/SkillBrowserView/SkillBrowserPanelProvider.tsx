@@ -40,7 +40,8 @@ interface SkillBrowserPanelProviderProps {
 }
 
 // Create context
-const SkillBrowserPanelContext = React.createContext<SkillBrowserPanelProviderValue | null>(null);
+const SkillBrowserPanelContext =
+  React.createContext<SkillBrowserPanelProviderValue | null>(null);
 
 /**
  * Simplified panel provider for the Skill Browser view
@@ -54,14 +55,18 @@ export const SkillBrowserPanelProvider: React.FC<
   const [globalSkillsLoading, setGlobalSkillsLoading] = useState(false);
 
   // Track installed skills for LocalSkillsFileSystemAdapter
-  const [installedSkills, setInstalledSkills] = useState<Array<{ path: string; name: string; source: string }>>([]);
+  const [installedSkills, setInstalledSkills] = useState<
+    Array<{ path: string; name: string; source: string }>
+  >([]);
 
   // Track file tree from GitHub
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, _setFileTreeLoading] = useState(false);
 
   // Track GitHub repository info
-  const [githubRepoInfo, setGithubRepoInfo] = useState<GitHubRepoInfo | null>(null);
+  const [githubRepoInfo, setGithubRepoInfo] = useState<GitHubRepoInfo | null>(
+    null,
+  );
 
   // Create GitHub file system adapter
   const githubAdapter = useMemo(() => {
@@ -89,10 +94,16 @@ export const SkillBrowserPanelProvider: React.FC<
       setGlobalSkillsLoading(true);
       try {
         const skills = await FileSystemService.getGlobalSkills();
-        console.info('[SkillBrowserPanelProvider] Fetched global skills:', skills.length);
+        console.info(
+          '[SkillBrowserPanelProvider] Fetched global skills:',
+          skills.length,
+        );
         setGlobalSkillsData(skills);
       } catch (error) {
-        console.error('[SkillBrowserPanelProvider] Failed to fetch global skills:', error);
+        console.error(
+          '[SkillBrowserPanelProvider] Failed to fetch global skills:',
+          error,
+        );
         setGlobalSkillsData([]);
       } finally {
         setGlobalSkillsLoading(false);
@@ -103,12 +114,16 @@ export const SkillBrowserPanelProvider: React.FC<
 
     // Listen for skill installation/uninstallation events to refresh global skills
     const unsubscribeInstalled = events.on('skill:installed', () => {
-      console.info('[SkillBrowserPanelProvider] Skill installed, refreshing global skills');
+      console.info(
+        '[SkillBrowserPanelProvider] Skill installed, refreshing global skills',
+      );
       fetchGlobalSkills();
     });
 
     const unsubscribeUninstalled = events.on('skill:uninstalled', () => {
-      console.info('[SkillBrowserPanelProvider] Skill uninstalled, refreshing global skills');
+      console.info(
+        '[SkillBrowserPanelProvider] Skill uninstalled, refreshing global skills',
+      );
       fetchGlobalSkills();
     });
 
@@ -124,11 +139,17 @@ export const SkillBrowserPanelProvider: React.FC<
       try {
         const result = await FileSystemService.getAllLocalSkills();
         if (result && result.skills) {
-          console.info('[SkillBrowserPanelProvider] Fetched installed skills:', result.skills.length);
+          console.info(
+            '[SkillBrowserPanelProvider] Fetched installed skills:',
+            result.skills.length,
+          );
           setInstalledSkills(result.skills);
         }
       } catch (error) {
-        console.error('[SkillBrowserPanelProvider] Failed to fetch installed skills:', error);
+        console.error(
+          '[SkillBrowserPanelProvider] Failed to fetch installed skills:',
+          error,
+        );
         setInstalledSkills([]);
       }
     };
@@ -137,7 +158,9 @@ export const SkillBrowserPanelProvider: React.FC<
 
     // Listen for skill installation events to refresh
     const unsubscribe = events.on('skill:installed', () => {
-      console.info('[SkillBrowserPanelProvider] Skill installed, refreshing installed skills');
+      console.info(
+        '[SkillBrowserPanelProvider] Skill installed, refreshing installed skills',
+      );
       fetchInstalledSkills();
     });
 
@@ -149,7 +172,10 @@ export const SkillBrowserPanelProvider: React.FC<
     () => ({
       fileSystem: {
         readFile: async (filePath: string): Promise<string> => {
-          console.info('[SkillBrowserPanelProvider] readFile called:', filePath);
+          console.info(
+            '[SkillBrowserPanelProvider] readFile called:',
+            filePath,
+          );
 
           // If it's an absolute path (global skills), read directly
           if (filePath.startsWith('/') || filePath.startsWith('~')) {
@@ -160,23 +186,36 @@ export const SkillBrowserPanelProvider: React.FC<
               }
               return result.content;
             } catch (error) {
-              console.error('[SkillBrowserPanelProvider] Failed to read file:', error);
+              console.error(
+                '[SkillBrowserPanelProvider] Failed to read file:',
+                error,
+              );
               throw error;
             }
           }
 
           // Check if it's a virtual skill path (source/skill-name/file.md)
           // These paths don't start with / or ~ and typically have 3+ parts
-          if (!filePath.startsWith('/') && !filePath.startsWith('~') && localSkillsAdapter) {
+          if (
+            !filePath.startsWith('/') &&
+            !filePath.startsWith('~') &&
+            localSkillsAdapter
+          ) {
             const parts = filePath.split('/');
             // Virtual skill paths are: source/skill-name/file.md
             if (parts.length >= 3) {
               try {
-                console.info('[SkillBrowserPanelProvider] Reading installed skill:', filePath);
+                console.info(
+                  '[SkillBrowserPanelProvider] Reading installed skill:',
+                  filePath,
+                );
                 const content = await localSkillsAdapter.readFile(filePath);
                 return content;
               } catch (error) {
-                console.error('[SkillBrowserPanelProvider] Failed to read local skill:', error);
+                console.error(
+                  '[SkillBrowserPanelProvider] Failed to read local skill:',
+                  error,
+                );
                 // Fall through to try GitHub adapter
               }
             }
@@ -188,12 +227,17 @@ export const SkillBrowserPanelProvider: React.FC<
               const content = await githubAdapter.readFile(filePath);
               return content;
             } catch (error) {
-              console.error('[SkillBrowserPanelProvider] Failed to read GitHub file:', error);
+              console.error(
+                '[SkillBrowserPanelProvider] Failed to read GitHub file:',
+                error,
+              );
               throw error;
             }
           }
 
-          throw new Error('No suitable file system adapter available for path: ' + filePath);
+          throw new Error(
+            'No suitable file system adapter available for path: ' + filePath,
+          );
         },
         writeFile: async () => {
           throw new Error('File writing not supported in Skill Browser');
@@ -226,7 +270,10 @@ export const SkillBrowserPanelProvider: React.FC<
         setFileTreeData(tree);
       },
       setGitHubRepository: (info: GitHubRepoInfo | null) => {
-        console.info('[SkillBrowserPanelProvider] Setting GitHub repository:', info);
+        console.info(
+          '[SkillBrowserPanelProvider] Setting GitHub repository:',
+          info,
+        );
         setGithubRepoInfo(info);
       },
     }),
@@ -242,33 +289,39 @@ export const SkillBrowserPanelProvider: React.FC<
       loading: fileTreeLoading,
       error: null,
       refresh: async () => {
-        console.info('[SkillBrowserPanelProvider] fileTree refresh called (no-op)');
+        console.info(
+          '[SkillBrowserPanelProvider] fileTree refresh called (no-op)',
+        );
       },
     }),
     [fileTreeData, fileTreeLoading],
   );
 
-  const globalSkillsSlice: DataSlice<{ skills: GlobalSkill[] } | null> = useMemo(
-    () => ({
-      scope: 'workspace' as const,
-      name: 'globalSkills',
-      data: { skills: globalSkillsData },
-      loading: globalSkillsLoading,
-      error: null,
-      refresh: async () => {
-        setGlobalSkillsLoading(true);
-        try {
-          const skills = await FileSystemService.getGlobalSkills();
-          setGlobalSkillsData(skills);
-        } catch (error) {
-          console.error('[SkillBrowserPanelProvider] Failed to refresh global skills:', error);
-        } finally {
-          setGlobalSkillsLoading(false);
-        }
-      },
-    }),
-    [globalSkillsData, globalSkillsLoading],
-  );
+  const globalSkillsSlice: DataSlice<{ skills: GlobalSkill[] } | null> =
+    useMemo(
+      () => ({
+        scope: 'workspace' as const,
+        name: 'globalSkills',
+        data: { skills: globalSkillsData },
+        loading: globalSkillsLoading,
+        error: null,
+        refresh: async () => {
+          setGlobalSkillsLoading(true);
+          try {
+            const skills = await FileSystemService.getGlobalSkills();
+            setGlobalSkillsData(skills);
+          } catch (error) {
+            console.error(
+              '[SkillBrowserPanelProvider] Failed to refresh global skills:',
+              error,
+            );
+          } finally {
+            setGlobalSkillsLoading(false);
+          }
+        },
+      }),
+      [globalSkillsData, globalSkillsLoading],
+    );
 
   // Create context value
   const context = useMemo(
@@ -278,31 +331,43 @@ export const SkillBrowserPanelProvider: React.FC<
       globalSkills: globalSkillsSlice,
       // Repository-like properties for compatibility with skills panels
       // Use owner/repo as the path when browsing GitHub
-      repositoryPath: githubRepoInfo ? `${githubRepoInfo.owner}/${githubRepoInfo.repo}` : null,
-      repository: githubRepoInfo ? {
-        path: `${githubRepoInfo.owner}/${githubRepoInfo.repo}`,
-        name: githubRepoInfo.repo,
-        owner: githubRepoInfo.owner,
-        branch: githubRepoInfo.branch,
-      } : null,
+      repositoryPath: githubRepoInfo
+        ? `${githubRepoInfo.owner}/${githubRepoInfo.repo}`
+        : null,
+      repository: githubRepoInfo
+        ? {
+            path: `${githubRepoInfo.owner}/${githubRepoInfo.repo}`,
+            name: githubRepoInfo.repo,
+            owner: githubRepoInfo.owner,
+            branch: githubRepoInfo.branch,
+          }
+        : null,
       loading: globalSkillsLoading || fileTreeLoading,
 
       // PanelContextValue properties
       currentScope: {
-        type: githubRepoInfo ? 'repository' as const : 'workspace' as const,
+        type: githubRepoInfo ? ('repository' as const) : ('workspace' as const),
         workspace: undefined,
-        repository: githubRepoInfo ? {
-          path: `${githubRepoInfo.owner}/${githubRepoInfo.repo}`,
-          name: githubRepoInfo.repo,
-        } : undefined,
+        repository: githubRepoInfo
+          ? {
+              path: `${githubRepoInfo.owner}/${githubRepoInfo.repo}`,
+              name: githubRepoInfo.repo,
+            }
+          : undefined,
       },
       slices,
       adapters,
-      isSliceLoading: (_name: string, _scope?: 'workspace' | 'repository'): boolean => {
+      isSliceLoading: (
+        _name: string,
+        _scope?: 'workspace' | 'repository',
+      ): boolean => {
         // Use typed slice properties directly (context.fileTree.loading, context.globalSkills.loading)
         return false;
       },
-      refresh: async (_scope?: 'workspace' | 'repository', sliceName?: string): Promise<void> => {
+      refresh: async (
+        _scope?: 'workspace' | 'repository',
+        sliceName?: string,
+      ): Promise<void> => {
         // Refresh specific slices based on name
         if (!sliceName || sliceName === 'globalSkills') {
           await globalSkillsSlice.refresh();
@@ -312,7 +377,15 @@ export const SkillBrowserPanelProvider: React.FC<
         }
       },
     }),
-    [slices, adapters, githubRepoInfo, fileTreeSlice, globalSkillsSlice, globalSkillsLoading, fileTreeLoading],
+    [
+      slices,
+      adapters,
+      githubRepoInfo,
+      fileTreeSlice,
+      globalSkillsSlice,
+      globalSkillsLoading,
+      fileTreeLoading,
+    ],
   );
 
   // Provider value
@@ -333,10 +406,13 @@ export const SkillBrowserPanelProvider: React.FC<
 };
 
 // Hook to use the context
-export const useSkillBrowserPanelProvider = (): SkillBrowserPanelProviderValue => {
-  const context = React.useContext(SkillBrowserPanelContext);
-  if (!context) {
-    throw new Error('useSkillBrowserPanelProvider must be used within SkillBrowserPanelProvider');
-  }
-  return context;
-};
+export const useSkillBrowserPanelProvider =
+  (): SkillBrowserPanelProviderValue => {
+    const context = React.useContext(SkillBrowserPanelContext);
+    if (!context) {
+      throw new Error(
+        'useSkillBrowserPanelProvider must be used within SkillBrowserPanelProvider',
+      );
+    }
+    return context;
+  };

@@ -150,7 +150,6 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
 
         <span style={{ flex: 1 }} />
 
-
         <span
           style={{
             flexShrink: 0,

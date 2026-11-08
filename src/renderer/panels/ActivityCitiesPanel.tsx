@@ -13,7 +13,8 @@ import { usePrincipalEvents } from '../principal-window/PrincipalEventContext';
 export const ActivityCitiesPanel: React.FC = () => {
   const { theme } = useTheme();
   const { events: principalEvents } = usePrincipalEvents();
-  const { repositories, onlineCount, loading, error, isAuthenticated } = useActivityCities();
+  const { repositories, onlineCount, loading, error, isAuthenticated } =
+    useActivityCities();
 
   // Navigate to Auth view
   const handleSignIn = useCallback(() => {
@@ -137,7 +138,8 @@ export const ActivityCitiesPanel: React.FC = () => {
         <div style={emptyStateStyle}>
           <div>No active repositories</div>
           <div style={{ fontSize: theme.fontSizes[0], opacity: 0.7 }}>
-            When users are online and working on repositories, their cities will appear here.
+            When users are online and working on repositories, their cities will
+            appear here.
           </div>
         </div>
       );
@@ -165,7 +167,8 @@ export const ActivityCitiesPanel: React.FC = () => {
         <div style={emptyStateStyle}>
           <div>No accessible repositories</div>
           <div style={{ fontSize: theme.fontSizes[0], opacity: 0.7 }}>
-            When users are online and working on repositories you have access to, their cities will appear here.
+            When users are online and working on repositories you have access
+            to, their cities will appear here.
           </div>
         </div>
       );

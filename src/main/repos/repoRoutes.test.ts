@@ -34,7 +34,8 @@ function setup(options: SetupOptions = {}) {
       options.getRepositoryByPath ?? (async () => null),
     ),
     registerRepository: jest.fn(
-      options.registerRepository ?? (async (repoPath: string) => entry(repoPath)),
+      options.registerRepository ??
+        (async (repoPath: string) => entry(repoPath)),
     ),
     removeRepository: jest.fn(),
   };
@@ -253,7 +254,9 @@ test('rejects a batch above the limit', async () => {
 test('explains how to fix a missing base directory', async () => {
   const { res, payload, deps } = await clone(
     { repos: ['acme/web'] },
-    { deps: { getBaseDefaultDirectory: jest.fn().mockResolvedValue(undefined) } },
+    {
+      deps: { getBaseDefaultDirectory: jest.fn().mockResolvedValue(undefined) },
+    },
   );
 
   expect(res.status).toHaveBeenCalledWith(400);
@@ -283,7 +286,11 @@ describe('DELETE /api/repos', () => {
       ...options.deps,
     };
     registerRepoRoutes(
-      { get: jest.fn(), post: jest.fn(), delete: deleteFn } as unknown as Application,
+      {
+        get: jest.fn(),
+        post: jest.fn(),
+        delete: deleteFn,
+      } as unknown as Application,
       registry as unknown as AlexandriaRegistryService,
       deps,
     );

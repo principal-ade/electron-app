@@ -19,4 +19,8 @@ export {
   GlobalSkillsPanel,
   AgenticResourcesPanel,
 } from './agent-panels';
-export type { Skill, SkillDetailPanelProps, GlobalSkillsPanelProps } from './agent-panels';
+export type {
+  Skill,
+  SkillDetailPanelProps,
+  GlobalSkillsPanelProps,
+} from './agent-panels';

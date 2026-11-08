@@ -18,14 +18,24 @@ interface PendingChangesPanelProps {
   onClose?: () => void;
 }
 
-export const PendingChangesPanel: React.FC<PendingChangesPanelProps> = ({ onClose }) => {
+export const PendingChangesPanel: React.FC<PendingChangesPanelProps> = ({
+  onClose,
+}) => {
   const { theme } = useTheme();
-  const { pendingChanges, hasPendingChanges, totalPendingCount, clearPendingChanges } =
-    useSkillsPendingChanges();
+  const {
+    pendingChanges,
+    hasPendingChanges,
+    totalPendingCount,
+    clearPendingChanges,
+  } = useSkillsPendingChanges();
   const { config } = useSkillsSync();
 
-  const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set());
-  const [selectedChanges, setSelectedChanges] = useState<Map<string, Set<string>>>(new Map());
+  const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(
+    new Set(),
+  );
+  const [selectedChanges, setSelectedChanges] = useState<
+    Map<string, Set<string>>
+  >(new Map());
 
   // Toggle directory expansion
   const toggleDirectory = (directoryId: string) => {
@@ -109,7 +119,12 @@ export const PendingChangesPanel: React.FC<PendingChangesPanelProps> = ({ onClos
 
     // TODO: Implement actual sync logic
     // For now, just clear the pending changes
-    console.info('[PendingChangesPanel] Syncing directory:', directoryId, 'changes:', selected);
+    console.info(
+      '[PendingChangesPanel] Syncing directory:',
+      directoryId,
+      'changes:',
+      selected,
+    );
 
     await clearPendingChanges(directoryId);
 
@@ -123,7 +138,11 @@ export const PendingChangesPanel: React.FC<PendingChangesPanelProps> = ({ onClos
 
   // Handle discard for a directory
   const handleDiscard = async (directoryId: string) => {
-    if (confirm('Are you sure you want to discard these changes? This action cannot be undone.')) {
+    if (
+      confirm(
+        'Are you sure you want to discard these changes? This action cannot be undone.',
+      )
+    ) {
       await clearPendingChanges(directoryId);
 
       // Clear selection
@@ -149,8 +168,17 @@ export const PendingChangesPanel: React.FC<PendingChangesPanelProps> = ({ onClos
           color: theme.colors.textSecondary,
         }}
       >
-        <CheckCircle2 className="w-12 h-12 mx-auto mb-3" style={{ color: '#10b981' }} />
-        <p style={{ fontSize: '14px', marginBottom: '8px', color: theme.colors.text }}>
+        <CheckCircle2
+          className="w-12 h-12 mx-auto mb-3"
+          style={{ color: '#10b981' }}
+        />
+        <p
+          style={{
+            fontSize: '14px',
+            marginBottom: '8px',
+            color: theme.colors.text,
+          }}
+        >
           No Pending Changes
         </p>
         <p style={{ fontSize: '12px' }}>
@@ -166,7 +194,8 @@ export const PendingChangesPanel: React.FC<PendingChangesPanelProps> = ({ onClos
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        backgroundColor: theme.colors.backgroundSecondary || theme.colors.background,
+        backgroundColor:
+          theme.colors.backgroundSecondary || theme.colors.background,
       }}
     >
       {/* Header */}
@@ -177,10 +206,18 @@ export const PendingChangesPanel: React.FC<PendingChangesPanelProps> = ({ onClos
           backgroundColor: theme.colors.background,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <AlertCircle className="w-5 h-5" style={{ color: '#f59e0b' }} />
-            <h3 style={{ margin: 0, fontSize: '16px', color: theme.colors.text }}>
+            <h3
+              style={{ margin: 0, fontSize: '16px', color: theme.colors.text }}
+            >
               Pending Skills Changes
             </h3>
           </div>
@@ -197,181 +234,240 @@ export const PendingChangesPanel: React.FC<PendingChangesPanelProps> = ({ onClos
             {totalPendingCount} change{totalPendingCount !== 1 ? 's' : ''}
           </div>
         </div>
-        <p style={{ fontSize: '12px', color: theme.colors.textSecondary, margin: '8px 0 0 0' }}>
+        <p
+          style={{
+            fontSize: '12px',
+            color: theme.colors.textSecondary,
+            margin: '8px 0 0 0',
+          }}
+        >
           Review and sync changes detected in your global skills directories
         </p>
       </div>
 
       {/* Directory list */}
       <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
-        {Array.from(pendingChanges.entries()).map(([directoryId, dirChanges]) => {
-          const isExpanded = expandedDirectories.has(directoryId);
-          const dirSelection = selectedChanges.get(directoryId) || new Set();
-          const selectedCount = dirSelection.size;
+        {Array.from(pendingChanges.entries()).map(
+          ([directoryId, dirChanges]) => {
+            const isExpanded = expandedDirectories.has(directoryId);
+            const dirSelection = selectedChanges.get(directoryId) || new Set();
+            const selectedCount = dirSelection.size;
 
-          return (
-            <div
-              key={directoryId}
-              style={{
-                marginBottom: '16px',
-                borderRadius: '8px',
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.background,
-                overflow: 'hidden',
-              }}
-            >
-              {/* Directory header */}
+            return (
               <div
-                onClick={() => toggleDirectory(directoryId)}
+                key={directoryId}
                 style={{
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: isExpanded ? 'rgba(0, 0, 0, 0.05)' : 'transparent',
+                  marginBottom: '16px',
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: theme.colors.background,
+                  overflow: 'hidden',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isExpanded ? (
-                    <ChevronDown className="w-4 h-4" style={{ color: theme.colors.textSecondary }} />
-                  ) : (
-                    <ChevronRight className="w-4 h-4" style={{ color: theme.colors.textSecondary }} />
-                  )}
-                  <span style={{ fontSize: '14px', fontWeight: 500, color: theme.colors.text }}>
-                    {getDirectoryName(directoryId)}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      color: theme.colors.textSecondary,
-                      padding: '2px 8px',
-                      borderRadius: '8px',
-                      backgroundColor: theme.colors.backgroundSecondary || theme.colors.background,
-                    }}
-                  >
-                    {dirChanges.changes.length} change{dirChanges.changes.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
-                  {new Date(dirChanges.lastDetected).toLocaleTimeString()}
-                </div>
-              </div>
-
-              {/* Expanded content */}
-              {isExpanded && (
-                <div style={{ borderTop: `1px solid ${theme.colors.border}` }}>
-                  {/* Changes list */}
-                  <div style={{ padding: '8px' }}>
-                    {dirChanges.changes.map((change) => {
-                      const isSelected = dirSelection.has(change.path);
-                      const skillName = change.path.split('/').pop()?.replace('.md', '') || change.path;
-
-                      return (
-                        <div
-                          key={change.path}
-                          onClick={() => toggleChange(directoryId, change.path)}
-                          style={{
-                            padding: '8px 12px',
-                            marginBottom: '4px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            backgroundColor: isSelected
-                              ? 'rgba(0, 0, 0, 0.05)'
-                              : 'transparent',
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {}}
-                            style={{ cursor: 'pointer' }}
-                          />
-                          {getChangeIcon(change.type)}
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '13px', color: theme.colors.text }}>
-                              {skillName}
-                            </div>
-                            <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
-                              {change.path}
-                            </div>
-                          </div>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 500,
-                              color:
-                                change.type === 'added'
-                                  ? '#10b981'
-                                  : change.type === 'deleted'
-                                    ? '#ef4444'
-                                    : '#3b82f6',
-                            }}
-                          >
-                            {getChangeTypeLabel(change.type)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Action buttons */}
+                {/* Directory header */}
+                <div
+                  onClick={() => toggleDirectory(directoryId)}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: isExpanded
+                      ? 'rgba(0, 0, 0, 0.05)'
+                      : 'transparent',
+                  }}
+                >
                   <div
                     style={{
-                      padding: '12px 16px',
-                      borderTop: `1px solid ${theme.colors.border}`,
                       display: 'flex',
+                      alignItems: 'center',
                       gap: '8px',
-                      justifyContent: 'flex-end',
                     }}
                   >
-                    <button
-                      onClick={() => handleDiscard(directoryId)}
+                    {isExpanded ? (
+                      <ChevronDown
+                        className="w-4 h-4"
+                        style={{ color: theme.colors.textSecondary }}
+                      />
+                    ) : (
+                      <ChevronRight
+                        className="w-4 h-4"
+                        style={{ color: theme.colors.textSecondary }}
+                      />
+                    )}
+                    <span
                       style={{
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        border: `1px solid ${theme.colors.border}`,
-                        backgroundColor: 'transparent',
-                        color: theme.colors.textSecondary,
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <XCircle className="w-4 h-4" />
-                      Discard
-                    </button>
-                    <button
-                      onClick={() => handleSync(directoryId)}
-                      disabled={selectedCount === 0}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        backgroundColor: selectedCount > 0 ? '#3b82f6' : theme.colors.backgroundSecondary || theme.colors.background,
-                        color: selectedCount > 0 ? '#fff' : theme.colors.textSecondary,
-                        fontSize: '13px',
+                        fontSize: '14px',
                         fontWeight: 500,
-                        cursor: selectedCount > 0 ? 'pointer' : 'not-allowed',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
+                        color: theme.colors.text,
                       }}
                     >
-                      <GitCommit className="w-4 h-4" />
-                      Commit & Sync ({selectedCount})
-                    </button>
+                      {getDirectoryName(directoryId)}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        color: theme.colors.textSecondary,
+                        padding: '2px 8px',
+                        borderRadius: '8px',
+                        backgroundColor:
+                          theme.colors.backgroundSecondary ||
+                          theme.colors.background,
+                      }}
+                    >
+                      {dirChanges.changes.length} change
+                      {dirChanges.changes.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    {new Date(dirChanges.lastDetected).toLocaleTimeString()}
                   </div>
                 </div>
-              )}
-            </div>
-          );
-        })}
+
+                {/* Expanded content */}
+                {isExpanded && (
+                  <div
+                    style={{ borderTop: `1px solid ${theme.colors.border}` }}
+                  >
+                    {/* Changes list */}
+                    <div style={{ padding: '8px' }}>
+                      {dirChanges.changes.map((change) => {
+                        const isSelected = dirSelection.has(change.path);
+                        const skillName =
+                          change.path.split('/').pop()?.replace('.md', '') ||
+                          change.path;
+
+                        return (
+                          <div
+                            key={change.path}
+                            onClick={() =>
+                              toggleChange(directoryId, change.path)
+                            }
+                            style={{
+                              padding: '8px 12px',
+                              marginBottom: '4px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              backgroundColor: isSelected
+                                ? 'rgba(0, 0, 0, 0.05)'
+                                : 'transparent',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {}}
+                              style={{ cursor: 'pointer' }}
+                            />
+                            {getChangeIcon(change.type)}
+                            <div style={{ flex: 1 }}>
+                              <div
+                                style={{
+                                  fontSize: '13px',
+                                  color: theme.colors.text,
+                                }}
+                              >
+                                {skillName}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: '11px',
+                                  color: theme.colors.textSecondary,
+                                }}
+                              >
+                                {change.path}
+                              </div>
+                            </div>
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color:
+                                  change.type === 'added'
+                                    ? '#10b981'
+                                    : change.type === 'deleted'
+                                      ? '#ef4444'
+                                      : '#3b82f6',
+                              }}
+                            >
+                              {getChangeTypeLabel(change.type)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div
+                      style={{
+                        padding: '12px 16px',
+                        borderTop: `1px solid ${theme.colors.border}`,
+                        display: 'flex',
+                        gap: '8px',
+                        justifyContent: 'flex-end',
+                      }}
+                    >
+                      <button
+                        onClick={() => handleDiscard(directoryId)}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '6px',
+                          border: `1px solid ${theme.colors.border}`,
+                          backgroundColor: 'transparent',
+                          color: theme.colors.textSecondary,
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Discard
+                      </button>
+                      <button
+                        onClick={() => handleSync(directoryId)}
+                        disabled={selectedCount === 0}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor:
+                            selectedCount > 0
+                              ? '#3b82f6'
+                              : theme.colors.backgroundSecondary ||
+                                theme.colors.background,
+                          color:
+                            selectedCount > 0
+                              ? '#fff'
+                              : theme.colors.textSecondary,
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          cursor: selectedCount > 0 ? 'pointer' : 'not-allowed',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <GitCommit className="w-4 h-4" />
+                        Commit & Sync ({selectedCount})
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          },
+        )}
       </div>
 
       {/* Footer */}
@@ -385,7 +481,13 @@ export const PendingChangesPanel: React.FC<PendingChangesPanelProps> = ({ onClos
           alignItems: 'center',
         }}
       >
-        <p style={{ fontSize: '12px', color: theme.colors.textSecondary, margin: 0 }}>
+        <p
+          style={{
+            fontSize: '12px',
+            color: theme.colors.textSecondary,
+            margin: 0,
+          }}
+        >
           Changes are detected from repository monitoring
         </p>
         <button

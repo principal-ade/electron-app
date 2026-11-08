@@ -24,7 +24,9 @@ const HOME = '/Users/dev';
 
 const fileSystemService = {
   getTopLevelFolders: jest.fn().mockResolvedValue([]),
-  scanFoldersForRepos: jest.fn().mockResolvedValue({ success: true, repos: [] }),
+  scanFoldersForRepos: jest
+    .fn()
+    .mockResolvedValue({ success: true, repos: [] }),
   onRepoScanProgress: jest.fn().mockReturnValue(() => {}),
 };
 
@@ -42,7 +44,9 @@ const skillInstaller = {
   installSkills: jest.fn(),
 };
 
-function renderWizard(initialStep: 'home-directory' | 'skills' = 'home-directory') {
+function renderWizard(
+  initialStep: 'home-directory' | 'skills' = 'home-directory',
+) {
   return render(
     <OnboardingWizard
       initialStep={initialStep}
@@ -139,7 +143,7 @@ test('skills step selects every skill by default and installs them', async () =>
   const installed = skillInstaller.installSkills.mock.calls[0][0] as Array<{
     name: string;
   }>;
-  expect(installed.map(skill => skill.name).sort()).toEqual(allNames);
+  expect(installed.map((skill) => skill.name).sort()).toEqual(allNames);
 
   // Installed rows lock in: nothing left to install.
   await waitFor(() =>
@@ -181,8 +185,12 @@ test('skills step locks rows that are already installed', async () => {
   expect(installButton.disabled).toBe(false);
 
   const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
-  expect(checkboxes.every(box => (box as HTMLInputElement).checked)).toBe(true);
-  const disabledBoxes = checkboxes.filter(box => (box as HTMLInputElement).disabled);
+  expect(checkboxes.every((box) => (box as HTMLInputElement).checked)).toBe(
+    true,
+  );
+  const disabledBoxes = checkboxes.filter(
+    (box) => (box as HTMLInputElement).disabled,
+  );
   expect(disabledBoxes).toHaveLength(2);
 });
 

@@ -18,13 +18,31 @@
  * Cloned.
  */
 
-import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
+import React, {
+  useMemo,
+  useCallback,
+  useState,
+  useEffect,
+  useRef,
+} from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Eraser, FolderGit2, FolderSearch, Loader2, Lock, RefreshCw, Search, Terminal } from 'lucide-react';
+import {
+  Eraser,
+  FolderGit2,
+  FolderSearch,
+  Loader2,
+  Lock,
+  RefreshCw,
+  Search,
+  Terminal,
+} from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
-import { payloadFromGithub, payloadFromLocalEntry } from '../events/repositorySelected';
+import {
+  payloadFromGithub,
+  payloadFromLocalEntry,
+} from '../events/repositorySelected';
 import { emitTerminalNew } from '../events/portalIntents';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -146,7 +164,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   const [privateOnly, setPrivateOnly] = useState(false);
 
   // Git status map for local repositories
-  const [gitStatusMap, setGitStatusMap] = useState<Map<string, GitStatusWithFiles>>(new Map());
+  const [gitStatusMap, setGitStatusMap] = useState<
+    Map<string, GitStatusWithFiles>
+  >(new Map());
 
   // Collapsed state for org sections
   const [collapsedOrgs, setCollapsedOrgs] = useState<Set<string>>(new Set());
@@ -154,7 +174,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   // manual expand/collapse is never overridden on later re-renders.
   const defaultedOrgsRef = useRef<Set<string>>(new Set());
 
-  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
+    string | null
+  >(null);
 
   // Folder-scan flow: pick a folder, find every git repo inside, and register
   // each one with Alexandria. The registry-change event refreshes the list.
@@ -181,18 +203,24 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
 
       await Promise.all(
         repositories
-          .filter(repo => repo.path)
+          .filter((repo) => repo.path)
           .map(async (repo) => {
             if (!repo.path) return;
             try {
-              const status = await RepositoryMonitoringService.getGitStatusWithFiles(repo.path);
+              const status =
+                await RepositoryMonitoringService.getGitStatusWithFiles(
+                  repo.path,
+                );
               if (!cancelled && status) {
                 newStatusMap.set(repo.path, status);
               }
             } catch (error) {
-              console.error(`[ProjectsList] Failed to fetch git status for ${repo.path}:`, error);
+              console.error(
+                `[ProjectsList] Failed to fetch git status for ${repo.path}:`,
+                error,
+              );
             }
-          })
+          }),
       );
 
       if (!cancelled) {
@@ -209,13 +237,15 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
 
   // Subscribe to git status changes for real-time updates
   useEffect(() => {
-    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged((status) => {
-      setGitStatusMap(prev => {
-        const updated = new Map(prev);
-        updated.set(status.repoPath, status);
-        return updated;
-      });
-    });
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
+      (status) => {
+        setGitStatusMap((prev) => {
+          const updated = new Map(prev);
+          updated.set(status.repoPath, status);
+          return updated;
+        });
+      },
+    );
 
     return unsubscribe;
   }, []);
@@ -233,15 +263,23 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     void UserPreferencesService.getPreferences().then(apply);
 
     const handlePreferencesUpdated = (event: Event) => {
-      const detail = (event as CustomEvent<{ baseDefaultDirectory?: string | null }>).detail;
+      const detail = (
+        event as CustomEvent<{ baseDefaultDirectory?: string | null }>
+      ).detail;
       if (detail) apply(detail);
     };
 
-    window.addEventListener('user-preferences-updated', handlePreferencesUpdated as EventListener);
+    window.addEventListener(
+      'user-preferences-updated',
+      handlePreferencesUpdated as EventListener,
+    );
 
     return () => {
       mounted = false;
-      window.removeEventListener('user-preferences-updated', handlePreferencesUpdated as EventListener);
+      window.removeEventListener(
+        'user-preferences-updated',
+        handlePreferencesUpdated as EventListener,
+      );
     };
   }, []);
 
@@ -262,7 +300,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         payload,
       });
     },
-    [events]
+    [events],
   );
 
   // Open a terminal tab rooted at a cloned project's on-disk path. The Projects
@@ -275,7 +313,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         label,
       });
     },
-    [events]
+    [events],
   );
 
   // Terminal button click. With a single clone, open it straight away; with
@@ -291,15 +329,20 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       }
       setTerminalPickerTarget(project);
     },
-    [openTerminalAt]
+    [openTerminalAt],
   );
 
   // Remove-from-list confirmation state. This flow only unregisters the
   // project from Alexandria; the clone on disk is untouched.
-  const [removeConfirm, setRemoveConfirm] = useState<AlexandriaEntry | null>(null);
-  const [relocateTarget, setRelocateTarget] = useState<UnifiedProject | null>(null);
+  const [removeConfirm, setRemoveConfirm] = useState<AlexandriaEntry | null>(
+    null,
+  );
+  const [relocateTarget, setRelocateTarget] = useState<UnifiedProject | null>(
+    null,
+  );
   // Set when a multi-clone repo's terminal button is clicked; drives the clone picker.
-  const [terminalPickerTarget, setTerminalPickerTarget] = useState<UnifiedProject | null>(null);
+  const [terminalPickerTarget, setTerminalPickerTarget] =
+    useState<UnifiedProject | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [clearAllConfirm, setClearAllConfirm] = useState(false);
   const [clearAllBusy, setClearAllBusy] = useState(false);
@@ -308,7 +351,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     if (!removeConfirm) return;
     setRemoveBusy(true);
     try {
-      await AlexandriaService.removeRepository(String(removeConfirm.path), false);
+      await AlexandriaService.removeRepository(
+        String(removeConfirm.path),
+        false,
+      );
       setRemoveConfirm(null);
     } catch (error) {
       console.error('[ProjectsList] Failed to remove from registry:', error);
@@ -338,7 +384,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         try {
           await AlexandriaService.registerRepository(repoPath);
         } catch (error) {
-          console.error(`[ProjectsList] Failed to register ${repoPath}:`, error);
+          console.error(
+            `[ProjectsList] Failed to register ${repoPath}:`,
+            error,
+          );
         }
       }
     } catch (error) {
@@ -366,10 +415,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     () =>
       new Set(
         starredRepos.map(
-          (r) => `${r.owner.login.toLowerCase()}/${r.name.toLowerCase()}`
-        )
+          (r) => `${r.owner.login.toLowerCase()}/${r.name.toLowerCase()}`,
+        ),
       ),
-    [starredRepos]
+    [starredRepos],
   );
 
   // Merge GitHub repos (owned + starred) and local clones into one project model
@@ -383,7 +432,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     const addGithubRepo = (
       repo: GitHubRepository,
       isStarred: boolean,
-      isOwned: boolean
+      isOwned: boolean,
     ) => {
       const owner = repo.owner.login;
       const key = `${owner.toLowerCase()}/${repo.name.toLowerCase()}`;
@@ -420,7 +469,7 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       const localActivity = Math.max(
         toMs(entry.github?.lastCommit),
         toMs(entry.lastOpenedAt),
-        toMs(entry.registeredAt)
+        toMs(entry.registeredAt),
       );
 
       const offConvention = getOffConventionTarget(entry, baseDefaultDirectory);
@@ -432,8 +481,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         existing.clones.push(entry);
         existing.isDirty = gitStatus?.isDirty ?? false;
         existing.isStarred = existing.isStarred || starredKeys.has(key);
-        existing.description = existing.description ?? entry.github?.description;
-        existing.isPrivate = existing.isPrivate ?? toIsPrivate(entry.github?.isPublic);
+        existing.description =
+          existing.description ?? entry.github?.description;
+        existing.isPrivate =
+          existing.isPrivate ?? toIsPrivate(entry.github?.isPublic);
         existing.lastActivity = Math.max(existing.lastActivity, localActivity);
         existing.offConvention = offConvention;
       } else {
@@ -456,7 +507,14 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     }
 
     return Array.from(map.values());
-  }, [githubRepos, starredRepos, repositories, gitStatusMap, baseDefaultDirectory, starredKeys]);
+  }, [
+    githubRepos,
+    starredRepos,
+    repositories,
+    gitStatusMap,
+    baseDefaultDirectory,
+    starredKeys,
+  ]);
 
   // Owned/Starred only have content when there's a GitHub session (the `gh`
   // CLI). Gate on auth state directly — known on first paint — rather than on
@@ -474,24 +532,24 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
   const { groups, sortedOrgNames } = useMemo(() => {
     let filtered = projects;
     if (effectiveFilter === 'owned') {
-      filtered = filtered.filter(p => p.isOwned);
+      filtered = filtered.filter((p) => p.isOwned);
     } else if (effectiveFilter === 'cloned') {
-      filtered = filtered.filter(p => p.isCloned);
+      filtered = filtered.filter((p) => p.isCloned);
     } else if (effectiveFilter === 'starred') {
-      filtered = filtered.filter(p => p.isStarred);
+      filtered = filtered.filter((p) => p.isStarred);
     }
 
     if (privateOnly) {
-      filtered = filtered.filter(p => p.isPrivate === true);
+      filtered = filtered.filter((p) => p.isPrivate === true);
     }
 
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       filtered = filtered.filter(
-        p =>
+        (p) =>
           p.name.toLowerCase().includes(q) ||
           p.owner.toLowerCase().includes(q) ||
-          (p.description?.toLowerCase().includes(q) ?? false)
+          (p.description?.toLowerCase().includes(q) ?? false),
       );
     }
 
@@ -515,12 +573,17 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
     // Order groups: the user's own org first, then member orgs, then others,
     // with Untracked pinned to the bottom.
     const orgNames = Array.from(grouped.keys());
-    const userOwn = currentUser && orgNames.includes(currentUser) ? [currentUser] : [];
+    const userOwn =
+      currentUser && orgNames.includes(currentUser) ? [currentUser] : [];
     const memberOrgs = orgNames
-      .filter(o => o !== 'Untracked' && o !== currentUser && userOrgs.includes(o))
+      .filter(
+        (o) => o !== 'Untracked' && o !== currentUser && userOrgs.includes(o),
+      )
       .sort((a, b) => a.localeCompare(b));
     const otherOrgs = orgNames
-      .filter(o => o !== 'Untracked' && o !== currentUser && !userOrgs.includes(o))
+      .filter(
+        (o) => o !== 'Untracked' && o !== currentUser && !userOrgs.includes(o),
+      )
       .sort((a, b) => a.localeCompare(b));
     const untracked = orgNames.includes('Untracked') ? ['Untracked'] : [];
 
@@ -528,16 +591,23 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       groups: grouped,
       sortedOrgNames: [...userOwn, ...memberOrgs, ...otherOrgs, ...untracked],
     };
-  }, [projects, effectiveFilter, privateOnly, searchQuery, currentUser, userOrgs]);
+  }, [
+    projects,
+    effectiveFilter,
+    privateOnly,
+    searchQuery,
+    currentUser,
+    userOrgs,
+  ]);
 
   const hasClonedProjects = useMemo(
-    () => repositories.some(r => r.path),
-    [repositories]
+    () => repositories.some((r) => r.path),
+    [repositories],
   );
 
   // Toggle org collapsed state
   const toggleOrgCollapsed = useCallback((orgName: string) => {
-    setCollapsedOrgs(prev => {
+    setCollapsedOrgs((prev) => {
       const next = new Set(prev);
       if (next.has(orgName)) {
         next.delete(orgName);
@@ -559,9 +629,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
       if (repos.length > DEFAULT_COLLAPSE_THRESHOLD) toCollapse.push(orgName);
     });
     if (toCollapse.length) {
-      setCollapsedOrgs(prev => {
+      setCollapsedOrgs((prev) => {
         const next = new Set(prev);
-        toCollapse.forEach(o => next.add(o));
+        toCollapse.forEach((o) => next.add(o));
         return next;
       });
     }
@@ -619,7 +689,11 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           flexShrink: 0,
         }}
       >
-        <FolderGit2 size={16} color={theme.colors.text} style={{ marginLeft: 4 }} />
+        <FolderGit2
+          size={16}
+          color={theme.colors.text}
+          style={{ marginLeft: 4 }}
+        />
         <span
           style={{
             flex: 1,
@@ -692,12 +766,16 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             padding: `${spacing.xs}px ${spacing.sm}px`,
           }}
         >
-          <Search size={13} color={theme.colors.textSecondary} style={{ flexShrink: 0 }} />
+          <Search
+            size={13}
+            color={theme.colors.textSecondary}
+            style={{ flexShrink: 0 }}
+          />
           <input
             type="text"
             placeholder="Filter projects..."
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             style={{
               flex: 1,
               background: 'none',
@@ -713,9 +791,13 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         {/* Toggle: show private repos only (off = show all) */}
         <button
           type="button"
-          onClick={() => setPrivateOnly(prev => !prev)}
+          onClick={() => setPrivateOnly((prev) => !prev)}
           aria-pressed={privateOnly}
-          title={privateOnly ? 'Showing private repos only — click to show all' : 'Show private repos only'}
+          title={
+            privateOnly
+              ? 'Showing private repos only — click to show all'
+              : 'Show private repos only'
+          }
           aria-label="Toggle private repos only"
           style={{
             flexShrink: 0,
@@ -727,8 +809,12 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             padding: 0,
             border: 'none',
             borderRadius: theme.radii?.[1] || 4,
-            background: privateOnly ? theme.colors.backgroundSecondary : 'transparent',
-            color: privateOnly ? theme.colors.primary : theme.colors.textSecondary,
+            background: privateOnly
+              ? theme.colors.backgroundSecondary
+              : 'transparent',
+            color: privateOnly
+              ? theme.colors.primary
+              : theme.colors.textSecondary,
             cursor: 'pointer',
           }}
           onMouseEnter={(e) => {
@@ -773,7 +859,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           }}
         >
           {scanning ? (
-            <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+            <Loader2
+              size={14}
+              style={{ animation: 'spin 1s linear infinite' }}
+            />
           ) : (
             <FolderSearch size={14} />
           )}
@@ -836,7 +925,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
               gap: spacing.sm,
             }}
           >
-            <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+            <Loader2
+              size={20}
+              style={{ animation: 'spin 1s linear infinite' }}
+            />
             <span>Loading projects…</span>
           </div>
         ) : sortedOrgNames.length === 0 ? (
@@ -852,7 +944,10 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
               textAlign: 'center',
             }}
           >
-            <FolderGit2 size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
+            <FolderGit2
+              size={32}
+              style={{ marginBottom: spacing.sm, opacity: 0.3 }}
+            />
             <span>{emptyMessage}</span>
           </div>
         ) : (
@@ -860,7 +955,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
             const repos = groups.get(orgName) || [];
             // While searching, force every matching section open so results
             // aren't hidden behind a collapsed (or auto-collapsed) org.
-            const isCollapsed = searchQuery.trim() ? false : collapsedOrgs.has(orgName);
+            const isCollapsed = searchQuery.trim()
+              ? false
+              : collapsedOrgs.has(orgName);
             const isUserOwn = currentUser === orgName;
             const isMemberOrg = userOrgs.includes(orgName);
             const badge: 'you' | 'member' | undefined = isUserOwn
@@ -907,7 +1004,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
                         dragText={projectDragText(project)}
                         onClick={() => handleProjectClick(project)}
                         onRemove={
-                          project.entry ? () => setRemoveConfirm(project.entry ?? null) : undefined
+                          project.entry
+                            ? () => setRemoveConfirm(project.entry ?? null)
+                            : undefined
                         }
                         onOpenTerminal={
                           project.clones.some((c) => c.path)
@@ -967,7 +1066,6 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
         />
       )}
 
-
       {/* Remove-from-list confirm. Does not touch files on disk. */}
       {removeConfirm && (
         <RemoveConfirmModal
@@ -998,9 +1096,9 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({
           title="Remove all cloned projects from list?"
           body={
             <>
-              Removes all cloned projects from this list. Your folders on disk are
-              not deleted. To delete clones on disk, open each project and use its
-              profile tab.
+              Removes all cloned projects from this list. Your folders on disk
+              are not deleted. To delete clones on disk, open each project and
+              use its profile tab.
             </>
           }
           confirmLabel="Remove all"
@@ -1224,11 +1322,15 @@ const ClonePickerModal: React.FC<ClonePickerModalProps> = ({
             }}
           >
             <Terminal size={14} style={{ flexShrink: 0 }} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{path}</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {path}
+            </span>
           </button>
         ))}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+      <div
+        style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}
+      >
         <button
           type="button"
           onClick={onCancel}

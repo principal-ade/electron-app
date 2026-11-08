@@ -18,14 +18,8 @@ export const StorybookHeaderButton: React.FC<StorybookHeaderButtonProps> = ({
   storybook,
   repositoryPath,
 }) => {
-  const {
-    packages,
-    selectedPackage,
-    isRunning,
-    isStarting,
-    start,
-    stop,
-  } = storybook;
+  const { packages, selectedPackage, isRunning, isStarting, start, stop } =
+    storybook;
 
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -94,9 +88,7 @@ export const StorybookHeaderButton: React.FC<StorybookHeaderButtonProps> = ({
           border: `1px solid ${
             isRunning ? theme.colors.success : theme.colors.border
           }`,
-          color: isRunning
-            ? theme.colors.success
-            : theme.colors.textSecondary,
+          color: isRunning ? theme.colors.success : theme.colors.textSecondary,
           cursor: isStarting ? 'wait' : 'pointer',
           padding: '6px 12px',
           borderRadius: '6px',
@@ -129,9 +121,7 @@ export const StorybookHeaderButton: React.FC<StorybookHeaderButtonProps> = ({
       >
         {isRunning ? <Square size={14} /> : <BookOpen size={14} />}
         <span>{label}</span>
-        {hasMultiple && !isRunning && !isStarting && (
-          <ChevronDown size={12} />
-        )}
+        {hasMultiple && !isRunning && !isStarting && <ChevronDown size={12} />}
       </button>
 
       {open && hasMultiple && !isRunning && !isStarting && (

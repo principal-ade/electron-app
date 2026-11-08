@@ -65,7 +65,9 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
                 padding: `${verticalPadding ?? spacing.sm}px ${spacing.xs}px`,
                 fontSize: theme.fontSizes[1],
                 fontWeight: isActive ? 600 : 500,
-                color: isActive ? theme.colors.text : theme.colors.textSecondary,
+                color: isActive
+                  ? theme.colors.text
+                  : theme.colors.textSecondary,
                 backgroundColor: 'transparent',
                 border: 'none',
                 borderBottom: `2px solid ${isActive ? theme.colors.primary : 'transparent'}`,
@@ -99,7 +101,9 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
     <div
       style={{
         display: 'flex',
-        backgroundColor: isFlat ? 'transparent' : theme.colors.backgroundSecondary,
+        backgroundColor: isFlat
+          ? 'transparent'
+          : theme.colors.backgroundSecondary,
         border: isFlat ? 'none' : `1px solid ${theme.colors.border}`,
         borderRadius: flush || isFlat ? 0 : theme.radii?.[1] || 4,
         padding: isFlat ? 0 : 2,
@@ -118,7 +122,9 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
               padding: `${verticalPadding ?? spacing.xs}px ${spacing.sm}px`,
               fontSize: theme.fontSizes[1],
               fontWeight: 500,
-              color: isActive ? theme.colors.textOnPrimary : theme.colors.textSecondary,
+              color: isActive
+                ? theme.colors.textOnPrimary
+                : theme.colors.textSecondary,
               backgroundColor: isActive ? theme.colors.primary : 'transparent',
               border: 'none',
               borderRadius: flush ? 0 : theme.radii?.[0] || 2,

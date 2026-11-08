@@ -33,19 +33,35 @@ import { GitService } from '../main-process-api/GitService';
 import { SkillLockService } from '../main-process-api/SkillLockService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
-import { FileTreeCore, createFileTreeSource, PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
+import {
+  FileTreeCore,
+  createFileTreeSource,
+  PathsFileTreeBuilder,
+} from '@principal-ai/repository-abstraction';
 import type { PackagesSliceData } from '@principal-ai/codebase-composition';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
-import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
+import type {
+  ColorMode,
+  FileMetricData,
+  QualitySliceData,
+} from '@principal-ai/quality-lens-registry';
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
-import type { FeedProjectSliceData, ActivityHeatmapSliceData, LineCountsSliceData } from '@industry-theme/file-city-panel';
+import type {
+  FeedProjectSliceData,
+  ActivityHeatmapSliceData,
+  LineCountsSliceData,
+} from '@industry-theme/file-city-panel';
 import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
-import type { BrunoRequest, BrunoResponse, BrunoEnvironment } from '@principal-ade/bruno-panels';
+import type {
+  BrunoRequest,
+  BrunoResponse,
+  BrunoEnvironment,
+} from '@principal-ade/bruno-panels';
 import { BrunoService } from '../main-process-api/BrunoService';
 
 // Color mode for file city visualization - imported from registry
@@ -67,7 +83,10 @@ export interface RepositoryPanelActions extends PanelActions {
   /** Write file content - REQUIRED for FileEditorPanel and MDXEditorPanel */
   writeFile: (filePath: string, content: string) => Promise<void>;
   /** Get file content at a specific git revision - REQUIRED for GitDiffPanel */
-  getFileContentAtRevision: (filePath: string, revision?: string) => Promise<string>;
+  getFileContentAtRevision: (
+    filePath: string,
+    revision?: string,
+  ) => Promise<string>;
   /** Open file in viewer - only supports markdown files */
   openFile?: (filePath: string) => Promise<void>;
   // Local Projects panel actions
@@ -89,7 +108,10 @@ export interface RepositoryPanelActions extends PanelActions {
   /** Load all environments from environments/*.json files in the collection */
   loadEnvironments?: (collectionPath: string) => Promise<BrunoEnvironment[]>;
   /** Send an HTTP request using Bruno request format */
-  sendRequest?: (request: BrunoRequest, environment?: Record<string, string>) => Promise<BrunoResponse>;
+  sendRequest?: (
+    request: BrunoRequest,
+    environment?: Record<string, string>,
+  ) => Promise<BrunoResponse>;
 }
 
 // Extended context for repository panels
@@ -150,7 +172,9 @@ export const RepositoryPanelProvider: React.FC<
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
 
   // Track root file tree for .claude/plans directory
-  const [rootFileTreeData, setRootFileTreeData] = useState<FileTree | null>(null);
+  const [rootFileTreeData, setRootFileTreeData] = useState<FileTree | null>(
+    null,
+  );
   const [rootFileTreeLoading, setRootFileTreeLoading] = useState(false);
 
   // Use a ref to always have the latest rootFileTreeData in actions
@@ -179,11 +203,13 @@ export const RepositoryPanelProvider: React.FC<
   const [gitStatusLoading, setGitStatusLoading] = useState(false);
 
   // Track activity heatmap data (commits per day for last 30 days)
-  const [activityHeatmapData, setActivityHeatmapData] = useState<ActivityHeatmapSliceData | null>(null);
+  const [activityHeatmapData, setActivityHeatmapData] =
+    useState<ActivityHeatmapSliceData | null>(null);
   const [activityHeatmapLoading, setActivityHeatmapLoading] = useState(false);
 
   // Track line counts data (for File City 3D building heights)
-  const [lineCountsData, setLineCountsData] = useState<LineCountsSliceData | null>(null);
+  const [lineCountsData, setLineCountsData] =
+    useState<LineCountsSliceData | null>(null);
   const [lineCountsLoading, setLineCountsLoading] = useState(false);
 
   // Track selected color mode for file city visualization
@@ -226,11 +252,15 @@ export const RepositoryPanelProvider: React.FC<
   const [localhostServersLoading, setLocalhostServersLoading] = useState(false);
 
   // Track terminal sessions
-  const [terminalSessions, setTerminalSessions] = useState<TerminalSessionInfo[]>([]);
+  const [terminalSessions, setTerminalSessions] = useState<
+    TerminalSessionInfo[]
+  >([]);
   const [terminalSessionsLoading, setTerminalSessionsLoading] = useState(false);
 
   // Track active file for markdown panel (and other file viewers)
-  const [activeFileData, setActiveFileData] = useState<ActiveFileSlice | null>(null);
+  const [activeFileData, setActiveFileData] = useState<ActiveFileSlice | null>(
+    null,
+  );
   const [activeFileLoading, setActiveFileLoading] = useState(false);
   const [activeFileError, setActiveFileError] = useState<Error | null>(null);
 
@@ -247,6 +277,30 @@ export const RepositoryPanelProvider: React.FC<
     remoteUrl: string,
   ): { owner: string; repo: string } | null => parseGitHubUrl(remoteUrl);
 
+  // Clear repository-scoped UI data when the monitor confirms unregistration.
+  useEffect(() => {
+    const unsubscribe = RepositoryMonitoringService.onRepositoryUnregistered(
+      ({ repoPath: removedPath }) => {
+        if (removedPath !== repositoryPath) return;
+        setFileTreeData(null);
+        setFileTreeLoading(false);
+        setPackagesData(null);
+        setPackagesLoading(false);
+        setGitStatusData(null);
+        setGitStatusLoading(false);
+        setActivityHeatmapData(null);
+        setActivityHeatmapLoading(false);
+        setLineCountsData(null);
+        setLineCountsLoading(false);
+        setQualityData(null);
+        setQualityLoading(false);
+        setActiveFileData(null);
+        setActiveFileLoading(false);
+      },
+    );
+    return unsubscribe;
+  }, [repositoryPath]);
+
   // Fetch file tree when repository changes and subscribe to cache sync updates
   // Strategy: Load cached data first for instant display, then refresh in background
   // Fresh data arrives via CACHE_SYNC event handled below.
@@ -260,7 +314,8 @@ export const RepositoryPanelProvider: React.FC<
       setFileTreeLoading(true);
       try {
         // FAST PATH: Get cached data immediately for instant display
-        const cachedTree = await RepositoryMonitoringService.getFileTree(repositoryPath);
+        const cachedTree =
+          await RepositoryMonitoringService.getFileTree(repositoryPath);
         if (cachedTree) {
           setFileTreeData(cachedTree);
           setFileTreeLoading(false); // Stop loading spinner immediately
@@ -326,8 +381,9 @@ export const RepositoryPanelProvider: React.FC<
         const entries = await FileSystemService.readDirectory(plansDir);
 
         // Step 2: Filter for plan files
-        const planFileNames = entries
-          .filter((entry) => entry.endsWith('.md') || entry.endsWith('.MD'));
+        const planFileNames = entries.filter(
+          (entry) => entry.endsWith('.md') || entry.endsWith('.MD'),
+        );
 
         // Step 3: Fetch file stats for each plan file to get modification times
         const planFilesWithStats = await Promise.all(
@@ -339,13 +395,13 @@ export const RepositoryPanelProvider: React.FC<
               size: stats?.size || 0,
               lastModified: stats?.lastModified || new Date(),
             };
-          })
+          }),
         );
 
         // Step 4: Build FileTree with file metadata
         const builder = new PathsFileTreeBuilder();
         const builtTree = builder.build({
-          files: planFilesWithStats.map(f => f.path),
+          files: planFilesWithStats.map((f) => f.path),
           rootPath: homePath,
         });
 
@@ -357,7 +413,8 @@ export const RepositoryPanelProvider: React.FC<
             return {
               ...file,
               size: statsEntry?.size || file.size || 0,
-              lastModified: statsEntry?.lastModified || file.lastModified || new Date(),
+              lastModified:
+                statsEntry?.lastModified || file.lastModified || new Date(),
             };
           }),
         };
@@ -403,9 +460,15 @@ export const RepositoryPanelProvider: React.FC<
           fileTypes: ['.md', '.MD'],
           isSubdirectory: false,
         });
-        console.info('[RepositoryPanelProvider] Started watching global plans directory:', plansDir);
+        console.info(
+          '[RepositoryPanelProvider] Started watching global plans directory:',
+          plansDir,
+        );
       } catch (error) {
-        console.error('[RepositoryPanelProvider] Failed to setup global plans watcher:', error);
+        console.error(
+          '[RepositoryPanelProvider] Failed to setup global plans watcher:',
+          error,
+        );
       }
     };
 
@@ -429,7 +492,10 @@ export const RepositoryPanelProvider: React.FC<
       unsubscribe();
       if (plansDir) {
         FileSystemService.stopWatchingDirectory(plansDir).catch((error) => {
-          console.error('[RepositoryPanelProvider] Failed to stop watching global plans directory:', error);
+          console.error(
+            '[RepositoryPanelProvider] Failed to stop watching global plans directory:',
+            error,
+          );
         });
       }
     };
@@ -550,12 +616,18 @@ export const RepositoryPanelProvider: React.FC<
 
       setActivityHeatmapLoading(true);
       try {
-        const commitDates = await GitService.getCommitDatesForHeatMap(repositoryPath, 30);
+        const commitDates = await GitService.getCommitDatesForHeatMap(
+          repositoryPath,
+          30,
+        );
         setActivityHeatmapData({
-          days: commitDates.map(d => ({ date: d.date, count: d.count })),
+          days: commitDates.map((d) => ({ date: d.date, count: d.count })),
         });
       } catch (error) {
-        console.error('[RepositoryPanelProvider] Failed to fetch activity heatmap:', error);
+        console.error(
+          '[RepositoryPanelProvider] Failed to fetch activity heatmap:',
+          error,
+        );
         setActivityHeatmapData(null);
       } finally {
         setActivityHeatmapLoading(false);
@@ -575,7 +647,8 @@ export const RepositoryPanelProvider: React.FC<
 
       setLineCountsLoading(true);
       try {
-        const rawLineCounts = await FileCityImageService.countLines(repositoryPath);
+        const rawLineCounts =
+          await FileCityImageService.countLines(repositoryPath);
         if (rawLineCounts) {
           // Transform paths to use relative paths (strip repo name prefix if present)
           const repoName = repositoryPath.split('/').pop() || '';
@@ -595,7 +668,10 @@ export const RepositoryPanelProvider: React.FC<
           });
         }
       } catch (error) {
-        console.error('[RepositoryPanelProvider] Failed to fetch line counts:', error);
+        console.error(
+          '[RepositoryPanelProvider] Failed to fetch line counts:',
+          error,
+        );
         setLineCountsData(null);
       } finally {
         setLineCountsLoading(false);
@@ -659,11 +735,13 @@ export const RepositoryPanelProvider: React.FC<
     if (!localhostServers || localhostServers.length === 0) return 'empty';
     // Hash based on port, pid, and label (the identifying characteristics)
     return JSON.stringify(
-      localhostServers.map(s => ({
-        port: s.port,
-        pid: s.pid,
-        label: s.label,
-      })).sort((a, b) => a.port - b.port)
+      localhostServers
+        .map((s) => ({
+          port: s.port,
+          pid: s.pid,
+          label: s.label,
+        }))
+        .sort((a, b) => a.port - b.port),
     );
   }, [localhostServers]);
 
@@ -677,8 +755,11 @@ export const RepositoryPanelProvider: React.FC<
   const stableActiveFileData = useMemo(() => activeFileData, [activeFilePath]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const stableGitStatusData = useMemo(() => gitStatusData, [gitStatusHash]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stableLocalhostServers = useMemo(() => localhostServers, [localhostServersHash]);
+  const stableLocalhostServers = useMemo(
+    () => localhostServers,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [localhostServersHash],
+  );
 
   // Augment file tree with deleted files from git status
   const augmentedFileTreeData = useMemo(() => {
@@ -687,21 +768,19 @@ export const RepositoryPanelProvider: React.FC<
     }
 
     // Create file entries for deleted files
-    const deletedFileInfos = stableGitStatusData.deletedFiles.map(filePath => ({
-      path: filePath,
-      size: 0,
-      lastModified: new Date(0),
-    }));
+    const deletedFileInfos = stableGitStatusData.deletedFiles.map(
+      (filePath) => ({
+        path: filePath,
+        size: 0,
+        lastModified: new Date(0),
+      }),
+    );
 
     // Use FileTreeCore.augmentWithFiles() to properly rebuild tree structure
-    return FileTreeCore.augmentWithFiles(
-      stableFileTreeData,
-      deletedFileInfos,
-      {
-        updateSha: (baseSha, count) => `${baseSha}-deleted:${count}`,
-        fileDefaults: { size: 0, lastModified: new Date(0) },
-      }
-    );
+    return FileTreeCore.augmentWithFiles(stableFileTreeData, deletedFileInfos, {
+      updateSha: (baseSha, count) => `${baseSha}-deleted:${count}`,
+      fileDefaults: { size: 0, lastModified: new Date(0) },
+    });
   }, [stableFileTreeData, stableGitStatusData]);
 
   // Compute effective color mode: use explicit selection, or auto-select 'git' if there are changes
@@ -733,22 +812,26 @@ export const RepositoryPanelProvider: React.FC<
       return;
     }
 
-    const unsubscribe = RepositoryMonitoringService.onWorkspaceChange((event) => {
-      if (event.repoPath === repositoryPath) {
-        console.info(
-          '[RepositoryPanelProvider] Workspace changed, refreshing file tree:',
-          repositoryPath,
-        );
-        // Use refreshRepository() to invalidate cache and wait for CACHE_SYNC
-        // This avoids the race condition of calling getFileTree() which returns stale data
-        RepositoryMonitoringService.refreshRepository(repositoryPath).catch((error) => {
-          console.error(
-            '[RepositoryPanelProvider] Failed to refresh after workspace change:',
-            error,
+    const unsubscribe = RepositoryMonitoringService.onWorkspaceChange(
+      (event) => {
+        if (event.repoPath === repositoryPath) {
+          console.info(
+            '[RepositoryPanelProvider] Workspace changed, refreshing file tree:',
+            repositoryPath,
           );
-        });
-      }
-    });
+          // Use refreshRepository() to invalidate cache and wait for CACHE_SYNC
+          // This avoids the race condition of calling getFileTree() which returns stale data
+          RepositoryMonitoringService.refreshRepository(repositoryPath).catch(
+            (error) => {
+              console.error(
+                '[RepositoryPanelProvider] Failed to refresh after workspace change:',
+                error,
+              );
+            },
+          );
+        }
+      },
+    );
 
     return () => {
       unsubscribe();
@@ -816,7 +899,9 @@ export const RepositoryPanelProvider: React.FC<
   // Listen for refresh requests from AgenticResourcesPanel
   useEffect(() => {
     const unsubscribeSkillsRefresh = events.on('skills:refresh', async () => {
-      console.info('[RepositoryPanelProvider] Received skills:refresh event, refreshing global skills and file tree');
+      console.info(
+        '[RepositoryPanelProvider] Received skills:refresh event, refreshing global skills and file tree',
+      );
 
       // Refresh both global skills and file tree (for project skills)
       try {
@@ -826,10 +911,16 @@ export const RepositoryPanelProvider: React.FC<
             setGlobalSkillsLoading(true);
             try {
               const skills = await FileSystemService.getGlobalSkills();
-              console.info('[RepositoryPanelProvider] Refreshed global skills:', skills.length);
+              console.info(
+                '[RepositoryPanelProvider] Refreshed global skills:',
+                skills.length,
+              );
               setGlobalSkillsData(skills);
             } catch (error) {
-              console.error('[RepositoryPanelProvider] Failed to refresh global skills:', error);
+              console.error(
+                '[RepositoryPanelProvider] Failed to refresh global skills:',
+                error,
+              );
             } finally {
               setGlobalSkillsLoading(false);
             }
@@ -839,10 +930,17 @@ export const RepositoryPanelProvider: React.FC<
             if (repositoryPath) {
               setFileTreeLoading(true);
               try {
-                await RepositoryMonitoringService.refreshRepository(repositoryPath);
-                console.info('[RepositoryPanelProvider] Refreshed file tree for project skills');
+                await RepositoryMonitoringService.refreshRepository(
+                  repositoryPath,
+                );
+                console.info(
+                  '[RepositoryPanelProvider] Refreshed file tree for project skills',
+                );
               } catch (error) {
-                console.error('[RepositoryPanelProvider] Failed to refresh file tree:', error);
+                console.error(
+                  '[RepositoryPanelProvider] Failed to refresh file tree:',
+                  error,
+                );
               } finally {
                 setFileTreeLoading(false);
               }
@@ -850,21 +948,31 @@ export const RepositoryPanelProvider: React.FC<
           })(),
         ]);
       } catch (error) {
-        console.error('[RepositoryPanelProvider] Error during skills refresh:', error);
+        console.error(
+          '[RepositoryPanelProvider] Error during skills refresh:',
+          error,
+        );
       }
     });
 
     const unsubscribeAgentsRefresh = events.on('agents:refresh', async () => {
-      console.info('[RepositoryPanelProvider] Received agents:refresh event, refreshing file tree');
+      console.info(
+        '[RepositoryPanelProvider] Received agents:refresh event, refreshing file tree',
+      );
 
       // Refresh file tree to pick up new AGENTS.md and subagent files
       if (repositoryPath) {
         setFileTreeLoading(true);
         try {
           await RepositoryMonitoringService.refreshRepository(repositoryPath);
-          console.info('[RepositoryPanelProvider] Refreshed file tree for agents');
+          console.info(
+            '[RepositoryPanelProvider] Refreshed file tree for agents',
+          );
         } catch (error) {
-          console.error('[RepositoryPanelProvider] Failed to refresh file tree for agents:', error);
+          console.error(
+            '[RepositoryPanelProvider] Failed to refresh file tree for agents:',
+            error,
+          );
         } finally {
           setFileTreeLoading(false);
         }
@@ -899,7 +1007,7 @@ export const RepositoryPanelProvider: React.FC<
       try {
         // Step 1: Resolve git remote
         span.addEvent('quality.artifact.step.remote', {
-          'step': 'Resolving git remote',
+          step: 'Resolving git remote',
           'repository.path': repositoryPath,
         });
 
@@ -911,7 +1019,7 @@ export const RepositoryPanelProvider: React.FC<
           );
           span.addEvent('quality.artifact.skipped', {
             'skip.reason': 'no_git_remote',
-            'message': 'Repository has no git remote configured',
+            message: 'Repository has no git remote configured',
           });
           span.setStatus({ code: SpanStatusCode.OK });
           span.end();
@@ -920,7 +1028,7 @@ export const RepositoryPanelProvider: React.FC<
         }
 
         span.addEvent('quality.artifact.step.remote.resolved', {
-          'step': 'Git remote resolved',
+          step: 'Git remote resolved',
           'remote.url': remoteInfo.remoteUrl,
         });
 
@@ -930,7 +1038,7 @@ export const RepositoryPanelProvider: React.FC<
           console.info('[RepositoryPanelProvider] Not a GitHub repository');
           span.addEvent('quality.artifact.skipped', {
             'skip.reason': 'not_github',
-            'message': 'Remote URL is not a GitHub repository',
+            message: 'Remote URL is not a GitHub repository',
             'remote.url': remoteInfo.remoteUrl,
           });
           span.setStatus({ code: SpanStatusCode.OK });
@@ -944,21 +1052,24 @@ export const RepositoryPanelProvider: React.FC<
         span.setAttribute('github.repo', githubInfo.repo);
 
         span.addEvent('quality.artifact.step.github.parsed', {
-          'step': 'GitHub info parsed',
+          step: 'GitHub info parsed',
           'github.owner': githubInfo.owner,
           'github.repo': githubInfo.repo,
         });
 
         // Step 3: Get current branch
         span.addEvent('quality.artifact.step.branch', {
-          'step': 'Getting current branch',
+          step: 'Getting current branch',
         });
 
         const gitStatus =
           await RepositoryMonitoringService.getGitStatus(repositoryPath);
 
         // Debug: log gitStatus structure
-        console.info('[RepositoryPanelProvider] gitStatus:', JSON.stringify(gitStatus, null, 2));
+        console.info(
+          '[RepositoryPanelProvider] gitStatus:',
+          JSON.stringify(gitStatus, null, 2),
+        );
 
         // Extract branch - gitStatus.branch should be a string per GitStatusMetadata
         const branch = gitStatus?.branch ?? 'main';
@@ -966,7 +1077,7 @@ export const RepositoryPanelProvider: React.FC<
         span.setAttribute('git.branch', branch);
 
         span.addEvent('quality.artifact.step.branch.resolved', {
-          'step': 'Branch resolved',
+          step: 'Branch resolved',
           'git.branch': branch,
           'git.branchSource': branchSource,
         });
@@ -984,7 +1095,7 @@ export const RepositoryPanelProvider: React.FC<
 
         // Step 5: Call GitHub API
         span.addEvent('quality.artifact.step.api.calling', {
-          'step': 'Calling GitHub Actions API',
+          step: 'Calling GitHub Actions API',
           'github.owner': githubInfo.owner,
           'github.repo': githubInfo.repo,
           'git.branch': branch,
@@ -1000,7 +1111,7 @@ export const RepositoryPanelProvider: React.FC<
         const apiDuration = Date.now() - apiStartTime;
 
         span.addEvent('quality.artifact.step.api.complete', {
-          'step': 'GitHub API call complete',
+          step: 'GitHub API call complete',
           'api.duration.ms': apiDuration,
           'api.found': artifactData !== null,
         });
@@ -1040,7 +1151,8 @@ export const RepositoryPanelProvider: React.FC<
             lastUpdated: artifactData.timestamp,
             // Include per-file data for File City visualization
             fileCoverage: artifactData.fileCoverage,
-            fileMetrics: artifactData.fileMetrics as Record<string, FileMetricData[]> | undefined,
+            fileMetrics: artifactData.fileMetrics as
+              Record<string, FileMetricData[]> | undefined,
           });
 
           // Emit context updated event
@@ -1072,7 +1184,9 @@ export const RepositoryPanelProvider: React.FC<
           code: SpanStatusCode.ERROR,
           message: error instanceof Error ? error.message : 'Unknown error',
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error)),
+        );
         setQualityData(null);
       } finally {
         span.end();
@@ -1171,23 +1285,25 @@ export const RepositoryPanelProvider: React.FC<
     fetchTerminalSessions();
 
     // Subscribe to session changes via TIPC (from main process)
-    const unsubscribeSessions = TerminalService.onSessionsChanged((sessions) => {
-      // Map TerminalInfo to TerminalSessionInfo
-      const sessionInfos: TerminalSessionInfo[] = sessions.map((s) => ({
-        id: s.id,
-        pid: 0,
-        cwd: s.directory || '',
-        shell: '',
-        createdAt: s.createdAt || Date.now(),
-        lastActivity: s.lastActivity || Date.now(),
-        context: s.context,
-        status: s.status,
-        metadata: s.metadata,
-        agentSessionId: s.agentSessionId,
-        ownedByWindowId: s.ownedByWindowId,
-      }));
-      setTerminalSessions(sessionInfos);
-    });
+    const unsubscribeSessions = TerminalService.onSessionsChanged(
+      (sessions) => {
+        // Map TerminalInfo to TerminalSessionInfo
+        const sessionInfos: TerminalSessionInfo[] = sessions.map((s) => ({
+          id: s.id,
+          pid: 0,
+          cwd: s.directory || '',
+          shell: '',
+          createdAt: s.createdAt || Date.now(),
+          lastActivity: s.lastActivity || Date.now(),
+          context: s.context,
+          status: s.status,
+          metadata: s.metadata,
+          agentSessionId: s.agentSessionId,
+          ownedByWindowId: s.ownedByWindowId,
+        }));
+        setTerminalSessions(sessionInfos);
+      },
+    );
 
     return () => {
       unsubscribeSessions();
@@ -1220,15 +1336,24 @@ export const RepositoryPanelProvider: React.FC<
 
     // Listen for skill changes from any window (IPC broadcasts from main process)
     const unsubInstall = SkillLockService.onSkillInstalled((payload) => {
-      console.info('[RepositoryPanelProvider] Skill installed, refreshing global skills:', payload.skillName);
+      console.info(
+        '[RepositoryPanelProvider] Skill installed, refreshing global skills:',
+        payload.skillName,
+      );
       fetchGlobalSkills();
     });
     const unsubUninstall = SkillLockService.onSkillUninstalled((payload) => {
-      console.info('[RepositoryPanelProvider] Skill uninstalled, refreshing global skills:', payload.skillName);
+      console.info(
+        '[RepositoryPanelProvider] Skill uninstalled, refreshing global skills:',
+        payload.skillName,
+      );
       fetchGlobalSkills();
     });
     const unsubUpdate = SkillLockService.onSkillUpdated((payload) => {
-      console.info('[RepositoryPanelProvider] Skill updated, refreshing global skills:', payload.skillName);
+      console.info(
+        '[RepositoryPanelProvider] Skill updated, refreshing global skills:',
+        payload.skillName,
+      );
       fetchGlobalSkills();
     });
 
@@ -1265,20 +1390,28 @@ export const RepositoryPanelProvider: React.FC<
           // Check if this is a plan file from the global .claude/plans directory
           if (filePath.includes('.claude/plans/')) {
             const basePath = currentRootFileTree?.metadata?.id;
-            console.info('[RepositoryPanelProvider] Plan file detected. basePath:', basePath);
+            console.info(
+              '[RepositoryPanelProvider] Plan file detected. basePath:',
+              basePath,
+            );
 
             if (basePath) {
               // If path is already absolute but wrong (uses repositoryPath instead of home)
               // Fix it by extracting the relative part and re-resolving
               if (repositoryPath && filePath.startsWith(repositoryPath + '/')) {
                 // Extract relative path: /repo/.claude/plans/file.md -> .claude/plans/file.md
-                const relativePath = filePath.substring(repositoryPath.length + 1);
+                const relativePath = filePath.substring(
+                  repositoryPath.length + 1,
+                );
                 absolutePath = `${basePath}/${relativePath}`;
-                console.info('[RepositoryPanelProvider] Fixed wrong absolute path:', {
-                  original: filePath,
-                  relativePath,
-                  corrected: absolutePath,
-                });
+                console.info(
+                  '[RepositoryPanelProvider] Fixed wrong absolute path:',
+                  {
+                    original: filePath,
+                    relativePath,
+                    corrected: absolutePath,
+                  },
+                );
               } else if (filePath.startsWith('/')) {
                 // Already absolute and might be correct
                 absolutePath = filePath;
@@ -1286,9 +1419,14 @@ export const RepositoryPanelProvider: React.FC<
                 // Relative path
                 absolutePath = `${basePath}/${filePath}`;
               }
-              console.info('[RepositoryPanelProvider] Reading plan file from home dir:', absolutePath);
+              console.info(
+                '[RepositoryPanelProvider] Reading plan file from home dir:',
+                absolutePath,
+              );
             } else {
-              console.warn('[RepositoryPanelProvider] rootFileTree metadata.id not available, using fallback');
+              console.warn(
+                '[RepositoryPanelProvider] rootFileTree metadata.id not available, using fallback',
+              );
               absolutePath = filePath.startsWith('/')
                 ? filePath
                 : `${repositoryPath}/${filePath}`;
@@ -1298,7 +1436,10 @@ export const RepositoryPanelProvider: React.FC<
             absolutePath = filePath.startsWith('/')
               ? filePath
               : `${repositoryPath}/${filePath}`;
-            console.info('[RepositoryPanelProvider] Reading repository file:', absolutePath);
+            console.info(
+              '[RepositoryPanelProvider] Reading repository file:',
+              absolutePath,
+            );
           }
 
           const result = await FileSystemService.readFile(absolutePath);
@@ -1333,7 +1474,10 @@ export const RepositoryPanelProvider: React.FC<
         }
       },
 
-      getFileContentAtRevision: async (filePath: string, revision: string = 'HEAD') => {
+      getFileContentAtRevision: async (
+        filePath: string,
+        revision: string = 'HEAD',
+      ) => {
         if (!repositoryPath) {
           throw new Error('No repository path set');
         }
@@ -1355,18 +1499,20 @@ export const RepositoryPanelProvider: React.FC<
           repositoryPath,
           originalPath: filePath,
           pathRelativeToRepo,
-          revision
+          revision,
         });
 
         // Use FileSystemService to call IPC with the relative path
         const content = await FileSystemService.getFileContentAtRevision(
           repositoryPath,
           pathRelativeToRepo,
-          revision
+          revision,
         );
 
         if (content === null) {
-          throw new Error(`File not found at revision ${revision}: ${filePath}`);
+          throw new Error(
+            `File not found at revision ${revision}: ${filePath}`,
+          );
         }
 
         return content;
@@ -1385,20 +1531,30 @@ export const RepositoryPanelProvider: React.FC<
             if (basePath) {
               // If path is already absolute but wrong (uses repositoryPath instead of home)
               if (repositoryPath && filePath.startsWith(repositoryPath + '/')) {
-                const relativePath = filePath.substring(repositoryPath.length + 1);
+                const relativePath = filePath.substring(
+                  repositoryPath.length + 1,
+                );
                 absolutePath = `${basePath}/${relativePath}`;
-                console.info('[RepositoryPanelProvider] Fixed wrong absolute path for openFile:', {
-                  original: filePath,
-                  corrected: absolutePath,
-                });
+                console.info(
+                  '[RepositoryPanelProvider] Fixed wrong absolute path for openFile:',
+                  {
+                    original: filePath,
+                    corrected: absolutePath,
+                  },
+                );
               } else if (filePath.startsWith('/')) {
                 absolutePath = filePath;
               } else {
                 absolutePath = `${basePath}/${filePath}`;
               }
-              console.info('[RepositoryPanelProvider] Opening plan file from home dir:', absolutePath);
+              console.info(
+                '[RepositoryPanelProvider] Opening plan file from home dir:',
+                absolutePath,
+              );
             } else {
-              console.warn('[RepositoryPanelProvider] rootFileTree metadata.id not available for openFile, using fallback');
+              console.warn(
+                '[RepositoryPanelProvider] rootFileTree metadata.id not available for openFile, using fallback',
+              );
               absolutePath = filePath.startsWith('/')
                 ? filePath
                 : `${repositoryPath}/${filePath}`;
@@ -1638,7 +1794,9 @@ export const RepositoryPanelProvider: React.FC<
         return BrunoService.loadBruRequest(absolutePath);
       },
 
-      loadEnvironments: async (collectionPath: string): Promise<BrunoEnvironment[]> => {
+      loadEnvironments: async (
+        collectionPath: string,
+      ): Promise<BrunoEnvironment[]> => {
         const absolutePath = collectionPath.startsWith('/')
           ? collectionPath
           : `${repositoryPath}/${collectionPath}`;
@@ -1693,16 +1851,25 @@ export const RepositoryPanelProvider: React.FC<
         // FileSystemService.readFile returns { content, filePath } or null
         const result = await FileSystemService.readFile(absolutePath);
         if (!result) {
-          console.info('[RepositoryPanelProvider] File not found:', absolutePath);
+          console.info(
+            '[RepositoryPanelProvider] File not found:',
+            absolutePath,
+          );
           throw new Error(`Failed to fetch content for ${relativePath}`);
         }
-        console.info('[RepositoryPanelProvider] File read successfully:', absolutePath);
+        console.info(
+          '[RepositoryPanelProvider] File read successfully:',
+          absolutePath,
+        );
         // Extract content from the result object
         return typeof result === 'string' ? result : result.content;
       };
 
       // Shared writeFile implementation
-      const writeFileImpl = async (relativePath: string, content: string): Promise<void> => {
+      const writeFileImpl = async (
+        relativePath: string,
+        content: string,
+      ): Promise<void> => {
         const absolutePath = relativePath.startsWith('/')
           ? relativePath
           : `${repositoryPath}/${relativePath}`;
@@ -1744,11 +1911,13 @@ export const RepositoryPanelProvider: React.FC<
           // Git-specific method to read file content at a specific revision
           getFileContentAtRevision: async (
             filePath: string,
-            revision: string = 'HEAD'
+            revision: string = 'HEAD',
           ): Promise<string | null> => {
             try {
               if (!repositoryPath) {
-                console.warn('[RepositoryPanelProvider] No repository path set');
+                console.warn(
+                  '[RepositoryPanelProvider] No repository path set',
+                );
                 return null;
               }
 
@@ -1757,44 +1926,54 @@ export const RepositoryPanelProvider: React.FC<
               if (filePath.startsWith('/')) {
                 // If absolute path, make it relative to repository root
                 if (filePath.startsWith(repositoryPath + '/')) {
-                  pathRelativeToRepo = filePath.substring(repositoryPath.length + 1);
+                  pathRelativeToRepo = filePath.substring(
+                    repositoryPath.length + 1,
+                  );
                 } else if (filePath === repositoryPath) {
                   pathRelativeToRepo = '';
                 } else {
-                  console.warn('[RepositoryPanelProvider] File path is outside repository:', {
-                    filePath,
-                    repositoryPath
-                  });
+                  console.warn(
+                    '[RepositoryPanelProvider] File path is outside repository:',
+                    {
+                      filePath,
+                      repositoryPath,
+                    },
+                  );
                   return null;
                 }
               }
 
-              console.info('[RepositoryPanelProvider] getFileContentAtRevision:', {
-                repositoryPath,
-                originalPath: filePath,
-                pathRelativeToRepo,
-                revision
-              });
+              console.info(
+                '[RepositoryPanelProvider] getFileContentAtRevision:',
+                {
+                  repositoryPath,
+                  originalPath: filePath,
+                  pathRelativeToRepo,
+                  revision,
+                },
+              );
 
               // Use FileSystemService to call IPC with the relative path
               const content = await FileSystemService.getFileContentAtRevision(
                 repositoryPath,
                 pathRelativeToRepo,
-                revision
+                revision,
               );
 
               return content;
             } catch (error) {
-              console.error('[RepositoryPanelProvider] Failed to get file content from git:', error);
+              console.error(
+                '[RepositoryPanelProvider] Failed to get file content from git:',
+                error,
+              );
               return null;
             }
           },
           // Path manipulation methods required by TraceListPanel
           join: (...paths: string[]): string => {
-            return paths
-              .join('/')
-              .replace(/\/+/g, '/')
-              .replace(/\/$/, '') || '/';
+            return (
+              paths.join('/').replace(/\/+/g, '/').replace(/\/$/, '') || '/'
+            );
           },
           dirname: (path: string): string => {
             const lastSlash = path.lastIndexOf('/');
@@ -1839,9 +2018,7 @@ export const RepositoryPanelProvider: React.FC<
             // Force cache invalidation and rebuild
             // This will emit CACHE_SYNC events that the onCacheSync listener
             // (line 241) will handle to update state automatically
-            await RepositoryMonitoringService.refreshRepository(
-              repositoryPath,
-            );
+            await RepositoryMonitoringService.refreshRepository(repositoryPath);
             console.info(
               '[RepositoryPanelProvider] Refresh triggered for file tree, waiting for cache sync event',
             );
@@ -1852,9 +2029,7 @@ export const RepositoryPanelProvider: React.FC<
             );
             // Fallback: try to get whatever is in cache
             const tree =
-              await RepositoryMonitoringService.getFileTree(
-                repositoryPath,
-              );
+              await RepositoryMonitoringService.getFileTree(repositoryPath);
             setFileTreeData(tree);
           } finally {
             setFileTreeLoading(false);
@@ -1879,8 +2054,9 @@ export const RepositoryPanelProvider: React.FC<
           const plansDir = `${homePath}/.claude/plans`;
           const entries = await FileSystemService.readDirectory(plansDir);
 
-          const planFileNames = entries
-            .filter((entry) => entry.endsWith('.md') || entry.endsWith('.MD'));
+          const planFileNames = entries.filter(
+            (entry) => entry.endsWith('.md') || entry.endsWith('.MD'),
+          );
 
           const planFilesWithStats = await Promise.all(
             planFileNames.map(async (fileName) => {
@@ -1891,12 +2067,12 @@ export const RepositoryPanelProvider: React.FC<
                 size: stats?.size || 0,
                 lastModified: stats?.lastModified || new Date(),
               };
-            })
+            }),
           );
 
           const builder = new PathsFileTreeBuilder();
           const builtTree = builder.build({
-            files: planFilesWithStats.map(f => f.path),
+            files: planFilesWithStats.map((f) => f.path),
             rootPath: homePath,
           });
 
@@ -1907,7 +2083,8 @@ export const RepositoryPanelProvider: React.FC<
               return {
                 ...file,
                 size: statsEntry?.size || file.size || 0,
-                lastModified: statsEntry?.lastModified || file.lastModified || new Date(),
+                lastModified:
+                  statsEntry?.lastModified || file.lastModified || new Date(),
               };
             }),
           };
@@ -1921,9 +2098,14 @@ export const RepositoryPanelProvider: React.FC<
           };
 
           setRootFileTreeData(fileTree);
-          console.info('[RepositoryPanelProvider] Refreshed global plans file tree');
+          console.info(
+            '[RepositoryPanelProvider] Refreshed global plans file tree',
+          );
         } catch (error) {
-          console.error('[RepositoryPanelProvider] Failed to refresh global plans:', error);
+          console.error(
+            '[RepositoryPanelProvider] Failed to refresh global plans:',
+            error,
+          );
           setRootFileTreeData(null);
         } finally {
           setRootFileTreeLoading(false);
@@ -2004,9 +2186,7 @@ export const RepositoryPanelProvider: React.FC<
             // Force cache invalidation and rebuild
             // Markdown files are extracted from the file tree,
             // so refreshing the repository will update both
-            await RepositoryMonitoringService.refreshRepository(
-              repositoryPath,
-            );
+            await RepositoryMonitoringService.refreshRepository(repositoryPath);
             console.info(
               '[RepositoryPanelProvider] Refresh triggered for markdown, waiting for cache sync event',
             );
@@ -2017,9 +2197,7 @@ export const RepositoryPanelProvider: React.FC<
             );
             // Fallback: try to get whatever is in cache
             const tree =
-              await RepositoryMonitoringService.getFileTree(
-                repositoryPath,
-              );
+              await RepositoryMonitoringService.getFileTree(repositoryPath);
             setFileTreeData(tree);
           } finally {
             setFileTreeLoading(false);
@@ -2045,9 +2223,7 @@ export const RepositoryPanelProvider: React.FC<
             // Force cache invalidation and rebuild
             // This will emit CACHE_SYNC events that the onCacheSync listener
             // (line 315) will handle to update state automatically
-            await RepositoryMonitoringService.refreshRepository(
-              repositoryPath,
-            );
+            await RepositoryMonitoringService.refreshRepository(repositoryPath);
             console.info(
               '[RepositoryPanelProvider] Refresh triggered for packages, waiting for cache sync event',
             );
@@ -2058,9 +2234,7 @@ export const RepositoryPanelProvider: React.FC<
             );
             // Fallback: try to get whatever is in cache
             const result =
-              await RepositoryMonitoringService.getPackages(
-                repositoryPath,
-              );
+              await RepositoryMonitoringService.getPackages(repositoryPath);
             if (result) {
               setPackagesData(result);
             } else {
@@ -2079,7 +2253,10 @@ export const RepositoryPanelProvider: React.FC<
   // Find the current repository's AlexandriaEntry from the loaded repositories
   const currentAlexandriaEntry = useMemo(() => {
     if (!repositoryPath || alexandriaRepositories.length === 0) return null;
-    return alexandriaRepositories.find(entry => entry.path === repositoryPath) || null;
+    return (
+      alexandriaRepositories.find((entry) => entry.path === repositoryPath) ||
+      null
+    );
   }, [repositoryPath, alexandriaRepositories]);
 
   // Returns null if the workspace path isn't in the registry yet — upstream
@@ -2114,9 +2291,7 @@ export const RepositoryPanelProvider: React.FC<
             // Force cache invalidation and rebuild
             // This will emit GIT_STATUS_CHANGED events that the onGitStatusChanged
             // listener (line 365) will handle to update state automatically
-            await RepositoryMonitoringService.refreshRepository(
-              repositoryPath,
-            );
+            await RepositoryMonitoringService.refreshRepository(repositoryPath);
             console.info(
               '[RepositoryPanelProvider] Refresh triggered for git status, waiting for event',
             );
@@ -2154,9 +2329,7 @@ export const RepositoryPanelProvider: React.FC<
         setQualityLoading(true);
         try {
           const remoteInfo =
-            await RepositoryMonitoringService.getGitRemoteInfo(
-              repositoryPath,
-            );
+            await RepositoryMonitoringService.getGitRemoteInfo(repositoryPath);
           if (!remoteInfo?.remoteUrl) {
             setQualityData(null);
             return;
@@ -2169,9 +2342,7 @@ export const RepositoryPanelProvider: React.FC<
           }
 
           const gitStatus =
-            await RepositoryMonitoringService.getGitStatus(
-              repositoryPath,
-            );
+            await RepositoryMonitoringService.getGitStatus(repositoryPath);
           const branch = gitStatus?.branch || 'main';
 
           // Clear cache to force fresh fetch
@@ -2213,7 +2384,9 @@ export const RepositoryPanelProvider: React.FC<
   );
 
   // Explicit DataSlice: fileCityColorModes
-  const fileCityColorModesSlice = useMemo<DataSlice<FileCityColorModesSliceData>>(
+  const fileCityColorModesSlice = useMemo<
+    DataSlice<FileCityColorModesSliceData>
+  >(
     () => ({
       scope: 'repository' as const,
       name: 'fileCityColorModes',
@@ -2248,8 +2421,7 @@ export const RepositoryPanelProvider: React.FC<
         // Refetch localhost servers
         setLocalhostServersLoading(true);
         try {
-          const result =
-            await LocalhostDetectionService.detectRunningServers();
+          const result = await LocalhostDetectionService.detectRunningServers();
           setLocalhostServers(result.servers);
         } catch (error) {
           console.error(
@@ -2265,7 +2437,9 @@ export const RepositoryPanelProvider: React.FC<
   );
 
   // Explicit DataSlice: globalSkills
-  const globalSkillsSlice = useMemo<DataSlice<{ skills: GlobalSkill[] } | null>>(
+  const globalSkillsSlice = useMemo<
+    DataSlice<{ skills: GlobalSkill[] } | null>
+  >(
     () => ({
       scope: 'workspace' as const,
       name: 'globalSkills',
@@ -2376,7 +2550,9 @@ export const RepositoryPanelProvider: React.FC<
   );
 
   // Activity heatmap slice (for CodeCityPanel)
-  const activityHeatmapSlice = useMemo<DataSlice<ActivityHeatmapSliceData | null>>(
+  const activityHeatmapSlice = useMemo<
+    DataSlice<ActivityHeatmapSliceData | null>
+  >(
     () => ({
       scope: 'repository' as const,
       name: 'activityHeatmap',
@@ -2388,12 +2564,18 @@ export const RepositoryPanelProvider: React.FC<
 
         setActivityHeatmapLoading(true);
         try {
-          const commitDates = await GitService.getCommitDatesForHeatMap(repositoryPathRef.current, 30);
+          const commitDates = await GitService.getCommitDatesForHeatMap(
+            repositoryPathRef.current,
+            30,
+          );
           setActivityHeatmapData({
-            days: commitDates.map(d => ({ date: d.date, count: d.count })),
+            days: commitDates.map((d) => ({ date: d.date, count: d.count })),
           });
         } catch (error) {
-          console.error('[RepositoryPanelContext] Failed to refresh activity heatmap:', error);
+          console.error(
+            '[RepositoryPanelContext] Failed to refresh activity heatmap:',
+            error,
+          );
         } finally {
           setActivityHeatmapLoading(false);
         }
@@ -2415,7 +2597,9 @@ export const RepositoryPanelProvider: React.FC<
 
         setLineCountsLoading(true);
         try {
-          const rawLineCounts = await FileCityImageService.countLines(repositoryPathRef.current);
+          const rawLineCounts = await FileCityImageService.countLines(
+            repositoryPathRef.current,
+          );
           if (rawLineCounts) {
             // Transform paths to use relative paths (strip repo name prefix if present)
             const repoName = repositoryPathRef.current.split('/').pop() || '';
@@ -2435,7 +2619,10 @@ export const RepositoryPanelProvider: React.FC<
             });
           }
         } catch (error) {
-          console.error('[RepositoryPanelContext] Failed to refresh line counts:', error);
+          console.error(
+            '[RepositoryPanelContext] Failed to refresh line counts:',
+            error,
+          );
         } finally {
           setLineCountsLoading(false);
         }
@@ -2468,7 +2655,10 @@ export const RepositoryPanelProvider: React.FC<
   );
 
   const refresh = useCallback(
-    async (_scope?: 'workspace' | 'repository', _sliceName?: string): Promise<void> => {
+    async (
+      _scope?: 'workspace' | 'repository',
+      _sliceName?: string,
+    ): Promise<void> => {
       // No-op: Actions handle their own data refreshing
       // React's reactivity handles UI updates automatically
       // Any actual refresh should be triggered via actions, not context.refresh()

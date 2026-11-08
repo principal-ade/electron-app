@@ -24,7 +24,7 @@ export function useActivityFeed(
   repositories: AlexandriaEntry[],
   maxRepos = 10,
   commitsPerRepo = 5,
-  totalLimit = 20
+  totalLimit = 20,
 ) {
   const [commits, setCommits] = useState<ActivityCommit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,7 +44,9 @@ export function useActivityFeed(
     try {
       // Repositories are already sorted by lastOpenedAt from the provider
       // Just take the top N repos with valid paths
-      const topRepos = repositories.filter((entry) => entry.path).slice(0, maxRepos);
+      const topRepos = repositories
+        .filter((entry) => entry.path)
+        .slice(0, maxRepos);
 
       // Fetch recent commits from each repo in parallel
       const allCommits: ActivityCommit[] = [];
@@ -62,12 +64,14 @@ export function useActivityFeed(
             const repoCommits = await GitService.getCommitsInDateRange(
               entry.path,
               startDate,
-              endDate
+              endDate,
             );
 
             // Take only the most recent N commits per repo
             // Note: getCommitsInDateRange returns oldest first, so we reverse
-            const recentCommits = repoCommits.reverse().slice(0, commitsPerRepo);
+            const recentCommits = repoCommits
+              .reverse()
+              .slice(0, commitsPerRepo);
 
             for (const commit of recentCommits) {
               allCommits.push({
@@ -81,9 +85,12 @@ export function useActivityFeed(
               });
             }
           } catch (err) {
-            console.warn(`[useActivityFeed] Failed to fetch commits for ${entry.name}:`, err);
+            console.warn(
+              `[useActivityFeed] Failed to fetch commits for ${entry.name}:`,
+              err,
+            );
           }
-        })
+        }),
       );
 
       if (abortRef.current) return;
@@ -94,7 +101,9 @@ export function useActivityFeed(
       setCommits(limitedCommits);
     } catch (err) {
       console.error('[useActivityFeed] Error loading activity feed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load activity feed');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load activity feed',
+      );
       setCommits([]);
     } finally {
       setLoading(false);

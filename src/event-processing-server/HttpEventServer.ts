@@ -172,7 +172,9 @@ class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
     // Generic last-resort: take the trailing two path-ish segments. Preserves
     // the prior behavior for odd remotes the shared parser doesn't recognize.
     const match = remoteUrl.match(/([^/:]+)\/([^/]+?)(?:\.git)?$/);
-    return match ? { owner: match[1], repo: match[2] } : { owner: '', repo: '' };
+    return match
+      ? { owner: match[1], repo: match[2] }
+      : { owner: '', repo: '' };
   }
 
   getSystemInfo(): SystemInfo {
@@ -399,8 +401,8 @@ export class HttpEventServer extends EventEmitter {
 
           // Event: Agent event received via HTTP POST
           span.addEvent(eventNames[agent], {
-            'provider': agent,
-            'duration_ms': duration,
+            provider: agent,
+            duration_ms: duration,
           });
 
           span.setStatus({ code: SpanStatusCode.OK });
@@ -414,7 +416,10 @@ export class HttpEventServer extends EventEmitter {
           });
         } catch (error) {
           this.errorCount++;
-          span.setStatus({ code: SpanStatusCode.ERROR, message: (error as Error).message });
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: (error as Error).message,
+          });
           this.log('error', `Error processing ${agent} event: ${error}`);
 
           res.status(500).json({
@@ -478,7 +483,8 @@ export class HttpEventServer extends EventEmitter {
     if (!match) return;
     const topicId = match[1];
 
-    const rawSessionId = typeof raw.session_id === 'string' ? raw.session_id : undefined;
+    const rawSessionId =
+      typeof raw.session_id === 'string' ? raw.session_id : undefined;
     const sessionId = normalizedSessionId || rawSessionId;
     if (!sessionId) return;
 
@@ -524,7 +530,11 @@ export class HttpEventServer extends EventEmitter {
     if (!sessionId || !workingDirectory) return;
 
     const rawSource = evt.data?.source;
-    if (rawSource !== 'startup' && rawSource !== 'resume' && rawSource !== 'clear') {
+    if (
+      rawSource !== 'startup' &&
+      rawSource !== 'resume' &&
+      rawSource !== 'clear'
+    ) {
       return;
     }
 
@@ -582,10 +592,10 @@ export class HttpEventServer extends EventEmitter {
 
       // Event: Event processed through AgentEventPipeline
       span.addEvent('event.pipeline.event_processed', {
-        'provider': provider,
+        provider: provider,
         'session.id': repoNormalizedEvent.sessionId || '',
         'event.type': repoNormalizedEvent.eventType?.toString() || '',
-        'duration_ms': duration,
+        duration_ms: duration,
       });
 
       // Sidecar: if the agent ran a Bash curl that fetches GET /api/topics/<id>,
@@ -630,7 +640,10 @@ export class HttpEventServer extends EventEmitter {
 
       span.setStatus({ code: SpanStatusCode.OK });
     } catch (error) {
-      span.setStatus({ code: SpanStatusCode.ERROR, message: (error as Error).message });
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: (error as Error).message,
+      });
       this.log('error', `Event processing failed: ${error}`);
       throw error;
     } finally {
@@ -739,7 +752,10 @@ export class HttpEventServer extends EventEmitter {
             this.log('warn', `Port ${port} in use, trying ${port + 1}`);
             tryPort(port + 1, retries - 1);
           } else {
-            span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+            span.setStatus({
+              code: SpanStatusCode.ERROR,
+              message: err.message,
+            });
             span.end();
             reject(err);
           }
@@ -798,7 +814,11 @@ export class HttpEventServer extends EventEmitter {
     context?: Record<string, unknown>,
   ): void {
     // Only log errors and warnings unless debug is enabled
-    if (level !== 'error' && level !== 'warn' && this.config.logLevel !== 'debug') {
+    if (
+      level !== 'error' &&
+      level !== 'warn' &&
+      this.config.logLevel !== 'debug'
+    ) {
       return;
     }
     const timestamp = new Date().toISOString();

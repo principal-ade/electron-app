@@ -50,11 +50,17 @@ const createSkillContentWithFrontmatter = (
   title: string,
   description: string,
   capabilities: string[],
-  extraFrontmatter?: Record<string, any>
+  extraFrontmatter?: Record<string, any>,
 ) => `---
 name: ${title}
 description: ${description}
-${extraFrontmatter ? Object.entries(extraFrontmatter).map(([k, v]) => `${k}: ${JSON.stringify(v)}`).join('\n') : ''}
+${
+  extraFrontmatter
+    ? Object.entries(extraFrontmatter)
+        .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+        .join('\n')
+    : ''
+}
 ---
 
 # ${title}
@@ -97,7 +103,7 @@ const createGitHubFileSystemAdapter = () => {
         'Check for regulatory compliance',
         'Flag ambiguous or problematic clauses',
       ],
-      { tags: ['legal', 'compliance'] }
+      { tags: ['legal', 'compliance'] },
     ),
     '.agent/skills/data-analysis/SKILL.md': createSkillContentWithFrontmatter(
       'Data Analysis',
@@ -107,18 +113,19 @@ const createGitHubFileSystemAdapter = () => {
         'Data cleaning and preprocessing',
         'Generate charts and visualizations',
       ],
-      { tags: ['data', 'analytics'] }
+      { tags: ['data', 'analytics'] },
     ),
-    '.agent/skills/presentation-maker/SKILL.md': createSkillContentWithFrontmatter(
-      'Presentation Maker',
-      'Create professional presentations from content and data',
-      [
-        'Design slide layouts and themes',
-        'Convert data into visual stories',
-        'Generate speaker notes',
-      ],
-      { tags: ['presentation', 'design'] }
-    ),
+    '.agent/skills/presentation-maker/SKILL.md':
+      createSkillContentWithFrontmatter(
+        'Presentation Maker',
+        'Create professional presentations from content and data',
+        [
+          'Design slide layouts and themes',
+          'Convert data into visual stories',
+          'Generate speaker notes',
+        ],
+        { tags: ['presentation', 'design'] },
+      ),
     '.agent/skills/code-reviewer/SKILL.md': createSkillContentWithFrontmatter(
       'Code Reviewer',
       'Review code for quality, security, and best practices',
@@ -127,7 +134,7 @@ const createGitHubFileSystemAdapter = () => {
         'Suggest performance improvements',
         'Check adherence to coding standards',
       ],
-      { tags: ['code-quality', 'security'] }
+      { tags: ['code-quality', 'security'] },
     ),
   };
 
@@ -158,19 +165,21 @@ export const Default: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          currentScope: {
-            type: 'repository',
-            repository: {
-              name: 'professional-skills',
-              path: 'skills-org/professional-skills', // GitHub path format
+        contextOverrides={
+          {
+            currentScope: {
+              type: 'repository',
+              repository: {
+                name: 'professional-skills',
+                path: 'skills-org/professional-skills', // GitHub path format
+              },
             },
-          },
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createGitHubFileSystemAdapter(),
-          },
-        } as any}
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createGitHubFileSystemAdapter(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillsBrowsePanel {...props} />}
       </MockPanelProvider>
@@ -200,19 +209,21 @@ export const NoSkills: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          currentScope: {
-            type: 'repository',
-            repository: {
-              name: 'no-skills-repo',
-              path: 'example-org/no-skills-repo',
+        contextOverrides={
+          {
+            currentScope: {
+              type: 'repository',
+              repository: {
+                name: 'no-skills-repo',
+                path: 'example-org/no-skills-repo',
+              },
             },
-          },
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createGitHubFileSystemAdapter(),
-          },
-        } as any}
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createGitHubFileSystemAdapter(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillsBrowsePanel {...props} />}
       </MockPanelProvider>
@@ -237,25 +248,27 @@ export const Loading: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          currentScope: {
-            type: 'repository',
-            repository: {
-              name: 'professional-skills',
-              path: 'skills-org/professional-skills',
-            },
-          },
-          slices: mockSlices,
-          adapters: {
-            fileSystem: {
-              readFile: async () => {
-                // Simulate slow loading
-                await new Promise((resolve) => setTimeout(resolve, 10000));
-                return '';
+        contextOverrides={
+          {
+            currentScope: {
+              type: 'repository',
+              repository: {
+                name: 'professional-skills',
+                path: 'skills-org/professional-skills',
               },
             },
-          },
-        } as any}
+            slices: mockSlices,
+            adapters: {
+              fileSystem: {
+                readFile: async () => {
+                  // Simulate slow loading
+                  await new Promise((resolve) => setTimeout(resolve, 10000));
+                  return '';
+                },
+              },
+            },
+          } as any
+        }
       >
         {(props) => <SkillsBrowsePanel {...props} />}
       </MockPanelProvider>
@@ -271,7 +284,7 @@ export const ManySkills: Story = {
     // Generate a large file tree with many skills
     const manySkillsPaths = Array.from(
       { length: 30 },
-      (_, i) => `.agent/skills/skill-${i + 1}/SKILL.md`
+      (_, i) => `.agent/skills/skill-${i + 1}/SKILL.md`,
     );
     const manySkillsTree = builder.build({
       files: [...manySkillsPaths, 'src/index.ts', 'README.md'],
@@ -291,7 +304,7 @@ export const ManySkills: Story = {
               `Secondary capability for skill ${num}`,
               `Advanced feature for skill ${num}`,
             ],
-            { tags: [`skill-${num}`, 'test'] }
+            { tags: [`skill-${num}`, 'test'] },
           );
         }
         throw new Error(`File not found: ${path}`);
@@ -310,19 +323,21 @@ export const ManySkills: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          currentScope: {
-            type: 'repository',
-            repository: {
-              name: 'skill-collection',
-              path: 'skills-org/skill-collection',
+        contextOverrides={
+          {
+            currentScope: {
+              type: 'repository',
+              repository: {
+                name: 'skill-collection',
+                path: 'skills-org/skill-collection',
+              },
             },
-          },
-          slices: mockSlices,
-          adapters: {
-            fileSystem: manySkillsAdapter,
-          },
-        } as any}
+            slices: mockSlices,
+            adapters: {
+              fileSystem: manySkillsAdapter,
+            },
+          } as any
+        }
       >
         {(props) => <SkillsBrowsePanel {...props} />}
       </MockPanelProvider>
@@ -381,19 +396,21 @@ export const WithSearch: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          currentScope: {
-            type: 'repository',
-            repository: {
-              name: 'professional-skills',
-              path: 'skills-org/professional-skills',
+        contextOverrides={
+          {
+            currentScope: {
+              type: 'repository',
+              repository: {
+                name: 'professional-skills',
+                path: 'skills-org/professional-skills',
+              },
             },
-          },
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createGitHubFileSystemAdapter(),
-          },
-        } as any}
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createGitHubFileSystemAdapter(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillsBrowsePanel {...props} />}
       </MockPanelProvider>
@@ -419,19 +436,21 @@ export const WithRefresh: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          currentScope: {
-            type: 'repository',
-            repository: {
-              name: 'professional-skills',
-              path: 'skills-org/professional-skills',
+        contextOverrides={
+          {
+            currentScope: {
+              type: 'repository',
+              repository: {
+                name: 'professional-skills',
+                path: 'skills-org/professional-skills',
+              },
             },
-          },
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createGitHubFileSystemAdapter(),
-          },
-        } as any}
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createGitHubFileSystemAdapter(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillsBrowsePanel {...props} supportsRefresh={true} />}
       </MockPanelProvider>

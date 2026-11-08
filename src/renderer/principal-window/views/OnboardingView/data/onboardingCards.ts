@@ -31,7 +31,8 @@ export const getCardById = (id: string): OnboardingCard | undefined =>
  */
 export const getCardsByCategory = (
   category: OnboardingCard['category'],
-): OnboardingCard[] => ONBOARDING_CARDS.filter((card) => card.category === category);
+): OnboardingCard[] =>
+  ONBOARDING_CARDS.filter((card) => card.category === category);
 
 /**
  * Get all unique categories from the cards

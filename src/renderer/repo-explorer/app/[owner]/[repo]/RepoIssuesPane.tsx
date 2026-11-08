@@ -12,9 +12,17 @@
 
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { CircleDot, CheckCircle2, ChevronLeft, MessageSquare } from 'lucide-react';
+import {
+  CircleDot,
+  CheckCircle2,
+  ChevronLeft,
+  MessageSquare,
+} from 'lucide-react';
 import type { components } from '@octokit/openapi-types';
-import { useRepoIssues, type IssueStateFilter } from '../../../hooks/useRepoIssues';
+import {
+  useRepoIssues,
+  type IssueStateFilter,
+} from '../../../hooks/useRepoIssues';
 import { InlineTrailLoader } from '../../../components/trail/InlineTrailLoader';
 
 type GitHubIssue = components['schemas']['issue'];
@@ -128,7 +136,10 @@ const IssueRow: React.FC<{
         )}
         <div
           className="flex items-center gap-2"
-          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: theme.fontSizes[0],
+          }}
         >
           <span>#{issue.number}</span>
           <span>· {relativeTime(issue.updated_at)}</span>
@@ -152,7 +163,8 @@ export const RepoIssuesPane: React.FC<{
   onClose?: () => void;
 }> = ({ owner, repo, selectedIssueNumber, onSelectIssue, onClose }) => {
   const { theme } = useTheme();
-  const [stateFilter, setStateFilter] = React.useState<IssueStateFilter>('open');
+  const [stateFilter, setStateFilter] =
+    React.useState<IssueStateFilter>('open');
   const { issues, loading, loadingMore, error, hasMore, loadMore, refresh } =
     useRepoIssues(owner, repo, { state: stateFilter });
 
@@ -200,7 +212,9 @@ export const RepoIssuesPane: React.FC<{
                     ? theme.colors.backgroundSecondary
                     : 'transparent',
                 color:
-                  stateFilter === s ? theme.colors.text : theme.colors.textMuted,
+                  stateFilter === s
+                    ? theme.colors.text
+                    : theme.colors.textMuted,
                 border: `1px solid ${
                   stateFilter === s ? theme.colors.border : 'transparent'
                 }`,
@@ -216,7 +230,10 @@ export const RepoIssuesPane: React.FC<{
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center py-12 gap-3">
           <InlineTrailLoader size={40} />
           <span
-            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+            }}
           >
             Loading issues…
           </span>
@@ -229,7 +246,10 @@ export const RepoIssuesPane: React.FC<{
             Failed to load issues
           </span>
           <span
-            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[0],
+            }}
           >
             {error}
           </span>
@@ -251,7 +271,10 @@ export const RepoIssuesPane: React.FC<{
       ) : issues.length === 0 ? (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center py-12 px-6 text-center">
           <span
-            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+            }}
           >
             No {stateFilter === 'all' ? '' : `${stateFilter} `}issues found
           </span>

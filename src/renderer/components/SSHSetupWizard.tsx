@@ -21,12 +21,7 @@ interface SSHSetupWizardProps {
 }
 
 type WizardStep =
-  | 'intro'
-  | 'generating'
-  | 'upload'
-  | 'testing'
-  | 'complete'
-  | 'error';
+  'intro' | 'generating' | 'upload' | 'testing' | 'complete' | 'error';
 
 export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
   isOpen,

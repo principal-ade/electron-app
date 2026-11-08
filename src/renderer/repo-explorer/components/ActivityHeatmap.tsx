@@ -30,7 +30,12 @@ export const ActivityHeatmap: React.FC<{
 
   const weeks = useMemo(() => {
     const today = new Date();
-    const days: Array<{ date: string; count: number; dayOfWeek: number; monthLabel?: string }> = [];
+    const days: Array<{
+      date: string;
+      count: number;
+      dayOfWeek: number;
+      monthLabel?: string;
+    }> = [];
 
     for (let i = 364; i >= 0; i--) {
       const d = new Date(today);
@@ -40,16 +45,22 @@ export const ActivityHeatmap: React.FC<{
         date: key,
         count: activityData.get(key) ?? 0,
         dayOfWeek: d.getDay(),
-        monthLabel: d.getDate() === 1
-          ? ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][d.getMonth()]
-          : undefined,
+        monthLabel:
+          d.getDate() === 1
+            ? ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][
+                d.getMonth()
+              ]
+            : undefined,
       });
     }
 
     const groups: (typeof days)[] = [];
     let week: typeof days = [];
     for (const day of days) {
-      if (day.dayOfWeek === 0 && week.length > 0) { groups.push(week); week = []; }
+      if (day.dayOfWeek === 0 && week.length > 0) {
+        groups.push(week);
+        week = [];
+      }
       week.push(day);
     }
     if (week.length > 0) groups.push(week);
@@ -58,13 +69,17 @@ export const ActivityHeatmap: React.FC<{
 
   const maxCount = useMemo(() => {
     let max = 0;
-    activityData.forEach(v => { if (v > max) max = v; });
+    activityData.forEach((v) => {
+      if (v > max) max = v;
+    });
     return max || 1;
   }, [activityData]);
 
   const getColor = (count: number) => {
     if (count === 0) return `${theme.colors.border}30`;
-    const alpha = Math.floor(66 + Math.min(count / maxCount, 1) * 189).toString(16).padStart(2, '0');
+    const alpha = Math.floor(66 + Math.min(count / maxCount, 1) * 189)
+      .toString(16)
+      .padStart(2, '0');
     return `${theme.colors.primary}${alpha}`;
   };
 
@@ -76,29 +91,54 @@ export const ActivityHeatmap: React.FC<{
       ref={containerRef}
       className="owner-heatmap"
       style={{
-        display: 'flex', gap, padding: '0 16px 16px', width: '100%', height: '100%',
-        overflowX: 'auto', overflowY: 'hidden', alignItems: 'center',
+        display: 'flex',
+        gap,
+        padding: '0 16px 16px',
+        width: '100%',
+        height: '100%',
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        alignItems: 'center',
         scrollbarWidth: 'none',
       }}
     >
       {weeks.map((week, wi) => (
-        <div key={week[0]?.date ?? wi} style={{ display: 'flex', flexDirection: 'column', gap, flexShrink: 0 }}>
-          {week.map(day => (
+        <div
+          key={week[0]?.date ?? wi}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap,
+            flexShrink: 0,
+          }}
+        >
+          {week.map((day) => (
             <div
               key={day.date}
               title={`${day.date}: ${day.count} commits`}
               style={{
-                width: squareSize, height: squareSize, borderRadius: br,
-                backgroundColor: getColor(day.count), flexShrink: 0,
-                position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: squareSize,
+                height: squareSize,
+                borderRadius: br,
+                backgroundColor: getColor(day.count),
+                flexShrink: 0,
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               {day.monthLabel && (
-                <span style={{
-                  fontSize: Math.max(8, Math.floor(squareSize * 0.6)), fontWeight: 700,
-                  color: theme.colors.background, textShadow: `0 0 2px ${theme.colors.text}`,
-                  pointerEvents: 'none', userSelect: 'none',
-                }}>
+                <span
+                  style={{
+                    fontSize: Math.max(8, Math.floor(squareSize * 0.6)),
+                    fontWeight: 700,
+                    color: theme.colors.background,
+                    textShadow: `0 0 2px ${theme.colors.text}`,
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                >
                   {day.monthLabel}
                 </span>
               )}

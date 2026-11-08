@@ -117,9 +117,9 @@ describe('parseProgramStatusPayload', () => {
 
   it('ignores kind/progress when not applicable, and keeps last value', () => {
     // progress only applies to working/blocked; kind only to blocked.
-    expect(parseProgramStatusPayload('state=done:progress=10:kind=auth')).toEqual(
-      { state: 'done' },
-    );
+    expect(
+      parseProgramStatusPayload('state=done:progress=10:kind=auth'),
+    ).toEqual({ state: 'done' });
     // repeated key: last wins
     expect(parseProgramStatusPayload('state=working:app=a:app=b')).toEqual({
       state: 'working',
@@ -135,9 +135,9 @@ describe('parseProgramStatusPayload', () => {
   });
 
   it('exposes a feature-detection reply that contains no report data', () => {
-    expect(PROGRAM_STATUS_FEATURE_DETECTION_REPLY.startsWith('\x1b]7501;?')).toBe(
-      true,
-    );
+    expect(
+      PROGRAM_STATUS_FEATURE_DETECTION_REPLY.startsWith('\x1b]7501;?'),
+    ).toBe(true);
   });
 });
 
@@ -154,8 +154,14 @@ describe('ProgramStatusRegistry', () => {
     registry.applyReport({ state: 'working', app: 'deploy' });
     registry.applyReport({ state: 'blocked', kind: 'question', id: 'eu-west' });
     registry.applyReport({ state: 'done', id: 'us-east' });
-    const byId = Object.fromEntries(registry.list().map((r) => [r.id ?? '', r.state]));
-    expect(byId).toEqual({ '': 'working', 'eu-west': 'blocked', 'us-east': 'done' });
+    const byId = Object.fromEntries(
+      registry.list().map((r) => [r.id ?? '', r.state]),
+    );
+    expect(byId).toEqual({
+      '': 'working',
+      'eu-west': 'blocked',
+      'us-east': 'done',
+    });
   });
 
   it('clear removes a record and its descendants', () => {
@@ -164,7 +170,12 @@ describe('ProgramStatusRegistry', () => {
     registry.applyReport({ state: 'working', id: 'build/test' });
     registry.applyReport({ state: 'done', id: 'other' });
     registry.applyReport({ id: 'build', state: 'clear' });
-    expect(registry.list().map((r) => r.id).sort()).toEqual(['other']);
+    expect(
+      registry
+        .list()
+        .map((r) => r.id)
+        .sort(),
+    ).toEqual(['other']);
   });
 
   it('dropTransient keeps done/error and removes working/blocked/idle', () => {
@@ -174,7 +185,12 @@ describe('ProgramStatusRegistry', () => {
     registry.applyReport({ state: 'done', id: 'c' });
     registry.applyReport({ state: 'error', id: 'd' });
     registry.dropTransient();
-    expect(registry.list().map((r) => r.id).sort()).toEqual(['c', 'd']);
+    expect(
+      registry
+        .list()
+        .map((r) => r.id)
+        .sort(),
+    ).toEqual(['c', 'd']);
   });
 
   it('resolves app from the nearest ancestor', () => {

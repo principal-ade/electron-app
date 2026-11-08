@@ -135,12 +135,7 @@ export interface ExplainCommitsResponse {
 }
 
 export type WorkingChangeStatus =
-  | 'added'
-  | 'modified'
-  | 'deleted'
-  | 'renamed'
-  | 'copied'
-  | 'untracked';
+  'added' | 'modified' | 'deleted' | 'renamed' | 'copied' | 'untracked';
 
 export interface WorkingChangeData {
   path: string;

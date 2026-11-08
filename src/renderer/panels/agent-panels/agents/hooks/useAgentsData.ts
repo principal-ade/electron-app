@@ -4,8 +4,8 @@ import type { PanelContextValue } from '@principal-ade/panel-framework-core';
 import type { AgentsPanelContext } from '../../types';
 
 export type AgentSource =
-  | 'project-root'      // ./AGENTS.md at repository root
-  | 'project-nested'    // ./path/to/AGENTS.md in subdirectories (monorepo)
+  | 'project-root' // ./AGENTS.md at repository root
+  | 'project-nested' // ./path/to/AGENTS.md in subdirectories (monorepo)
   | 'global-universal'; // ~/.claude/AGENTS.md (from globalAgents slice)
 
 export interface Agent {
@@ -48,7 +48,9 @@ interface UseAgentsDataReturn {
 /**
  * Helper function to determine agent source and priority from path
  */
-const determineAgentSource = (path: string): { source: AgentSource; priority: 1 | 2 | 3 } => {
+const determineAgentSource = (
+  path: string,
+): { source: AgentSource; priority: 1 | 2 | 3 } => {
   // Check if it's at the root (just "AGENTS.md")
   if (path === 'AGENTS.md') {
     return { source: 'project-root', priority: 1 };
@@ -62,13 +64,13 @@ const determineAgentSource = (path: string): { source: AgentSource; priority: 1 
  */
 const findAgentFiles = (fileTree: FileTree): string[] => {
   // Filter allFiles for AGENTS.md files anywhere in the tree
-  const agentFiles = fileTree.allFiles.filter(file => {
+  const agentFiles = fileTree.allFiles.filter((file) => {
     const fileName = file.name.toUpperCase();
     return fileName === 'AGENTS.MD';
   });
 
   // Return their relative paths
-  return agentFiles.map(file => file.relativePath);
+  return agentFiles.map((file) => file.relativePath);
 };
 
 /**
@@ -132,7 +134,9 @@ const parseAgentContent = (content: string, path: string): Agent => {
   // Extract name from path
   const pathParts = path.split('/');
   const isRoot = path === 'AGENTS.md';
-  const name = isRoot ? 'Project Agents' : pathParts[pathParts.length - 2] || 'Agents';
+  const name = isRoot
+    ? 'Project Agents'
+    : pathParts[pathParts.length - 2] || 'Agents';
 
   // Determine source and priority
   const { source, priority } = determineAgentSource(path);
@@ -170,7 +174,7 @@ export const useAgentsData = ({
   // Memoize globalAgents to prevent infinite re-renders
   const globalAgents = useMemo(
     () => globalAgentsSlice?.data?.agents ?? EMPTY_AGENTS_ARRAY,
-    [globalAgentsSlice?.data?.agents]
+    [globalAgentsSlice?.data?.agents],
   );
   const globalAgentsCount = globalAgents.length; // Use count as stable primitive
 
@@ -184,7 +188,10 @@ export const useAgentsData = ({
 
   const loadAgents = useCallback(async () => {
     // Skip if we've already loaded this exact data
-    if (fileTreeSha === lastLoadedSha.current && globalAgentsCount === lastGlobalAgentsCount.current) {
+    if (
+      fileTreeSha === lastLoadedSha.current &&
+      globalAgentsCount === lastGlobalAgentsCount.current
+    ) {
       return;
     }
 
@@ -211,7 +218,7 @@ export const useAgentsData = ({
         });
 
         localAgents = (await Promise.all(agentPromises)).filter(
-          (agent): agent is Agent => agent !== null
+          (agent): agent is Agent => agent !== null,
         );
       }
 
@@ -224,13 +231,21 @@ export const useAgentsData = ({
       lastLoadedSha.current = fileTreeSha;
       lastGlobalAgentsCount.current = globalAgentsCount;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load agents';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to load agents';
       setError(errorMessage);
       console.error('Error loading agents:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [fileTree, fileTreeSha, globalAgents, globalAgentsCount, repoPath, fileSystem]);
+  }, [
+    fileTree,
+    fileTreeSha,
+    globalAgents,
+    globalAgentsCount,
+    repoPath,
+    fileSystem,
+  ]);
 
   const refreshAgents = useCallback(async () => {
     // Force reload by clearing the tracking refs

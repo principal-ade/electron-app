@@ -91,14 +91,14 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
       >
         {React.Children.toArray(children).filter(
           (child) =>
-          React.isValidElement(child) &&
-          (child.props as { position?: string }).position === 'center',
+            React.isValidElement(child) &&
+            (child.props as { position?: string }).position === 'center',
         )}
         {/* Show title only if no center content */}
         {React.Children.toArray(children).filter(
           (child) =>
-          React.isValidElement(child) &&
-          (child.props as { position?: string }).position === 'center',
+            React.isValidElement(child) &&
+            (child.props as { position?: string }).position === 'center',
         ).length === 0 &&
           title && (
             <div

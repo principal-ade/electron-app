@@ -156,7 +156,10 @@ export const alexandriaRouter = {
   alexandria_getCodebaseView: t.procedure
     .input<GetCodebaseViewInput>()
     .action(async ({ input }) => {
-      return registryService.getCodebaseView(input.repositoryPath, input.viewId);
+      return registryService.getCodebaseView(
+        input.repositoryPath,
+        input.viewId,
+      );
     }),
 };
 

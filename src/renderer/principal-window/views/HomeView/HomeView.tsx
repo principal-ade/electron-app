@@ -37,7 +37,6 @@ interface HomeViewProps {
   onDismissOverlay?: () => void;
 }
 
-
 export function HomeView({ onDismissOverlay }: HomeViewProps) {
   const { theme } = useTheme();
   const { events: portalEvents } = usePortalEvents();

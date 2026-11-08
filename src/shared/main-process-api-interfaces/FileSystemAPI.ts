@@ -78,11 +78,11 @@ export interface SerializedFileStats {
 }
 
 export type SkillSource =
-  | 'project-universal'  // ./.agents/skills/
-  | 'global-universal'   // ~/.agents/skills/
-  | 'project-claude'     // ./.claude/skills/
-  | 'global-claude'      // ~/.claude/skills/
-  | 'project-other';     // any other location in project
+  | 'project-universal' // ./.agents/skills/
+  | 'global-universal' // ~/.agents/skills/
+  | 'project-claude' // ./.claude/skills/
+  | 'global-claude' // ~/.claude/skills/
+  | 'project-other'; // any other location in project
 
 /**
  * Skill metadata interface
@@ -127,25 +127,25 @@ export interface SkillMetadata {
  * Individual directory configuration for skill syncing
  */
 export interface GlobalSkillDirectory {
-  id: string;                    // UUID
-  path: string;                  // Full path (e.g., ~/.agents/skills)
-  displayName: string;           // User-friendly name
-  enabled: boolean;              // Active status
-  isCustom: boolean;             // true if user-added
-  localClonePath: string;        // Unique clone location per directory
-  lastSyncedAt?: string;         // Last sync timestamp for this directory
+  id: string; // UUID
+  path: string; // Full path (e.g., ~/.agents/skills)
+  displayName: string; // User-friendly name
+  enabled: boolean; // Active status
+  isCustom: boolean; // true if user-added
+  localClonePath: string; // Unique clone location per directory
+  lastSyncedAt?: string; // Last sync timestamp for this directory
 
   // Repository monitoring integration
-  isMonitored?: boolean;         // Registered with repository monitoring
-  watchReference?: string;       // Watch reference ID
-  pendingChangesCount?: number;  // Number of pending changes
+  isMonitored?: boolean; // Registered with repository monitoring
+  watchReference?: string; // Watch reference ID
+  pendingChangesCount?: number; // Number of pending changes
 
   // Status information
   status?: {
-    targetExists: boolean;       // Target directory exists
-    targetIsGit: boolean;        // Target directory is a git repo
-    cloneExists: boolean;        // Clone directory exists
-    cloneIsGit: boolean;         // Clone directory is a git repo
+    targetExists: boolean; // Target directory exists
+    targetIsGit: boolean; // Target directory is a git repo
+    cloneExists: boolean; // Clone directory exists
+    cloneIsGit: boolean; // Clone directory is a git repo
   };
 }
 
@@ -154,7 +154,7 @@ export interface GlobalSkillDirectory {
  */
 export interface PresetDirectory {
   id: string;
-  path: string;                  // Template with {HOME}
+  path: string; // Template with {HOME}
   displayName: string;
   description: string;
   icon?: string;
@@ -175,7 +175,7 @@ export const PRESET_SKILL_DIRECTORIES: PresetDirectory[] = [
     id: 'claude-specific',
     path: '{HOME}/.claude/skills',
     displayName: 'Claude Skills',
-    description: 'Claude-specific skills for Anthropic\'s Claude',
+    description: "Claude-specific skills for Anthropic's Claude",
     icon: '🎯',
   },
   {
@@ -198,13 +198,13 @@ export const PRESET_SKILL_DIRECTORIES: PresetDirectory[] = [
  * Configuration for the global skills Git repository
  */
 export interface SkillsRepoConfig {
-  version: number;               // For migrations
+  version: number; // For migrations
 
   // Global git configuration (shared by all directories)
   enabled: boolean;
   repoUrl: string;
   branch: string;
-  autoSyncInterval?: number;     // Minutes (0 = manual only)
+  autoSyncInterval?: number; // Minutes (0 = manual only)
   syncOnStartup?: boolean;
   credentialProvider?: 'system' | 'oauth';
 
@@ -231,7 +231,8 @@ export interface SyncState {
 /**
  * Sync status for individual skills
  */
-export type SkillSyncStatus = 'synced' | 'update-available' | 'modified' | 'disabled' | 'conflict';
+export type SkillSyncStatus =
+  'synced' | 'update-available' | 'modified' | 'disabled' | 'conflict';
 
 /**
  * Validation status for skill frontmatter
@@ -258,7 +259,7 @@ export interface GlobalSkill {
   referenceFiles?: string[];
   assetFiles?: string[];
   source: 'global-universal' | 'global-claude';
-  priority: 2 | 4;  // 2=global-universal, 4=global-claude
+  priority: 2 | 4; // 2=global-universal, 4=global-claude
   metadata?: SkillMetadata;
   frontmatterValidation: FrontmatterValidation;
 }
@@ -332,11 +333,13 @@ export interface FileSystemAPI {
   watchFile: (filePath: string) => Promise<boolean>;
   watchFiles: (options: { filePaths: string[] }) => Promise<boolean>;
   onFileChange: (callback: (event: FileChangeEvent) => void) => () => void;
-  onDirectoryChange: (callback: (event: {
-    type: 'add' | 'unlink' | 'addDir' | 'unlinkDir';
-    path: string;
-    stats?: unknown;
-  }) => void) => () => void;
+  onDirectoryChange: (
+    callback: (event: {
+      type: 'add' | 'unlink' | 'addDir' | 'unlinkDir';
+      path: string;
+      stats?: unknown;
+    }) => void,
+  ) => () => void;
   selectDirectory: (options?: {
     title?: string;
     buttonLabel?: string;
@@ -389,54 +392,117 @@ export interface FileSystemAPI {
   getFileContentAtRevision: (
     repositoryPath: string,
     filePath: string,
-    revision?: string
+    revision?: string,
   ) => Promise<string | null>;
 
   // Skills Git sync methods
   syncGlobalSkills: () => Promise<{ success: boolean; error?: string }>;
   getSyncStatus: () => Promise<SyncState | null>;
   getSyncConfig: () => Promise<SkillsRepoConfig | null>;
-  updateSyncConfig: (updates: Partial<SkillsRepoConfig>) => Promise<SkillsRepoConfig | null>;
-  enableSkillSync: (options: { skillPath: string; syncSource: 'git-global' | 'github' }) => Promise<{ success: boolean; error?: string }>;
-  disableSkillSync: (options: { skillPath: string }) => Promise<{ success: boolean; error?: string }>;
-  resolveSkillConflict: (options: { skillPath: string; resolution: 'keep-local' | 'use-remote' }) => Promise<{ success: boolean; error?: string }>;
+  updateSyncConfig: (
+    updates: Partial<SkillsRepoConfig>,
+  ) => Promise<SkillsRepoConfig | null>;
+  enableSkillSync: (options: {
+    skillPath: string;
+    syncSource: 'git-global' | 'github';
+  }) => Promise<{ success: boolean; error?: string }>;
+  disableSkillSync: (options: {
+    skillPath: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+  resolveSkillConflict: (options: {
+    skillPath: string;
+    resolution: 'keep-local' | 'use-remote';
+  }) => Promise<{ success: boolean; error?: string }>;
 
   // Skills repository initialization
-  getAllLocalSkills: () => Promise<{ skills: Array<{ path: string; name: string; source: 'agents' | 'claude' }>; error?: string }>;
-  initializeSkillsRepo: (options: { repoUrl?: string }) => Promise<{ success: boolean; error?: string }>;
-  migrateSkillsToRepo: (options: { skillPaths: string[] }) => Promise<{ success: boolean; error?: string }>;
+  getAllLocalSkills: () => Promise<{
+    skills: Array<{ path: string; name: string; source: 'agents' | 'claude' }>;
+    error?: string;
+  }>;
+  initializeSkillsRepo: (options: {
+    repoUrl?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+  migrateSkillsToRepo: (options: {
+    skillPaths: string[];
+  }) => Promise<{ success: boolean; error?: string }>;
   pushSkillsRepo: () => Promise<{ success: boolean; error?: string }>;
-  detectUnsyncedSkills: () => Promise<{ skills: Array<{ name: string; path: string; directory: string }>; error?: string }>;
-  addSkillsToRepo: (options: { skillPaths: string[] }) => Promise<{ success: boolean; error?: string }>;
+  detectUnsyncedSkills: () => Promise<{
+    skills: Array<{ name: string; path: string; directory: string }>;
+    error?: string;
+  }>;
+  addSkillsToRepo: (options: {
+    skillPaths: string[];
+  }) => Promise<{ success: boolean; error?: string }>;
 
   // Global skill directories management
   getSkillDirectories: () => Promise<GlobalSkillDirectory[]>;
-  addSkillDirectory: (directory: Omit<GlobalSkillDirectory, 'id' | 'localClonePath'>) => Promise<{ success: boolean; directory?: GlobalSkillDirectory; error?: string }>;
-  updateSkillDirectory: (options: { id: string; updates: Partial<GlobalSkillDirectory> }) => Promise<{ success: boolean; directory?: GlobalSkillDirectory; error?: string }>;
-  removeSkillDirectory: (id: string) => Promise<{ success: boolean; error?: string }>;
-  detectPresetDirectories: () => Promise<Array<PresetDirectory & { path: string; skillCount: number; skills: string[] }>>;
-  createAgentDirectories: (agentIds: string[]) => Promise<{ success: boolean; createdDirectories?: string[]; error?: string }>;
-  deleteAgentDirectory: (agentId: string) => Promise<{ success: boolean; error?: string }>;
-  deleteSkill: (skillPath: string) => Promise<{ success: boolean; error?: string }>;
-  syncSingleDirectory: (directoryId: string) => Promise<{ success: boolean; error?: string }>;
+  addSkillDirectory: (
+    directory: Omit<GlobalSkillDirectory, 'id' | 'localClonePath'>,
+  ) => Promise<{
+    success: boolean;
+    directory?: GlobalSkillDirectory;
+    error?: string;
+  }>;
+  updateSkillDirectory: (options: {
+    id: string;
+    updates: Partial<GlobalSkillDirectory>;
+  }) => Promise<{
+    success: boolean;
+    directory?: GlobalSkillDirectory;
+    error?: string;
+  }>;
+  removeSkillDirectory: (
+    id: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  detectPresetDirectories: () => Promise<
+    Array<
+      PresetDirectory & { path: string; skillCount: number; skills: string[] }
+    >
+  >;
+  createAgentDirectories: (agentIds: string[]) => Promise<{
+    success: boolean;
+    createdDirectories?: string[];
+    error?: string;
+  }>;
+  deleteAgentDirectory: (
+    agentId: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  deleteSkill: (
+    skillPath: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  syncSingleDirectory: (
+    directoryId: string,
+  ) => Promise<{ success: boolean; error?: string }>;
 
   // Pending changes methods (watch-notify-confirm workflow)
-  getPendingChanges: () => Promise<Array<{
-    directoryId: string;
-    changes: Array<{ path: string; type: string }>;
-    lastDetected: Date;
-  }>>;
-  clearPendingChanges: (directoryId: string) => Promise<{ success: boolean; error?: string }>;
-  onPendingChangesUpdated: (callback: (event: {
-    directoryId: string;
-    changes: {
+  getPendingChanges: () => Promise<
+    Array<{
+      directoryId: string;
       changes: Array<{ path: string; type: string }>;
       lastDetected: Date;
-    };
-  }) => void) => () => void;
+    }>
+  >;
+  clearPendingChanges: (
+    directoryId: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  onPendingChangesUpdated: (
+    callback: (event: {
+      directoryId: string;
+      changes: {
+        changes: Array<{ path: string; type: string }>;
+        lastDetected: Date;
+      };
+    }) => void,
+  ) => () => void;
 
   // Repository scanning for onboarding
   getTopLevelFolders: () => Promise<TopLevelFolder[]>;
-  scanFoldersForRepos: (folderPaths: string[]) => Promise<{ success: boolean; repos: ScannedRepository[]; error?: string }>;
-  onRepoScanProgress: (callback: (progress: ScanProgress) => void) => () => void;
+  scanFoldersForRepos: (folderPaths: string[]) => Promise<{
+    success: boolean;
+    repos: ScannedRepository[];
+    error?: string;
+  }>;
+  onRepoScanProgress: (
+    callback: (progress: ScanProgress) => void,
+  ) => () => void;
 }

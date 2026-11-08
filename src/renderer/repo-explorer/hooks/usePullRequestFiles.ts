@@ -31,9 +31,7 @@ export function usePullRequestFiles(
     if (wanted.length === 0) return;
     let cancelled = false;
 
-    const toFetch = wanted.filter(
-      (n) => !cacheRef.current.has(n),
-    );
+    const toFetch = wanted.filter((n) => !cacheRef.current.has(n));
 
     const rebuild = () => {
       if (cancelled) return;

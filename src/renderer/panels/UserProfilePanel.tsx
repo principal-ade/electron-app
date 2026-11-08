@@ -12,13 +12,7 @@ import type {
   PanelActions,
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
-import {
-  User,
-  Twitter,
-  Github,
-  UserPlus,
-  UserCheck,
-} from 'lucide-react';
+import { User, Twitter, Github, UserPlus, UserCheck } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
 import {
   CommitActivityPanel,
@@ -139,7 +133,10 @@ export interface UserProfilePanelActions extends PanelActions {
   /**
    * Get file tree for a repository (optional)
    */
-  getRepositoryFileTree?: (owner: string, repoName: string) => Promise<FileTree | null>;
+  getRepositoryFileTree?: (
+    owner: string,
+    repoName: string,
+  ) => Promise<FileTree | null>;
 
   /**
    * Follow a GitHub user (optional)
@@ -189,7 +186,12 @@ const ActivityHeatmap: React.FC<{
   theme: ReturnType<typeof useTheme>['theme'];
   bannerHeight?: number; // Height of the banner in pixels
   highlightCurrentYear?: boolean; // Whether to highlight current year squares
-}> = ({ activityData, theme, bannerHeight = 160, highlightCurrentYear = false }) => {
+}> = ({
+  activityData,
+  theme,
+  bannerHeight = 160,
+  highlightCurrentYear = false,
+}) => {
   // Calculate square size based on banner height
   // Formula: (height - vertical padding) / 7 days - gap
   const squareSize = useMemo(() => {
@@ -203,7 +205,13 @@ const ActivityHeatmap: React.FC<{
   const weeks = useMemo(() => {
     const today = new Date();
     const daysToShow = 365; // Full year
-    const days: Array<{ date: string; count: number; dayOfWeek: number; dateObj: Date; monthLabel?: string }> = [];
+    const days: Array<{
+      date: string;
+      count: number;
+      dayOfWeek: number;
+      dateObj: Date;
+      monthLabel?: string;
+    }> = [];
 
     for (let i = daysToShow - 1; i >= 0; i--) {
       const date = new Date(today);
@@ -212,16 +220,39 @@ const ActivityHeatmap: React.FC<{
       const count = activityData.get(dateKey) || 0;
 
       // Add month label if this is the first day of the month
-      const monthLabel = date.getDate() === 1
-        ? ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][date.getMonth()]
-        : undefined;
+      const monthLabel =
+        date.getDate() === 1
+          ? ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][
+              date.getMonth()
+            ]
+          : undefined;
 
-      days.push({ date: dateKey, count, dayOfWeek: date.getDay(), dateObj: date, monthLabel });
+      days.push({
+        date: dateKey,
+        count,
+        dayOfWeek: date.getDay(),
+        dateObj: date,
+        monthLabel,
+      });
     }
 
     // Group into weeks
-    const weekGroups: Array<Array<{ date: string; count: number; dayOfWeek: number; dateObj: Date; monthLabel?: string }>> = [];
-    let currentWeek: Array<{ date: string; count: number; dayOfWeek: number; dateObj: Date; monthLabel?: string }> = [];
+    const weekGroups: Array<
+      Array<{
+        date: string;
+        count: number;
+        dayOfWeek: number;
+        dateObj: Date;
+        monthLabel?: string;
+      }>
+    > = [];
+    let currentWeek: Array<{
+      date: string;
+      count: number;
+      dayOfWeek: number;
+      dateObj: Date;
+      monthLabel?: string;
+    }> = [];
 
     days.forEach((day) => {
       if (day.dayOfWeek === 0 && currentWeek.length > 0) {
@@ -271,7 +302,15 @@ const ActivityHeatmap: React.FC<{
       }}
     >
       {weeks.map((week, weekIndex) => (
-        <div key={week[0]?.date ?? `week-${weekIndex}`} style={{ display: 'flex', flexDirection: 'column', gap, flexShrink: 0 }}>
+        <div
+          key={week[0]?.date ?? `week-${weekIndex}`}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap,
+            flexShrink: 0,
+          }}
+        >
           {week.map((day) => {
             const isCurrentYear = day.dateObj.getFullYear() === currentYear;
             const shouldHighlight = highlightCurrentYear && isCurrentYear;
@@ -290,7 +329,9 @@ const ActivityHeatmap: React.FC<{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: shouldHighlight ? `0 0 0 1px ${theme.colors.primary}60` : 'none',
+                  boxShadow: shouldHighlight
+                    ? `0 0 0 1px ${theme.colors.primary}60`
+                    : 'none',
                   boxSizing: 'border-box',
                 }}
                 title={`${day.date}: ${day.count} commits`}
@@ -376,7 +417,9 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   const [_repositoriesLoading, setRepositoriesLoading] = useState(false);
 
   // File trees for repositories (lazy loaded)
-  const [fileTrees, setFileTrees] = useState<Map<string, FileTree | null>>(new Map());
+  const [fileTrees, setFileTrees] = useState<Map<string, FileTree | null>>(
+    new Map(),
+  );
 
   // Hover state for commits this year stat
   const [isCommitsStatHovered, setIsCommitsStatHovered] = useState(false);
@@ -386,7 +429,9 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   const [isFollowLoading, setIsFollowLoading] = useState(false);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'pinned'>('activity');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'activity' | 'pinned'
+  >('activity');
 
   // Panel width for responsive pinned column
   const containerRef = useRef<HTMLDivElement>(null);
@@ -568,14 +613,14 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             }
             const fileTree = await actions.getRepositoryFileTree(
               repo.githubOwner,
-              repo.repoName
+              repo.repoName,
             );
             newFileTrees.set(key, fileTree);
           } catch (err) {
             console.warn(`Failed to fetch file tree for ${key}:`, err);
             newFileTrees.set(key, null);
           }
-        })
+        }),
       );
 
       setFileTrees(newFileTrees);
@@ -593,7 +638,8 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
     let cancelled = false;
 
-    actions.getUserOrgs(user.username)
+    actions
+      .getUserOrgs(user.username)
       .then((result) => {
         if (!cancelled) setUserOrgs(result.slice(0, 8));
       })
@@ -613,7 +659,8 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
     let cancelled = false;
 
-    actions.getPinnedRepositories(user.username)
+    actions
+      .getPinnedRepositories(user.username)
       .then((names) => {
         if (!cancelled) setPinnedRepoNames(names);
       })
@@ -625,7 +672,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   }, [user, actions]);
 
   // Handle open in browser - emit event instead
-  const handleOpenUrl = (url: string, type: 'website' | 'twitter' | 'github' | 'email') => {
+  const handleOpenUrl = (
+    url: string,
+    type: 'website' | 'twitter' | 'github' | 'email',
+  ) => {
     events.emit({
       type: 'user-profile:open-link',
       source: 'UserProfilePanel',
@@ -672,7 +722,9 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     username: user?.username || '',
     name: undefined,
     email: undefined,
-    avatarUrl: user?.username ? `https://github.com/${user.username}.png` : undefined,
+    avatarUrl: user?.username
+      ? `https://github.com/${user.username}.png`
+      : undefined,
     bio: undefined,
     location: undefined,
     company: undefined,
@@ -723,18 +775,22 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         }}
       >
         <User size={48} style={{ marginBottom: spacing.md, opacity: 0.5 }} />
-        <p style={{
-          margin: 0,
-          fontSize: theme.fontSizes[2],
-          fontFamily: theme.fonts?.body
-        }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: theme.fontSizes[2],
+            fontFamily: theme.fonts?.body,
+          }}
+        >
           No user selected
         </p>
-        <p style={{
-          margin: `${spacing.xs}px 0 0`,
-          fontSize: theme.fontSizes[1],
-          fontFamily: theme.fonts?.body
-        }}>
+        <p
+          style={{
+            margin: `${spacing.xs}px 0 0`,
+            fontSize: theme.fontSizes[1],
+            fontFamily: theme.fonts?.body,
+          }}
+        >
           Select a user to view their profile
         </p>
       </div>
@@ -762,17 +818,43 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           flexShrink: 0,
         }}
       >
-        <ActivityHeatmap activityData={displayData.activityData} theme={theme} bannerHeight={170} highlightCurrentYear={isCommitsStatHovered} />
+        <ActivityHeatmap
+          activityData={displayData.activityData}
+          theme={theme}
+          bannerHeight={170}
+          highlightCurrentYear={isCommitsStatHovered}
+        />
       </div>
 
       {/* Profile Header - Fixed, no scroll */}
-      <div style={{ padding: spacing.md, marginTop: -60, position: 'relative', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'stretch', gap: spacing.md }}>
-
+      <div
+        style={{
+          padding: spacing.md,
+          marginTop: -60,
+          position: 'relative',
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{ display: 'flex', alignItems: 'stretch', gap: spacing.md }}
+        >
           {/* Left column: avatar+stats row, then name/bio below */}
-          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+          <div
+            style={{
+              flexShrink: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: spacing.md,
+            }}
+          >
             {/* Avatar + Stats row — same as original */}
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                gap: spacing.md,
+              }}
+            >
               {/* Avatar */}
               <div
                 style={{
@@ -790,7 +872,11 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   <img
                     src={displayData.avatarUrl}
                     alt={displayData.username}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
                   />
                 ) : (
                   <div
@@ -814,113 +900,161 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
               {/* Stats */}
               <div style={{ paddingBottom: spacing.xs }}>
-                <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}>
+                <div
+                  style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}
+                >
                   <div
                     style={{ textAlign: 'center', cursor: 'pointer' }}
                     onMouseEnter={() => setIsCommitsStatHovered(true)}
                     onMouseLeave={() => setIsCommitsStatHovered(false)}
                   >
-                    <div style={{
-                      fontSize: theme.fontSizes[3],
-                      fontWeight: theme.fontWeights?.semibold ?? 600,
-                      fontFamily: theme.fonts?.body,
-                      color: theme.colors.text,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '24px',
-                    }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[3],
+                        fontWeight: theme.fontWeights?.semibold ?? 600,
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.text,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '24px',
+                      }}
+                    >
                       {formatNumber(commitsThisYear)}
                     </div>
-                    <div style={{ fontSize: theme.fontSizes[0], fontFamily: theme.fonts?.body, color: theme.colors.textSecondary }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
                       commits this year
                     </div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{
-                      fontSize: theme.fontSizes[3],
-                      fontWeight: theme.fontWeights?.semibold ?? 600,
-                      fontFamily: theme.fonts?.body,
-                      color: theme.colors.text,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '24px',
-                    }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[3],
+                        fontWeight: theme.fontWeights?.semibold ?? 600,
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.text,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '24px',
+                      }}
+                    >
                       {formatNumber(displayData.totalRepos)}
                     </div>
-                    <div style={{ fontSize: theme.fontSizes[0], fontFamily: theme.fonts?.body, color: theme.colors.textSecondary }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
                       projects
                     </div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{
-                      fontSize: theme.fontSizes[3],
-                      fontWeight: theme.fontWeights?.semibold ?? 600,
-                      fontFamily: theme.fonts?.body,
-                      color: theme.colors.text,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '24px',
-                    }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[3],
+                        fontWeight: theme.fontWeights?.semibold ?? 600,
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.text,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '24px',
+                      }}
+                    >
                       {formatNumber(displayData.followers)}
                     </div>
-                    <div style={{ fontSize: theme.fontSizes[0], fontFamily: theme.fonts?.body, color: theme.colors.textSecondary }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
                       followers
                     </div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{
-                      fontSize: theme.fontSizes[3],
-                      fontWeight: theme.fontWeights?.semibold ?? 600,
-                      fontFamily: theme.fonts?.body,
-                      color: theme.colors.text,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '24px',
-                    }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[3],
+                        fontWeight: theme.fontWeights?.semibold ?? 600,
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.text,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '24px',
+                      }}
+                    >
                       {formatNumber(displayData.following)}
                     </div>
-                    <div style={{ fontSize: theme.fontSizes[0], fontFamily: theme.fonts?.body, color: theme.colors.textSecondary }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
                       following
                     </div>
                   </div>
 
                   {/* Follow Button - hidden on own profile */}
-                  {actions.followUser && actions.unfollowUser &&
-                    context.githubSyncState?.authenticatedUser !== user.username && (
-                    <div
-                      style={{
-                        textAlign: 'center',
-                        cursor: isFollowLoading ? 'not-allowed' : 'pointer',
-                        opacity: isFollowLoading ? 0.6 : 1,
-                        transition: 'opacity 0.2s ease',
-                        minWidth: '65px',
-                      }}
-                      onClick={isFollowLoading ? undefined : handleToggleFollow}
-                    >
-                      <div style={{
-                        fontSize: theme.fontSizes[3],
-                        fontWeight: theme.fontWeights?.semibold ?? 600,
-                        fontFamily: theme.fonts?.body,
-                        color: isFollowing ? theme.colors.primary : theme.colors.text,
-                        display: 'flex',
-                        justifyContent: 'center',
-                      }}>
-                        {isFollowing ? <UserCheck size={24} /> : <UserPlus size={24} />}
+                  {actions.followUser &&
+                    actions.unfollowUser &&
+                    context.githubSyncState?.authenticatedUser !==
+                      user.username && (
+                      <div
+                        style={{
+                          textAlign: 'center',
+                          cursor: isFollowLoading ? 'not-allowed' : 'pointer',
+                          opacity: isFollowLoading ? 0.6 : 1,
+                          transition: 'opacity 0.2s ease',
+                          minWidth: '65px',
+                        }}
+                        onClick={
+                          isFollowLoading ? undefined : handleToggleFollow
+                        }
+                      >
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[3],
+                            fontWeight: theme.fontWeights?.semibold ?? 600,
+                            fontFamily: theme.fonts?.body,
+                            color: isFollowing
+                              ? theme.colors.primary
+                              : theme.colors.text,
+                            display: 'flex',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {isFollowing ? (
+                            <UserCheck size={24} />
+                          ) : (
+                            <UserPlus size={24} />
+                          )}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts?.body,
+                            color: theme.colors.textSecondary,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {isFollowing ? 'following' : 'follow'}
+                        </div>
                       </div>
-                      <div style={{
-                        fontSize: theme.fontSizes[0],
-                        fontFamily: theme.fonts?.body,
-                        color: theme.colors.textSecondary,
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {isFollowing ? 'following' : 'follow'}
-                      </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               </div>
             </div>
@@ -950,10 +1084,21 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                 }}
               >
                 {/* GitHub handle */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                  }}
+                >
                   <Github size={14} color={theme.colors.textSecondary} />
                   <button
-                    onClick={() => handleOpenUrl(`https://github.com/${displayData.username}`, 'github')}
+                    onClick={() =>
+                      handleOpenUrl(
+                        `https://github.com/${displayData.username}`,
+                        'github',
+                      )
+                    }
                     style={{
                       background: 'none',
                       border: 'none',
@@ -965,8 +1110,12 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                       textDecoration: 'none',
                       transition: 'color 0.15s ease',
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = theme.colors.primary; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textSecondary; }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                    }}
                   >
                     {displayData.username}
                   </button>
@@ -975,11 +1124,29 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                 {/* Twitter handle inline */}
                 {displayData.twitterHandle && (
                   <>
-                    <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                    <span
+                      style={{
+                        color: theme.colors.textSecondary,
+                        fontSize: theme.fontSizes[2],
+                      }}
+                    >
+                      •
+                    </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing.xs,
+                      }}
+                    >
                       <Twitter size={14} color={theme.colors.textSecondary} />
                       <button
-                        onClick={() => handleOpenUrl(`https://twitter.com/${displayData.twitterHandle}`, 'twitter')}
+                        onClick={() =>
+                          handleOpenUrl(
+                            `https://twitter.com/${displayData.twitterHandle}`,
+                            'twitter',
+                          )
+                        }
                         style={{
                           background: 'none',
                           border: 'none',
@@ -991,8 +1158,13 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                           textDecoration: 'none',
                           transition: 'color 0.15s ease',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = theme.colors.primary; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textSecondary; }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = theme.colors.primary;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color =
+                            theme.colors.textSecondary;
+                        }}
                       >
                         {displayData.twitterHandle}
                       </button>
@@ -1003,20 +1175,31 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                 {/* Org avatars */}
                 {userOrgs.length > 0 && (
                   <>
-                    <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span
+                      style={{
+                        color: theme.colors.textSecondary,
+                        fontSize: theme.fontSizes[2],
+                      }}
+                    >
+                      •
+                    </span>
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                    >
                       {userOrgs.map((org, i) => (
                         <div
                           key={org.id}
                           style={{ position: 'relative', cursor: 'pointer' }}
                           onMouseEnter={() => setHoveredOrgIndex(i)}
                           onMouseLeave={() => setHoveredOrgIndex(null)}
-                          onClick={() => events.emit({
-                            type: 'owner:selected',
-                            source: 'user-profile-panel',
-                            timestamp: Date.now(),
-                            payload: { owner: org.login, isOrg: true },
-                          })}
+                          onClick={() =>
+                            events.emit({
+                              type: 'owner:selected',
+                              source: 'user-profile-panel',
+                              timestamp: Date.now(),
+                              payload: { owner: org.login, isOrg: true },
+                            })
+                          }
                         >
                           <img
                             src={org.avatar_url}
@@ -1028,28 +1211,35 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                               border: `2px solid ${theme.colors.background}`,
                               objectFit: 'cover',
                               display: 'block',
-                              transform: hoveredOrgIndex === i ? 'translateY(-3px)' : 'translateY(0)',
+                              transform:
+                                hoveredOrgIndex === i
+                                  ? 'translateY(-3px)'
+                                  : 'translateY(0)',
                               transition: 'transform 0.15s ease',
                             }}
                           />
                           {hoveredOrgIndex === i && (
-                            <div style={{
-                              position: 'absolute',
-                              bottom: '100%',
-                              left: '50%',
-                              transform: 'translateX(-50%)',
-                              marginBottom: 4,
-                              background: theme.colors.surface ?? theme.colors.background,
-                              border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary}`,
-                              borderRadius: 4,
-                              padding: '2px 6px',
-                              fontSize: theme.fontSizes[1],
-                              fontFamily: theme.fonts?.body,
-                              color: theme.colors.text,
-                              whiteSpace: 'nowrap',
-                              pointerEvents: 'none',
-                              zIndex: 100,
-                            }}>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                bottom: '100%',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                marginBottom: 4,
+                                background:
+                                  theme.colors.surface ??
+                                  theme.colors.background,
+                                border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary}`,
+                                borderRadius: 4,
+                                padding: '2px 6px',
+                                fontSize: theme.fontSizes[1],
+                                fontFamily: theme.fonts?.body,
+                                color: theme.colors.text,
+                                whiteSpace: 'nowrap',
+                                pointerEvents: 'none',
+                                zIndex: 100,
+                              }}
+                            >
                               {org.login}
                             </div>
                           )}
@@ -1079,86 +1269,110 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
           {/* Right column: pinned repos (wide mode only) */}
           {!isNarrow && pinnedRepoNames.length > 0 && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: 60, minWidth: 0 }}>
-
-            {/* Pinned repos */}
-            {pinnedRepoNames.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm, alignContent: 'flex-start' }}>
-                {pinnedRepoNames.map((nameWithOwner) => {
-                  const [owner, name] = nameWithOwner.split('/');
-                  const repoData = repositories.find(
-                    (r) => r.repoName === name && r.githubOwner === owner
-                  );
-                  return (
-                    <div
-                      key={nameWithOwner}
-                      onClick={() => {
-                        events.emit({
-                          type: 'repository:selected',
-                          source: 'UserProfilePanel',
-                          timestamp: Date.now(),
-                          payload: repoData
-                            ? payloadFromRepoCard(repoData)
-                            : payloadFromGithub({ owner: owner ?? '', name: name ?? nameWithOwner }),
-                        });
-                      }}
-                      style={{
-                        width: 'calc(50% - 4px)',
-                        minWidth: 120,
-                        padding: `${spacing.xs}px ${spacing.sm}px`,
-                        borderRadius: 6,
-                        border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`,
-                        backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2,
-                        boxSizing: 'border-box',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <div style={{
-                        fontSize: theme.fontSizes[1],
-                        fontWeight: theme.fontWeights?.semibold ?? 600,
-                        fontFamily: theme.fonts?.body,
-                        color: theme.colors.primary,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {name ?? nameWithOwner}
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                paddingTop: 60,
+                minWidth: 0,
+              }}
+            >
+              {/* Pinned repos */}
+              {pinnedRepoNames.length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: spacing.sm,
+                    alignContent: 'flex-start',
+                  }}
+                >
+                  {pinnedRepoNames.map((nameWithOwner) => {
+                    const [owner, name] = nameWithOwner.split('/');
+                    const repoData = repositories.find(
+                      (r) => r.repoName === name && r.githubOwner === owner,
+                    );
+                    return (
+                      <div
+                        key={nameWithOwner}
+                        onClick={() => {
+                          events.emit({
+                            type: 'repository:selected',
+                            source: 'UserProfilePanel',
+                            timestamp: Date.now(),
+                            payload: repoData
+                              ? payloadFromRepoCard(repoData)
+                              : payloadFromGithub({
+                                  owner: owner ?? '',
+                                  name: name ?? nameWithOwner,
+                                }),
+                          });
+                        }}
+                        style={{
+                          width: 'calc(50% - 4px)',
+                          minWidth: 120,
+                          padding: `${spacing.xs}px ${spacing.sm}px`,
+                          borderRadius: 6,
+                          border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`,
+                          backgroundColor:
+                            theme.colors.backgroundSecondary ??
+                            theme.colors.background,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 2,
+                          boxSizing: 'border-box',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[1],
+                            fontWeight: theme.fontWeights?.semibold ?? 600,
+                            fontFamily: theme.fonts?.body,
+                            color: theme.colors.primary,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {name ?? nameWithOwner}
+                        </div>
+                        {repoData?.description && (
+                          <div
+                            style={{
+                              fontSize: theme.fontSizes[0],
+                              fontFamily: theme.fonts?.body,
+                              color: theme.colors.textSecondary,
+                              overflow: 'hidden',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            {repoData.description}
+                          </div>
+                        )}
+                        {repoData?.language && (
+                          <div
+                            style={{
+                              fontSize: theme.fontSizes[0],
+                              fontFamily: theme.fonts?.body,
+                              color: theme.colors.textSecondary,
+                              marginTop: 2,
+                            }}
+                          >
+                            {repoData.language}
+                          </div>
+                        )}
                       </div>
-                      {repoData?.description && (
-                        <div style={{
-                          fontSize: theme.fontSizes[0],
-                          fontFamily: theme.fonts?.body,
-                          color: theme.colors.textSecondary,
-                          overflow: 'hidden',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          lineHeight: 1.3,
-                        }}>
-                          {repoData.description}
-                        </div>
-                      )}
-                      {repoData?.language && (
-                        <div style={{
-                          fontSize: theme.fontSizes[0],
-                          fontFamily: theme.fonts?.body,
-                          color: theme.colors.textSecondary,
-                          marginTop: 2,
-                        }}>
-                          {repoData.language}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
-
         </div>
       </div>
 
@@ -1179,8 +1393,14 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             fontSize: theme.fontSizes[2],
             fontFamily: theme.fonts?.body,
             fontWeight: theme.fontWeights?.semibold ?? 600,
-            color: activeTab === 'overview' ? theme.colors.primary : theme.colors.textSecondary,
-            borderBottom: activeTab === 'overview' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            color:
+              activeTab === 'overview'
+                ? theme.colors.primary
+                : theme.colors.textSecondary,
+            borderBottom:
+              activeTab === 'overview'
+                ? `2px solid ${theme.colors.primary}`
+                : '2px solid transparent',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             marginBottom: -1,
@@ -1207,8 +1427,14 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             fontSize: theme.fontSizes[2],
             fontFamily: theme.fonts?.body,
             fontWeight: theme.fontWeights?.semibold ?? 600,
-            color: activeTab === 'activity' ? theme.colors.primary : theme.colors.textSecondary,
-            borderBottom: activeTab === 'activity' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            color:
+              activeTab === 'activity'
+                ? theme.colors.primary
+                : theme.colors.textSecondary,
+            borderBottom:
+              activeTab === 'activity'
+                ? `2px solid ${theme.colors.primary}`
+                : '2px solid transparent',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             marginBottom: -1,
@@ -1236,18 +1462,26 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               fontSize: theme.fontSizes[2],
               fontFamily: theme.fonts?.body,
               fontWeight: theme.fontWeights?.semibold ?? 600,
-              color: activeTab === 'pinned' ? theme.colors.primary : theme.colors.textSecondary,
-              borderBottom: activeTab === 'pinned' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+              color:
+                activeTab === 'pinned'
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary,
+              borderBottom:
+                activeTab === 'pinned'
+                  ? `2px solid ${theme.colors.primary}`
+                  : '2px solid transparent',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               marginBottom: -1,
             }}
             onClick={() => setActiveTab('pinned')}
             onMouseEnter={(e) => {
-              if (activeTab !== 'pinned') e.currentTarget.style.color = theme.colors.text;
+              if (activeTab !== 'pinned')
+                e.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(e) => {
-              if (activeTab !== 'pinned') e.currentTarget.style.color = theme.colors.textSecondary;
+              if (activeTab !== 'pinned')
+                e.currentTarget.style.color = theme.colors.textSecondary;
             }}
           >
             Pinned
@@ -1265,9 +1499,20 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
       >
         {/* Activity Tab */}
         {activeTab === 'activity' && userData && (
-          <div style={{ marginTop: spacing.md, height: 600, display: 'flex', flexDirection: 'column' }}>
+          <div
+            style={{
+              marginTop: spacing.md,
+              height: 600,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <CommitActivityPanel
-              source={{ kind: 'owner', login: userData.username, accountType: 'User' }}
+              source={{
+                kind: 'owner',
+                login: userData.username,
+                accountType: 'User',
+              }}
               events={events}
               hideHeader
               actions={commitActivityActions}
@@ -1346,7 +1591,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               {pinnedRepoNames.map((nameWithOwner) => {
                 const [owner, name] = nameWithOwner.split('/');
                 const repo = repositories.find(
-                  (r) => r.repoName === name && r.githubOwner === owner
+                  (r) => r.repoName === name && r.githubOwner === owner,
                 );
                 if (!repo) return null;
                 const fileTreeKey = nameWithOwner;

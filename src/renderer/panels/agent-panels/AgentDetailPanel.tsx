@@ -5,26 +5,33 @@ import type {
   AgentsPanelContext,
 } from './types';
 import { useAgentsData, type Agent } from './agents/hooks/useAgentsData';
-import { useSubagentsData, type Subagent } from './agents/hooks/useSubagentsData';
+import {
+  useSubagentsData,
+  type Subagent,
+} from './agents/hooks/useSubagentsData';
 import { DocumentView } from 'themed-markdown';
 import { useTheme } from '@principal-ade/industry-theme';
 import { usePanelFocusListener } from '@principal-ade/panel-layouts';
 import { BookOpen, Bot, FileText, Wrench, Zap, Code2 } from 'lucide-react';
 
-export type AgentDetailPanelProps = PanelComponentProps<AgentPanelActions, AgentsPanelContext>;
+export type AgentDetailPanelProps = PanelComponentProps<
+  AgentPanelActions,
+  AgentsPanelContext
+>;
 
 type SelectedItem =
-  | { type: 'agent'; data: Agent }
-  | { type: 'subagent'; data: Subagent }
-  | null;
+  { type: 'agent'; data: Agent } | { type: 'subagent'; data: Subagent } | null;
 
 export const AgentDetailPanel: React.FC<AgentDetailPanelProps> = ({
   context,
   events,
 }) => {
   const { theme } = useTheme();
-  const { isLoading: agentsLoading, error: agentsError } = useAgentsData({ context });
-  const { isLoading: subagentsLoading, error: subagentsError } = useSubagentsData({ context });
+  const { isLoading: agentsLoading, error: agentsError } = useAgentsData({
+    context,
+  });
+  const { isLoading: subagentsLoading, error: subagentsError } =
+    useSubagentsData({ context });
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -32,19 +39,23 @@ export const AgentDetailPanel: React.FC<AgentDetailPanelProps> = ({
   const error = agentsError || subagentsError;
 
   // Listen for panel focus events
-  usePanelFocusListener('agent-detail', events, () => panelRef.current?.focus());
+  usePanelFocusListener('agent-detail', events, () =>
+    panelRef.current?.focus(),
+  );
 
   // Listen for agent/subagent selection events
   useEffect(() => {
     const unsubscribeAgent = events.on('agent:selected', (event) => {
-      const payload = event.payload as { id?: string; data?: Agent } | undefined;
+      const payload = event.payload as
+        { id?: string; data?: Agent } | undefined;
       if (payload?.id && payload?.data) {
         setSelectedItem({ type: 'agent', data: payload.data });
       }
     });
 
     const unsubscribeSubagent = events.on('subagent:selected', (event) => {
-      const payload = event.payload as { id?: string; data?: Subagent } | undefined;
+      const payload = event.payload as
+        { id?: string; data?: Subagent } | undefined;
       if (payload?.id && payload?.data) {
         setSelectedItem({ type: 'subagent', data: payload.data });
       }
@@ -144,7 +155,14 @@ export const AgentDetailPanel: React.FC<AgentDetailPanelProps> = ({
             backgroundColor: theme.colors.background,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '8px',
+            }}
+          >
             <BookOpen size={24} color={theme.colors.primary} />
             <h1
               style={{
@@ -211,7 +229,14 @@ export const AgentDetailPanel: React.FC<AgentDetailPanelProps> = ({
             backgroundColor: theme.colors.background,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '8px',
+            }}
+          >
             <Bot size={24} color={theme.colors.primary} />
             <h1
               style={{

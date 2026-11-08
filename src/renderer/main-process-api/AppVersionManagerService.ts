@@ -1,5 +1,9 @@
 // Import types from the shared API interface
-import type { UpdateInfo, ProgressInfo, UpdateDownloadedEvent } from '../../shared/main-process-api-interfaces/AppVersionManagerAPI';
+import type {
+  UpdateInfo,
+  ProgressInfo,
+  UpdateDownloadedEvent,
+} from '../../shared/main-process-api-interfaces/AppVersionManagerAPI';
 import { appVersionClient } from '../tipc/appVersionClient';
 
 export class AppVersionManagerService {
@@ -51,7 +55,9 @@ export class AppVersionManagerService {
     return window.mainProcess.appVersionManager.onUpdateAvailable(callback);
   }
 
-  static onUpdateNotAvailable(callback: (info: UpdateInfo) => void): () => void {
+  static onUpdateNotAvailable(
+    callback: (info: UpdateInfo) => void,
+  ): () => void {
     return window.mainProcess.appVersionManager.onUpdateNotAvailable(callback);
   }
 
@@ -75,7 +81,9 @@ export class AppVersionManagerService {
     );
   }
 
-  static onUpdateDownloaded(callback: (info: UpdateDownloadedEvent) => void): () => void {
+  static onUpdateDownloaded(
+    callback: (info: UpdateDownloadedEvent) => void,
+  ): () => void {
     return window.mainProcess.appVersionManager.onUpdateDownloaded(callback);
   }
 }

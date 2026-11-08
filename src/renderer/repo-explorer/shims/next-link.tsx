@@ -13,8 +13,10 @@ import { navigate } from './navigation';
 
 type Href = string | { pathname?: string; query?: Record<string, unknown> };
 
-export interface LinkProps
-  extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
+export interface LinkProps extends Omit<
+  React.AnchorHTMLAttributes<HTMLAnchorElement>,
+  'href'
+> {
   href: Href;
   children?: React.ReactNode;
   prefetch?: boolean;

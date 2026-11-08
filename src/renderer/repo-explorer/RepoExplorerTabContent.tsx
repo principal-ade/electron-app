@@ -196,8 +196,7 @@ export const RepoExplorerTabContent: React.FC<RepoExplorerTabContentProps> = ({
   const pinPathKey = clone?.path ? String(clone.path) : undefined;
   const pinPurlKey = String(purl);
   const isPinned =
-    (pinPathKey ? isRepoPinned(pinPathKey) : false) ||
-    isRepoPinned(pinPurlKey);
+    (pinPathKey ? isRepoPinned(pinPathKey) : false) || isRepoPinned(pinPurlKey);
   const handleTogglePin = () => {
     if (isPinned) {
       if (pinPathKey && isRepoPinned(pinPathKey)) toggleRepoPin(pinPathKey);
@@ -212,7 +211,9 @@ export const RepoExplorerTabContent: React.FC<RepoExplorerTabContentProps> = ({
       <button
         type="button"
         onClick={handleTogglePin}
-        title={isPinned ? 'Unpin repository from Home' : 'Pin repository to Home'}
+        title={
+          isPinned ? 'Unpin repository from Home' : 'Pin repository to Home'
+        }
         aria-pressed={isPinned}
         style={{
           display: 'flex',
@@ -429,7 +430,9 @@ export const RepoExplorerTabContent: React.FC<RepoExplorerTabContentProps> = ({
             AlexandriaService.registerRepository(path, remoteUrl)
           }
           initialUrl={
-            github ? `https://github.com/${github.owner}/${github.name}.git` : undefined
+            github
+              ? `https://github.com/${github.owner}/${github.name}.git`
+              : undefined
           }
         />
 

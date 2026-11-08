@@ -1,17 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { PanelContextValue } from '@principal-ade/panel-framework-core';
 import type { SkillsPanelContext } from '../../types';
-import {
-  findSkillFiles,
-  parseSkillContent,
-} from '../utils/skillsUtils';
+import { findSkillFiles, parseSkillContent } from '../utils/skillsUtils';
 
 export type SkillSource =
-  | 'project-universal'  // ./.agent/skills/ (from fileTree)
-  | 'global-universal'   // ~/.agent/skills/ (from globalSkills slice)
-  | 'project-claude'     // ./.claude/skills/ (from fileTree)
-  | 'global-claude'      // ~/.claude/skills/ (from globalSkills slice)
-  | 'project-other';     // any other location in project (from fileTree)
+  | 'project-universal' // ./.agent/skills/ (from fileTree)
+  | 'global-universal' // ~/.agent/skills/ (from globalSkills slice)
+  | 'project-claude' // ./.claude/skills/ (from fileTree)
+  | 'global-claude' // ~/.claude/skills/ (from globalSkills slice)
+  | 'project-other'; // any other location in project (from fileTree)
 
 export interface SkillMetadata {
   installedFrom?: string;
@@ -57,7 +54,7 @@ export interface Skill {
   assetFiles?: string[];
   // Source and priority metadata (for display purposes only)
   source: SkillSource;
-  priority: 1 | 2 | 3 | 4 | 5;  // 1=project-universal, 2=global-universal, 3=project-claude, 4=global-claude, 5=project-other
+  priority: 1 | 2 | 3 | 4 | 5; // 1=project-universal, 2=global-universal, 3=project-claude, 4=global-claude, 5=project-other
   // Installation metadata (from .metadata.json)
   metadata?: SkillMetadata;
   // Multiple installation locations (for deduplication)
@@ -95,7 +92,11 @@ interface UseSkillsDataReturn {
  */
 const getDeduplicationKey = (skill: Skill): string => {
   // Prefer GitHub source metadata for unique identification
-  if (skill.metadata?.owner && skill.metadata?.repo && skill.metadata?.skillPath) {
+  if (
+    skill.metadata?.owner &&
+    skill.metadata?.repo &&
+    skill.metadata?.skillPath
+  ) {
     return `github:${skill.metadata.owner}/${skill.metadata.repo}/${skill.metadata.skillPath}`;
   }
 
@@ -115,8 +116,12 @@ const comparePriority = (skill1: Skill, skill2: Skill): boolean => {
   }
 
   // Same priority - use installedAt timestamp if available
-  const time1 = skill1.metadata?.installedAt ? new Date(skill1.metadata.installedAt).getTime() : 0;
-  const time2 = skill2.metadata?.installedAt ? new Date(skill2.metadata.installedAt).getTime() : 0;
+  const time1 = skill1.metadata?.installedAt
+    ? new Date(skill1.metadata.installedAt).getTime()
+    : 0;
+  const time2 = skill2.metadata?.installedAt
+    ? new Date(skill2.metadata.installedAt).getTime()
+    : 0;
 
   // More recent installation wins
   return time1 > time2;
@@ -139,7 +144,10 @@ const skillToInstallation = (skill: Skill): SkillInstallation => ({
  * @param isBrowserMode Whether we're in browser mode (skip deduplication if true)
  * @returns Deduplicated skills with installedLocations populated
  */
-const deduplicateSkills = (skills: Skill[], isBrowserMode: boolean = false): Skill[] => {
+const deduplicateSkills = (
+  skills: Skill[],
+  isBrowserMode: boolean = false,
+): Skill[] => {
   // Skip deduplication in browser mode (no metadata available in remote repos)
   if (isBrowserMode) {
     return skills;
@@ -175,7 +183,7 @@ const deduplicateSkills = (skills: Skill[], isBrowserMode: boolean = false): Ski
 
     // Multiple installations - find primary
     const sortedByPriority = [...group].sort((a, b) =>
-      comparePriority(a, b) ? -1 : 1
+      comparePriority(a, b) ? -1 : 1,
     );
 
     const primary = sortedByPriority[0];
@@ -223,7 +231,10 @@ export const useSkillsData = ({
 
   const loadSkills = useCallback(async () => {
     // Skip if we've already loaded this exact data
-    if (fileTreeSha === lastLoadedSha.current && globalSkillsCount === lastGlobalSkillsCount.current) {
+    if (
+      fileTreeSha === lastLoadedSha.current &&
+      globalSkillsCount === lastGlobalSkillsCount.current
+    ) {
       return;
     }
 
@@ -258,9 +269,17 @@ export const useSkillsData = ({
           try {
             // In browser mode, use the relative path directly (GitHub adapter expects this)
             // In local mode, prepend the absolute repo path
-            const fullPath = isBrowserMode ? skillPath : `${repoPath}/${skillPath}`;
+            const fullPath = isBrowserMode
+              ? skillPath
+              : `${repoPath}/${skillPath}`;
             const content = await fileSystem.readFile(fullPath);
-            return parseSkillContent(content as string, skillPath, fileTree, fileSystem, isBrowserMode);
+            return parseSkillContent(
+              content as string,
+              skillPath,
+              fileTree,
+              fileSystem,
+              isBrowserMode,
+            );
           } catch (err) {
             console.error(`Failed to read skill at ${skillPath}:`, err);
             return null;
@@ -268,7 +287,7 @@ export const useSkillsData = ({
         });
 
         localSkills = (await Promise.all(skillPromises)).filter(
-          (skill): skill is Skill => skill !== null
+          (skill): skill is Skill => skill !== null,
         );
       }
 
@@ -279,13 +298,19 @@ export const useSkillsData = ({
       const allSkills = [...localSkills, ...globalSkills];
 
       // eslint-disable-next-line no-console
-      console.log('[useSkillsData] Total skills before deduplication:', allSkills.length);
+      console.log(
+        '[useSkillsData] Total skills before deduplication:',
+        allSkills.length,
+      );
 
       // Deduplicate skills based on metadata
       const deduplicatedSkills = deduplicateSkills(allSkills, isBrowserMode);
 
       // eslint-disable-next-line no-console
-      console.log('[useSkillsData] Total skills after deduplication:', deduplicatedSkills.length);
+      console.log(
+        '[useSkillsData] Total skills after deduplication:',
+        deduplicatedSkills.length,
+      );
 
       setSkills(deduplicatedSkills);
 
@@ -293,13 +318,21 @@ export const useSkillsData = ({
       lastLoadedSha.current = fileTreeSha;
       lastGlobalSkillsCount.current = globalSkillsCount;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load skills';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to load skills';
       setError(errorMessage);
       console.error('Error loading skills:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [fileTree, fileTreeSha, globalSkills, globalSkillsCount, repoPath, fileSystem]);
+  }, [
+    fileTree,
+    fileTreeSha,
+    globalSkills,
+    globalSkillsCount,
+    repoPath,
+    fileSystem,
+  ]);
 
   const refreshSkills = useCallback(async () => {
     // Force reload by clearing the tracking refs

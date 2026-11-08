@@ -92,12 +92,10 @@ export function registerTerminalRoutes(app: Application): void {
 
     const window = resolveTargetWindow();
     if (!window) {
-      res
-        .status(409)
-        .json({
-          success: false,
-          error: 'no live application window to own the terminal',
-        });
+      res.status(409).json({
+        success: false,
+        error: 'no live application window to own the terminal',
+      });
       return;
     }
 

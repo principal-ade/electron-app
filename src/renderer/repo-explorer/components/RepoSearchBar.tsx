@@ -44,9 +44,9 @@ export function RepoSearchBar({
   const [openRepoActive, setOpenRepoActive] = useState(autoFocus);
   const [openRepoUrl, setOpenRepoUrl] = useState('');
   const [openRepoError, setOpenRepoError] = useState(false);
-  const [openRepoResults, setOpenRepoResults] = useState<HeaderRepoSearchItem[]>(
-    [],
-  );
+  const [openRepoResults, setOpenRepoResults] = useState<
+    HeaderRepoSearchItem[]
+  >([]);
   const [openRepoSearching, setOpenRepoSearching] = useState(false);
   const [recentRepos, setRecentRepos] = useState<HeaderRepoSearchItem[]>([]);
   const [shortcutHint, setShortcutHint] = useState('');
@@ -136,7 +136,7 @@ export function RepoSearchBar({
         const data = await repoExplorerService.searchRepos(q, { perPage: 8 });
         setOpenRepoResults(
           Array.isArray(data.repos)
-            ? ((data.repos as unknown) as HeaderRepoSearchItem[]).slice(0, 8)
+            ? (data.repos as unknown as HeaderRepoSearchItem[]).slice(0, 8)
             : [],
         );
       } catch {
@@ -244,7 +244,7 @@ export function RepoSearchBar({
           background: theme.colors.background,
           border: `1px solid ${
             openRepoError
-              ? theme.colors.error ?? theme.colors.border
+              ? (theme.colors.error ?? theme.colors.border)
               : theme.colors.border
           }`,
         }}
@@ -332,7 +332,10 @@ export function RepoSearchBar({
                 className="w-5 h-5 shrink-0"
                 style={{ color: theme.colors.textMuted }}
               />
-              <span className="truncate" style={{ fontSize: theme.fontSizes[2] }}>
+              <span
+                className="truncate"
+                style={{ fontSize: theme.fontSizes[2] }}
+              >
                 Open {openRepoDirect.owner}/{openRepoDirect.repo}
               </span>
               <ChevronRight

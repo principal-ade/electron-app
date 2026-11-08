@@ -5,7 +5,10 @@
  * for use by both TIPC router and legacy handlers.
  */
 
-import { TerminalSessionManager, initializeDaemonModeSetting } from './TerminalSessionManager';
+import {
+  TerminalSessionManager,
+  initializeDaemonModeSetting,
+} from './TerminalSessionManager';
 
 let instance: TerminalSessionManager | null = null;
 let daemonModeInitialized = false;

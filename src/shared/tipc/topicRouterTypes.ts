@@ -16,11 +16,7 @@ import type {
 // Re-export domain types
 // =============================================================================
 
-export type {
-  Topic,
-  CreateTopicInput,
-  UpdateTopicInput,
-};
+export type { Topic, CreateTopicInput, UpdateTopicInput };
 
 export type {
   TopicChangeEvent,

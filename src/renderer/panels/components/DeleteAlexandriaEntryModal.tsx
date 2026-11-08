@@ -1,13 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
-import {
-  X,
-  Trash2,
-} from 'lucide-react';
-import type {
-  AlexandriaEntry,
-} from '@principal-ai/alexandria-core-library/types';
+import { X, Trash2 } from 'lucide-react';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { ShellService } from '../../main-process-api/ShellService';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
@@ -23,7 +18,8 @@ interface GitStatusSummary {
 
 interface DeleteAlexandriaEntryModalProps {
   isOpen: boolean;
-  entry: (AlexandriaEntry & { isTracked?: boolean; isDiscovered?: boolean }) | null;
+  entry:
+    (AlexandriaEntry & { isTracked?: boolean; isDiscovered?: boolean }) | null;
   onClose: () => void;
   onConfirm: (deleteLocal: boolean) => Promise<void>;
   /**
@@ -52,8 +48,7 @@ export const DeleteAlexandriaEntryModal: React.FC<
   const loadingGitStatus =
     !!repositoryPath && (result === undefined || result === 'loading');
   const statusUnavailable = !repositoryPath || result === 'unavailable';
-  const canDelete =
-    !isDeleting && result !== undefined && result !== 'loading';
+  const canDelete = !isDeleting && result !== undefined && result !== 'loading';
 
   // Always delete local files
   const deleteLocal = true;
@@ -65,7 +60,9 @@ export const DeleteAlexandriaEntryModal: React.FC<
       await onConfirm(deleteLocal);
     } catch (error) {
       console.error('Error deleting Alexandria entry:', error);
-      alert(`Failed to delete repository: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `Failed to delete repository: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     } finally {
       setIsDeleting(false);
       onClose(); // Always close the modal
@@ -119,7 +116,8 @@ export const DeleteAlexandriaEntryModal: React.FC<
 
     const fetchGitStatus = async () => {
       try {
-        unsubscribe = RepositoryMonitoringService.onGitStatusChanged(applyStatus);
+        unsubscribe =
+          RepositoryMonitoringService.onGitStatusChanged(applyStatus);
         const status = await (statusAttempt === 0
           ? RepositoryMonitoringService.getGitStatusWithFiles(repositoryPath)
           : RepositoryMonitoringService.refreshGitStatus(repositoryPath));
@@ -132,7 +130,10 @@ export const DeleteAlexandriaEntryModal: React.FC<
         if (cancelled || completed) return;
         completed = true;
         clearTimeout(timeout);
-        console.warn('[DeleteAlexandriaEntryModal] Failed to check git status:', error);
+        console.warn(
+          '[DeleteAlexandriaEntryModal] Failed to check git status:',
+          error,
+        );
         setStatusCheck({ path: repositoryPath, result: 'unavailable' });
       }
     };
@@ -278,9 +279,9 @@ export const DeleteAlexandriaEntryModal: React.FC<
               }}
             >
               This will remove the project folder. Any open terminals for this
-              clone will be closed first, stopping their running commands.
-              You can clone from the remote again, but local-only work cannot
-              be recovered.
+              clone will be closed first, stopping their running commands. You
+              can clone from the remote again, but local-only work cannot be
+              recovered.
             </div>
           </div>
 
@@ -344,60 +345,79 @@ export const DeleteAlexandriaEntryModal: React.FC<
           )}
 
           {/* Git Status Warning */}
-          {!loadingGitStatus && gitStatus && (gitStatus.hasUncommittedChanges || gitStatus.unpushedCommits > 0) && (
-            <div
-              style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                backgroundColor: `${theme.colors.error || '#ef4444'}15`,
-                border: `2px solid ${theme.colors.error || '#ef4444'}`,
-                marginBottom: '20px',
-              }}
-            >
+          {!loadingGitStatus &&
+            gitStatus &&
+            (gitStatus.hasUncommittedChanges ||
+              gitStatus.unpushedCommits > 0) && (
               <div
                 style={{
-                  fontSize: theme.fontSizes[2],
-                  fontFamily: theme.fonts.body,
-                  fontWeight: theme.fontWeights.semibold,
-                  color: theme.colors.error || '#ef4444',
-                  marginBottom: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: `${theme.colors.error || '#ef4444'}15`,
+                  border: `2px solid ${theme.colors.error || '#ef4444'}`,
+                  marginBottom: '20px',
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                  <line x1="12" y1="9" x2="12" y2="13"/>
-                  <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-                Warning: You will lose uncommitted work!
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[2],
+                    fontFamily: theme.fonts.body,
+                    fontWeight: theme.fontWeights.semibold,
+                    color: theme.colors.error || '#ef4444',
+                    marginBottom: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  Warning: You will lose uncommitted work!
+                </div>
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[1],
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.textSecondary,
+                    lineHeight: '1.5',
+                  }}
+                >
+                  {gitStatus.hasUncommittedChanges && (
+                    <div style={{ marginBottom: '4px' }}>
+                      {gitStatus.uncommittedCount > 0 ? (
+                        <>
+                          • <strong>{gitStatus.uncommittedCount}</strong>{' '}
+                          uncommitted{' '}
+                          {gitStatus.uncommittedCount === 1
+                            ? 'change'
+                            : 'changes'}{' '}
+                          will be permanently lost
+                        </>
+                      ) : (
+                        <>• Uncommitted changes will be permanently lost</>
+                      )}
+                    </div>
+                  )}
+                  {gitStatus.unpushedCommits > 0 && (
+                    <div>
+                      • <strong>{gitStatus.unpushedCommits}</strong> unpushed{' '}
+                      {gitStatus.unpushedCommits === 1 ? 'commit' : 'commits'}{' '}
+                      on <strong>{gitStatus.currentBranch}</strong> will be lost
+                    </div>
+                  )}
+                </div>
               </div>
-              <div
-                style={{
-                  fontSize: theme.fontSizes[1],
-                  fontFamily: theme.fonts.body,
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                {gitStatus.hasUncommittedChanges && (
-                  <div style={{ marginBottom: '4px' }}>
-                    {gitStatus.uncommittedCount > 0 ? (
-                      <>• <strong>{gitStatus.uncommittedCount}</strong> uncommitted {gitStatus.uncommittedCount === 1 ? 'change' : 'changes'} will be permanently lost</>
-                    ) : (
-                      <>• Uncommitted changes will be permanently lost</>
-                    )}
-                  </div>
-                )}
-                {gitStatus.unpushedCommits > 0 && (
-                  <div>
-                    • <strong>{gitStatus.unpushedCommits}</strong> unpushed {gitStatus.unpushedCommits === 1 ? 'commit' : 'commits'} on <strong>{gitStatus.currentBranch}</strong> will be lost
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+            )}
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -425,11 +445,21 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 e.currentTarget.style.backgroundColor = theme.colors.background;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
               </svg>
               Open in Finder
             </button>
@@ -447,12 +477,16 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 if (entry?.remoteUrl) {
                   const url = entry.remoteUrl;
                   // Handle https://github.com/owner/repo.git
-                  const httpsMatch = url.match(new RegExp('https://github\\.com/([^/]+)/([^/.]+)'));
+                  const httpsMatch = url.match(
+                    new RegExp('https://github\\.com/([^/]+)/([^/.]+)'),
+                  );
                   if (httpsMatch) {
                     return `https://github.com/${httpsMatch[1]}/${httpsMatch[2]}`;
                   }
                   // Handle git@github.com:owner/repo.git
-                  const sshMatch = url.match(new RegExp('git@github\\.com:([^/]+)/([^/.]+)'));
+                  const sshMatch = url.match(
+                    new RegExp('git@github\\.com:([^/]+)/([^/.]+)'),
+                  );
                   if (sshMatch) {
                     return `https://github.com/${sshMatch[1]}/${sshMatch[2]}`;
                   }
@@ -484,14 +518,21 @@ export const DeleteAlexandriaEntryModal: React.FC<
                     transition: 'all 0.2s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.background;
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.background;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundSecondary;
                   }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                  >
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
                   </svg>
                   Open Remote in GitHub
                 </button>

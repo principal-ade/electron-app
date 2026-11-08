@@ -3,7 +3,9 @@ import { stripTsNodeEnv, stripTsNodePreload } from './nodeOptions';
 describe('stripTsNodePreload', () => {
   it('removes the ts-node require flag but keeps other options', () => {
     expect(
-      stripTsNodePreload('-r ts-node/register --no-warnings --max-old-space-size=8192'),
+      stripTsNodePreload(
+        '-r ts-node/register --no-warnings --max-old-space-size=8192',
+      ),
     ).toBe('--no-warnings --max-old-space-size=8192');
   });
 

@@ -53,7 +53,10 @@ export interface UseActivityCitiesReturn {
 }
 
 // Cache for file trees to avoid repeated fetches
-const fileTreeCache = new Map<string, { cityData: CityData; timestamp: number }>();
+const fileTreeCache = new Map<
+  string,
+  { cityData: CityData; timestamp: number }
+>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // City builder instance (reusable)
@@ -82,8 +85,14 @@ function buildCityDataFromGitHubTree(
   };
 
   const files = getFilesFromGitHubTree(blobsOnly);
-  const fileSystemTree = buildFileSystemTreeFromFileInfoList(files, treeResponse.sha);
-  const cityData = cityBuilder.buildCityFromFileSystem(fileSystemTree, rootPath);
+  const fileSystemTree = buildFileSystemTreeFromFileInfoList(
+    files,
+    treeResponse.sha,
+  );
+  const cityData = cityBuilder.buildCityFromFileSystem(
+    fileSystemTree,
+    rootPath,
+  );
 
   return cityData;
 }
@@ -106,7 +115,9 @@ export function useActivityCities(): UseActivityCitiesReturn {
   useEffect(() => {
     PresenceService.getDeviceId()
       .then(setCurrentDeviceId)
-      .catch((err: unknown) => console.error('[useActivityCities] Failed to get device ID:', err));
+      .catch((err: unknown) =>
+        console.error('[useActivityCities] Failed to get device ID:', err),
+      );
   }, []);
 
   /**
@@ -137,7 +148,10 @@ export function useActivityCities(): UseActivityCitiesReturn {
         const treeResult = await GithubService.getTree(owner, repo, branch);
 
         if (!treeResult?.success || !treeResult.data) {
-          console.warn(`[useActivityCities] Failed to get tree for ${owner}/${repo}:`, treeResult?.error);
+          console.warn(
+            `[useActivityCities] Failed to get tree for ${owner}/${repo}:`,
+            treeResult?.error,
+          );
           return {
             cityData: null,
             error: treeResult?.error || 'Failed to fetch file tree',
@@ -154,7 +168,10 @@ export function useActivityCities(): UseActivityCitiesReturn {
 
         return { cityData, error: null };
       } catch (err) {
-        console.error(`[useActivityCities] Error fetching tree for ${owner}/${repo}:`, err);
+        console.error(
+          `[useActivityCities] Error fetching tree for ${owner}/${repo}:`,
+          err,
+        );
         return {
           cityData: null,
           error: err instanceof Error ? err.message : 'Unknown error',
@@ -189,8 +206,11 @@ export function useActivityCities(): UseActivityCitiesReturn {
         if (user.status === 'offline') continue;
 
         // openRepositories can be at user.openRepositories or user.extended.openRepositories
-        const extendedUser = user as { extended?: { openRepositories?: unknown[] } };
-        const rawRepos = user.openRepositories || extendedUser.extended?.openRepositories;
+        const extendedUser = user as {
+          extended?: { openRepositories?: unknown[] };
+        };
+        const rawRepos =
+          user.openRepositories || extendedUser.extended?.openRepositories;
 
         // Handle openRepositories being an object (keyed by repoId) or array
         const repoSessions = Array.isArray(rawRepos)
@@ -240,63 +260,70 @@ export function useActivityCities(): UseActivityCitiesReturn {
               users: [user],
               gitStatusByUser,
               openedAtTimes: session.openedAt ? [session.openedAt] : [],
-              lastActivityTimes: session.lastActivity ? [session.lastActivity] : [],
+              lastActivityTimes: session.lastActivity
+                ? [session.lastActivity]
+                : [],
             });
           }
         }
       }
 
       // Initialize repositories with loading state
-      const initialRepos: ActiveRepository[] = Array.from(repoUsersMap.entries()).map(
-        ([repoId, data]) => {
-          // Aggregate git status
-          const dirtyCount = Array.from(data.gitStatusByUser.values()).filter(s => s.isDirty).length;
+      const initialRepos: ActiveRepository[] = Array.from(
+        repoUsersMap.entries(),
+      ).map(([repoId, data]) => {
+        // Aggregate git status
+        const dirtyCount = Array.from(data.gitStatusByUser.values()).filter(
+          (s) => s.isDirty,
+        ).length;
 
-          // Aggregate timestamps
-          const earliestOpenedAt = data.openedAtTimes.length > 0
+        // Aggregate timestamps
+        const earliestOpenedAt =
+          data.openedAtTimes.length > 0
             ? Math.min(...data.openedAtTimes)
             : undefined;
-          const mostRecentActivity = data.lastActivityTimes.length > 0
+        const mostRecentActivity =
+          data.lastActivityTimes.length > 0
             ? Math.max(...data.lastActivityTimes)
             : undefined;
 
-          // Find most recent git change timestamp across all users
-          // Convert ISO strings to Unix timestamps for consistency
-          const gitChangeTimes = Array.from(data.gitStatusByUser.values())
-            .map(s => s.lastChangedAt)
-            .filter((t): t is string => t !== undefined && t !== null)
-            .map(isoString => new Date(isoString).getTime());
-          const mostRecentGitChange = gitChangeTimes.length > 0
-            ? Math.max(...gitChangeTimes)
-            : undefined;
+        // Find most recent git change timestamp across all users
+        // Convert ISO strings to Unix timestamps for consistency
+        const gitChangeTimes = Array.from(data.gitStatusByUser.values())
+          .map((s) => s.lastChangedAt)
+          .filter((t): t is string => t !== undefined && t !== null)
+          .map((isoString) => new Date(isoString).getTime());
+        const mostRecentGitChange =
+          gitChangeTimes.length > 0 ? Math.max(...gitChangeTimes) : undefined;
 
-          return {
-            owner: data.owner,
-            repo: data.repo,
-            repoId,
-            branch: data.branch,
-            users: data.users,
-            cityData: null,
-            loading: true,
-            error: null,
-            gitStatus: data.gitStatusByUser.size > 0
+        return {
+          owner: data.owner,
+          repo: data.repo,
+          repoId,
+          branch: data.branch,
+          users: data.users,
+          cityData: null,
+          loading: true,
+          error: null,
+          gitStatus:
+            data.gitStatusByUser.size > 0
               ? {
                   byUser: data.gitStatusByUser,
                   anyDirty: dirtyCount > 0,
                   dirtyCount,
                 }
               : undefined,
-            currentDeviceId,
-            timestamps: (earliestOpenedAt || mostRecentActivity || mostRecentGitChange)
+          currentDeviceId,
+          timestamps:
+            earliestOpenedAt || mostRecentActivity || mostRecentGitChange
               ? {
                   earliestOpenedAt,
                   mostRecentActivity,
                   mostRecentGitChange,
                 }
               : undefined,
-          };
-        },
-      );
+        };
+      });
 
       setRepositories(initialRepos);
 
@@ -325,7 +352,7 @@ export function useActivityCities(): UseActivityCitiesReturn {
             };
           }
           return repo;
-        })
+        }),
       );
     },
     [fetchCityDataForRepo, currentDeviceId],
@@ -341,7 +368,9 @@ export function useActivityCities(): UseActivityCitiesReturn {
       const authResult = await authService.checkAuth();
 
       if (!authResult.authenticated || !authResult.token) {
-        console.warn('[useActivityCities] Not authenticated, cannot connect to presence');
+        console.warn(
+          '[useActivityCities] Not authenticated, cannot connect to presence',
+        );
         setIsAuthenticated(false);
         return false;
       }
@@ -353,7 +382,10 @@ export function useActivityCities(): UseActivityCitiesReturn {
       if (result.success) {
         return true;
       } else {
-        console.warn('[useActivityCities] Failed to connect to presence:', result.error);
+        console.warn(
+          '[useActivityCities] Failed to connect to presence:',
+          result.error,
+        );
         return false;
       }
     } catch (err) {
@@ -378,7 +410,9 @@ export function useActivityCities(): UseActivityCitiesReturn {
       await processPresenceData(presenceData.users);
     } catch (err) {
       console.error('[useActivityCities] Error fetching presence data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch presence data');
+      setError(
+        err instanceof Error ? err.message : 'Failed to fetch presence data',
+      );
     } finally {
       setLoading(false);
     }
@@ -420,7 +454,9 @@ export function useActivityCities(): UseActivityCitiesReturn {
             const newByUser = new Map(repo.gitStatus?.byUser || new Map());
             newByUser.set(payload.userId, payload.gitStatus);
 
-            const dirtyCount = Array.from(newByUser.values()).filter(s => s.isDirty).length;
+            const dirtyCount = Array.from(newByUser.values()).filter(
+              (s) => s.isDirty,
+            ).length;
 
             // Update timestamp based on new git status
             const updatedRepo = {
@@ -435,12 +471,13 @@ export function useActivityCities(): UseActivityCitiesReturn {
             // Also update mostRecentGitChange if needed
             if (payload.gitStatus.lastChangedAt && updatedRepo.timestamps) {
               const gitChangeTimes = Array.from(newByUser.values())
-                .map(s => s.lastChangedAt)
+                .map((s) => s.lastChangedAt)
                 .filter((t): t is string => t !== undefined && t !== null)
-                .map(isoString => new Date(isoString).getTime());
-              const mostRecentGitChange = gitChangeTimes.length > 0
-                ? Math.max(...gitChangeTimes)
-                : undefined;
+                .map((isoString) => new Date(isoString).getTime());
+              const mostRecentGitChange =
+                gitChangeTimes.length > 0
+                  ? Math.max(...gitChangeTimes)
+                  : undefined;
 
               updatedRepo.timestamps = {
                 ...updatedRepo.timestamps,

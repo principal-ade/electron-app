@@ -264,7 +264,8 @@ export const FileSourcePanel: React.FC<{
               [dockLeft ? 'left' : 'right']: 0,
               bottom: 0,
               width: `min(${width}px, 95vw)`,
-              [dockLeft ? 'borderRight' : 'borderLeft']: `1px solid ${theme.colors.border}`,
+              [dockLeft ? 'borderRight' : 'borderLeft']:
+                `1px solid ${theme.colors.border}`,
               boxShadow: entered
                 ? `${dockLeft ? '12px' : '-12px'} 0 32px rgba(0,0,0,0.35)`
                 : 'none',
@@ -299,7 +300,12 @@ export const FileSourcePanel: React.FC<{
       />
       {dragging && (
         <div
-          style={{ position: 'absolute', inset: 0, zIndex: 50, cursor: 'ew-resize' }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 50,
+            cursor: 'ew-resize',
+          }}
         />
       )}
       {/* Header — file identity + close. */}
@@ -416,7 +422,10 @@ export const FileSourcePanel: React.FC<{
                 onLinkClick={(href: string) => {
                   // External links open in a new tab; in-page anchors are left
                   // to the renderer's own scroll handling.
-                  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(href) || href.startsWith('mailto:')) {
+                  if (
+                    /^[a-z][a-z0-9+.-]*:\/\//i.test(href) ||
+                    href.startsWith('mailto:')
+                  ) {
                     window.open(href, '_blank', 'noopener,noreferrer');
                   }
                 }}

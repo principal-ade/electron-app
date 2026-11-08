@@ -202,6 +202,18 @@ describe('RepositoryMonitoringManager (daemon transport)', () => {
     if (daemon.state !== 'running') return;
     const entry = daemon.repos.find((r) => r.path === repo);
     expect(entry?.slices.fileTree?.updatedAt).toEqual(expect.any(Number));
+
+    const unregistered = new Promise<unknown>((resolve) =>
+      manager.once('repository-unregistered', resolve),
+    );
+    await manager.unregisterRepository(repo);
+    await expect(unregistered).resolves.toEqual({ repoPath: repo });
+    expect(
+      mockSentToWindows.some(
+        (message) =>
+          message.channel === 'repository-monitoring:repository-unregistered',
+      ),
+    ).toBe(true);
   }, 30_000);
 
   it('a second manager joins the same daemon instead of spawning another', async () => {

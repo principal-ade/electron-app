@@ -44,9 +44,9 @@ export type SkillDestination =
 export const DIRECTORY_ID_TO_DESTINATION: Record<string, SkillDestination> = {
   'agent-universal': 'global-universal',
   'claude-specific': 'global-claude',
-  'opencode': 'global-opencode',
+  opencode: 'global-opencode',
   'cursor-ide': 'global-cursor',
-  'windsurf': 'global-windsurf',
+  windsurf: 'global-windsurf',
 };
 
 const _ALL_DESTINATIONS: Array<{
@@ -136,7 +136,7 @@ export const InstallSkillToolbar: React.FC<InstallSkillToolbarProps> = ({
 
     if (installedDirectoryIds.length === 1) {
       const dirId = installedDirectoryIds[0];
-      const dir = detectedDirectories.find(d => d.id === dirId);
+      const dir = detectedDirectories.find((d) => d.id === dirId);
       return `Installed in ${dir?.displayName || 'Unknown'}`;
     }
 
@@ -206,10 +206,12 @@ export const InstallSkillToolbar: React.FC<InstallSkillToolbarProps> = ({
               fontWeight: theme.fontWeights.medium,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
             }}
           >
             <Pencil size={16} />

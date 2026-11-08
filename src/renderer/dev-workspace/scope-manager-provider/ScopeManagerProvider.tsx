@@ -14,9 +14,8 @@ interface ScopeManagerContextValue {
   isLoaded: boolean;
 }
 
-const ScopeManagerContext = React.createContext<ScopeManagerContextValue | null>(
-  null,
-);
+const ScopeManagerContext =
+  React.createContext<ScopeManagerContextValue | null>(null);
 
 export interface ScopeManagerProviderProps {
   /**

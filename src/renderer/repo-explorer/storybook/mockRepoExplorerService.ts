@@ -59,11 +59,31 @@ export const mockRepoExplorerService: RepoExplorerServiceImpl = {
   async getContributors() {
     return {
       contributors: [
-        { login: 'alice', avatar_url: 'https://github.com/alice.png', contributions: 342 },
-        { login: 'bob', avatar_url: 'https://github.com/bob.png', contributions: 278 },
-        { login: 'carol', avatar_url: 'https://github.com/carol.png', contributions: 201 },
-        { login: 'dave', avatar_url: 'https://github.com/dave.png', contributions: 155 },
-        { login: 'eve', avatar_url: 'https://github.com/eve.png', contributions: 98 },
+        {
+          login: 'alice',
+          avatar_url: 'https://github.com/alice.png',
+          contributions: 342,
+        },
+        {
+          login: 'bob',
+          avatar_url: 'https://github.com/bob.png',
+          contributions: 278,
+        },
+        {
+          login: 'carol',
+          avatar_url: 'https://github.com/carol.png',
+          contributions: 201,
+        },
+        {
+          login: 'dave',
+          avatar_url: 'https://github.com/dave.png',
+          contributions: 155,
+        },
+        {
+          login: 'eve',
+          avatar_url: 'https://github.com/eve.png',
+          contributions: 98,
+        },
       ],
       truncated: false,
     };

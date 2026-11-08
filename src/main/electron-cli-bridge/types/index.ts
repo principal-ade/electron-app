@@ -5,11 +5,7 @@
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type WorkerCommandType = 'execute' | 'stream' | 'kill';
 export type WorkerResponseType =
-  | 'stdout'
-  | 'stderr'
-  | 'complete'
-  | 'error'
-  | 'progress';
+  'stdout' | 'stderr' | 'complete' | 'error' | 'progress';
 
 export interface ExecuteOptions {
   cwd?: string;

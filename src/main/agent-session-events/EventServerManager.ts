@@ -128,7 +128,10 @@ export class EventServerManager extends EventEmitter {
     try {
       if (!this.worker) {
         this.log('error', 'Cannot register port: worker not running');
-        span.setStatus({ code: SpanStatusCode.ERROR, message: 'Worker not running' });
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: 'Worker not running',
+        });
         return false;
       }
 
@@ -168,7 +171,7 @@ export class EventServerManager extends EventEmitter {
       // Event: MessagePort registered for window to receive events
       span.addEvent('event.port.registered', {
         'window.id': windowId,
-        'repository': repository,
+        repository: repository,
       });
 
       span.setStatus({ code: SpanStatusCode.OK });
@@ -179,7 +182,10 @@ export class EventServerManager extends EventEmitter {
 
       return true;
     } catch (error) {
-      span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) });
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error instanceof Error ? error.message : String(error),
+      });
       this.log('error', `Failed to register port: ${error}`);
       return false;
     } finally {
@@ -267,7 +273,10 @@ export class EventServerManager extends EventEmitter {
       );
       this.emit('started', this.serverPort);
     } catch (error) {
-      span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) });
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error instanceof Error ? error.message : String(error),
+      });
       this.log('error', `Failed to start event server: ${error}`);
       throw error;
     } finally {
@@ -485,7 +494,7 @@ export class EventServerManager extends EventEmitter {
       // Event: Window received session update broadcast
       span.addEvent('event.window.session_updated', {
         'session.id': (msg.data as { sessionId?: string })?.sessionId || '',
-        'directory': (msg.data as { directory?: string })?.directory || '',
+        directory: (msg.data as { directory?: string })?.directory || '',
         'windows.count': windows.length,
       });
 
@@ -495,7 +504,10 @@ export class EventServerManager extends EventEmitter {
         `Broadcasted ${msg.channel} to ${windows.length} windows`,
       );
     } catch (error) {
-      span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) });
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error instanceof Error ? error.message : String(error),
+      });
       this.log('error', `Window broadcast failed: ${error}`);
     } finally {
       span.end();

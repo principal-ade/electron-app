@@ -62,10 +62,20 @@ export async function loadManifestContents(
   // Helper to normalize entries to a path string
   const toPath = (entry: unknown): string => {
     if (typeof entry === 'string') return entry;
-    if (entry && typeof entry === 'object' && 'path' in entry && typeof (entry as { path: unknown }).path === 'string') {
+    if (
+      entry &&
+      typeof entry === 'object' &&
+      'path' in entry &&
+      typeof (entry as { path: unknown }).path === 'string'
+    ) {
       return (entry as { path: string }).path;
     }
-    if (entry && typeof entry === 'object' && 'name' in entry && typeof (entry as { name: unknown }).name === 'string') {
+    if (
+      entry &&
+      typeof entry === 'object' &&
+      'name' in entry &&
+      typeof (entry as { name: unknown }).name === 'string'
+    ) {
       return (entry as { name: string }).name;
     }
     return '';
@@ -73,7 +83,11 @@ export async function loadManifestContents(
 
   // Find all manifest files using PackageLayerModule's parsers (if available), else fallback patterns
   const parsers: Array<{ canParse?: (path: string) => boolean }> =
-    (pkgModule as unknown as { parsers?: Array<{ canParse?: (path: string) => boolean }> }).parsers || [];
+    (
+      pkgModule as unknown as {
+        parsers?: Array<{ canParse?: (path: string) => boolean }>;
+      }
+    ).parsers || [];
   const hasParsers = Array.isArray(parsers) && parsers.length > 0;
 
   const manifestFiles = fileSystemTree.allFiles

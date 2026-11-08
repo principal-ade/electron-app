@@ -456,10 +456,13 @@ export const UpdatesSettings: React.FC = () => {
                       fontWeight: 600,
                     }}
                     onClick={() => {
-                      uiSpanRef.current?.addEvent('app_updates.user.download_requested', {
-                        available_version: availableVersion,
-                        test_mode: true,
-                      });
+                      uiSpanRef.current?.addEvent(
+                        'app_updates.user.download_requested',
+                        {
+                          available_version: availableVersion,
+                          test_mode: true,
+                        },
+                      );
                       setIsDownloading(true);
                       setDownloadError(null);
                       setDownloadProgress(0);
@@ -485,7 +488,9 @@ export const UpdatesSettings: React.FC = () => {
                       marginLeft: '12px',
                     }}
                     onClick={() => {
-                      uiSpanRef.current?.addEvent('app_updates.user.test_goodbye_screen');
+                      uiSpanRef.current?.addEvent(
+                        'app_updates.user.test_goodbye_screen',
+                      );
                       AppVersionManagerService.testGoodbyeScreen();
                     }}
                   >

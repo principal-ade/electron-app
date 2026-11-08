@@ -16,7 +16,6 @@ import { ExtensionDetails } from './components/ExtensionDetails';
 import { PanelHarness } from './components/PanelHarness';
 import { ExtensionService } from '../main-process-api/ExtensionService';
 
-
 export const ExtensionWindowApp: React.FC = () => {
   const [extensions, setExtensions] = useState<DiscoveredExtension[]>([]);
   const [selectedExtension, setSelectedExtension] =
@@ -74,11 +73,9 @@ export const ExtensionWindowApp: React.FC = () => {
     loadExtensions();
 
     // Subscribe to extension changes
-    const unsubscribe = ExtensionService.onChanged(
-      (updatedExtensions) => {
-        setExtensions(updatedExtensions);
-      },
-    );
+    const unsubscribe = ExtensionService.onChanged((updatedExtensions) => {
+      setExtensions(updatedExtensions);
+    });
 
     return () => {
       unsubscribe();
@@ -163,7 +160,8 @@ export const ExtensionWindowApp: React.FC = () => {
           Check the console for [Preload-ExtensionWindow] logs.
         </div>
         <div className="text-gray-500 text-xs mt-4 text-center">
-          Extension service available: {ExtensionService.isAvailable() ? 'yes' : 'no'}
+          Extension service available:{' '}
+          {ExtensionService.isAvailable() ? 'yes' : 'no'}
           <br />
         </div>
       </div>

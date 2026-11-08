@@ -62,7 +62,6 @@ interface QuickOpenWindow extends Window {
 // Cast window to QuickOpenWindow since we know electronAPI is always present
 const quickOpenWindow = window as unknown as QuickOpenWindow;
 
-
 /**
  * Highlight matching text by splitting into segments
  */
@@ -241,9 +240,8 @@ const QuickOpenApp: React.FC = () => {
       searchTimeoutRef.current = setTimeout(async () => {
         setIsSearching(true);
         try {
-          const results = await quickOpenWindow.electronAPI.searchGitHub(
-            searchQuery,
-          );
+          const results =
+            await quickOpenWindow.electronAPI.searchGitHub(searchQuery);
           const mappedResults: QuickOpenItem[] = results.map((repo) => ({
             id: String(repo.id),
             type: 'github' as const,
@@ -332,10 +330,16 @@ const QuickOpenApp: React.FC = () => {
     if (e.metaKey && e.shiftKey && e.key >= '1' && e.key <= '9') {
       e.preventDefault();
       const itemIndex = parseInt(e.key, 10) - 1; // Convert 1-9 to 0-8
-      console.info('[Quick Open] Cmd+Shift+Number - copying path at index:', itemIndex);
+      console.info(
+        '[Quick Open] Cmd+Shift+Number - copying path at index:',
+        itemIndex,
+      );
       const item = filteredItems[itemIndex];
       if (item?.localPath) {
-        handleContextMenu(e as unknown as React.MouseEvent<HTMLDivElement>, item);
+        handleContextMenu(
+          e as unknown as React.MouseEvent<HTMLDivElement>,
+          item,
+        );
       }
       return;
     }
@@ -344,7 +348,10 @@ const QuickOpenApp: React.FC = () => {
     if (e.metaKey && e.key >= '1' && e.key <= '9') {
       e.preventDefault();
       const itemIndex = parseInt(e.key, 10) - 1; // Convert 1-9 to 0-8
-      console.info('[Quick Open] Cmd+Number - selecting item at index:', itemIndex);
+      console.info(
+        '[Quick Open] Cmd+Number - selecting item at index:',
+        itemIndex,
+      );
       if (filteredItems[itemIndex]) {
         handleSelectItem(filteredItems[itemIndex]);
       }
@@ -725,7 +732,11 @@ const QuickOpenApp: React.FC = () => {
                               whiteSpace: 'nowrap',
                             }}
                           >
-                            {highlightMatch(item.name, searchQuery, theme.colors.primary)}
+                            {highlightMatch(
+                              item.name,
+                              searchQuery,
+                              theme.colors.primary,
+                            )}
                           </span>
                           {item.isOpen && (
                             <span
@@ -807,7 +818,11 @@ const QuickOpenApp: React.FC = () => {
                             textOverflow: 'ellipsis',
                           }}
                         >
-                          {highlightMatch(tildifyPath(item.description), searchQuery, theme.colors.primary)}
+                          {highlightMatch(
+                            tildifyPath(item.description),
+                            searchQuery,
+                            theme.colors.primary,
+                          )}
                         </div>
                       )}
                     </div>

@@ -159,7 +159,7 @@ export class EventHighlightService extends EventEmitter {
     const toolOrType = event.toolName || event.eventType;
 
     // If there's exactly one file, include its name
-    const files = event.files?.filter(f => f.repository?.relativePath) || [];
+    const files = event.files?.filter((f) => f.repository?.relativePath) || [];
     if (files.length === 1) {
       const relativePath = files[0].repository?.relativePath;
       if (relativePath) {

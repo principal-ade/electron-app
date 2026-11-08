@@ -19,7 +19,8 @@ interface SkillsRepoOnboardingProps {
   onCancel?: () => void;
 }
 
-type OnboardingStep = 'welcome' | 'existing-skills' | 'configure' | 'migrating' | 'complete';
+type OnboardingStep =
+  'welcome' | 'existing-skills' | 'configure' | 'migrating' | 'complete';
 
 /**
  * Onboarding wizard for setting up a Git repository for skills
@@ -29,14 +30,20 @@ type OnboardingStep = 'welcome' | 'existing-skills' | 'configure' | 'migrating' 
  * 3. Configuring the repository (optional remote URL)
  * 4. Initializing and migrating skills
  */
-export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onComplete, onCancel }) => {
+export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({
+  onComplete,
+  onCancel,
+}) => {
   const { theme } = useTheme();
-  const { getAllLocalSkills, initializeRepo, migrateSkills, isLoading, error } = useSkillsSync();
+  const { getAllLocalSkills, initializeRepo, migrateSkills, isLoading, error } =
+    useSkillsSync();
   const { isAuthenticated, user } = useAuthUser();
 
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const [repoUrl, setRepoUrl] = useState('');
-  const [existingSkills, setExistingSkills] = useState<Array<{ path: string; name: string; source: string }>>([]);
+  const [existingSkills, setExistingSkills] = useState<
+    Array<{ path: string; name: string; source: string }>
+  >([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [creatingRepo, setCreatingRepo] = useState(false);
   const [createRepoError, setCreateRepoError] = useState<string | null>(null);
@@ -56,7 +63,7 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
     const skills = await getAllLocalSkills();
     setExistingSkills(skills);
     // Select all by default
-    setSelectedSkills(skills.map(s => s.path));
+    setSelectedSkills(skills.map((s) => s.path));
   };
 
   const loadDetectedPresets = async () => {
@@ -90,7 +97,7 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
 
       // Step 3: Add selected preset directories
       for (const presetId of selectedPresets) {
-        const preset = detectedPresets.find(p => p.id === presetId);
+        const preset = detectedPresets.find((p) => p.id === presetId);
         if (preset) {
           try {
             await FileSystemService.addSkillDirectory({
@@ -100,7 +107,10 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
               isCustom: false,
             });
           } catch (err) {
-            console.error(`Failed to add directory ${preset.displayName}:`, err);
+            console.error(
+              `Failed to add directory ${preset.displayName}:`,
+              err,
+            );
           }
         }
       }
@@ -113,18 +123,18 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
   };
 
   const toggleSkillSelection = (skillPath: string) => {
-    setSelectedSkills(prev =>
+    setSelectedSkills((prev) =>
       prev.includes(skillPath)
-        ? prev.filter(p => p !== skillPath)
-        : [...prev, skillPath]
+        ? prev.filter((p) => p !== skillPath)
+        : [...prev, skillPath],
     );
   };
 
   const togglePresetSelection = (presetId: string) => {
-    setSelectedPresets(prev =>
+    setSelectedPresets((prev) =>
       prev.includes(presetId)
-        ? prev.filter(p => p !== presetId)
-        : [...prev, presetId]
+        ? prev.filter((p) => p !== presetId)
+        : [...prev, presetId],
     );
   };
 
@@ -147,22 +157,26 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
           private: true,
           auto_init: false, // Don't create with README - we'll push our own content
         },
-        false // isOrganization
+        false, // isOrganization
       );
 
       // Set the HTTPS clone URL
       setRepoUrl(repo.clone_url);
       setCreatingRepo(false);
     } catch (err: unknown) {
-      console.error('[SkillsRepoOnboarding] Failed to create GitHub repo:', err);
+      console.error(
+        '[SkillsRepoOnboarding] Failed to create GitHub repo:',
+        err,
+      );
 
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create repository';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to create repository';
 
       // Check if it's a 422 error (repository already exists)
       if (errorMessage.includes('422')) {
         setCreateRepoError(
           `Repository "agent-skills" already exists in your GitHub account. ` +
-          `You can use the existing repository by entering its URL below: https://github.com/${user.login}/agent-skills`
+            `You can use the existing repository by entering its URL below: https://github.com/${user.login}/agent-skills`,
         );
         // Automatically set the URL to the existing repo
         setRepoUrl(`https://github.com/${user.login}/agent-skills`);
@@ -180,35 +194,57 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
       <h2 style={{ color: theme.colors.text, marginBottom: 16 }}>
         Set Up Your Skills Repository
       </h2>
-      <p style={{ color: theme.colors.textSecondary, marginBottom: 24, lineHeight: 1.6 }}>
-        Create a centralized Git repository for your agent skills. This allows you to:
+      <p
+        style={{
+          color: theme.colors.textSecondary,
+          marginBottom: 24,
+          lineHeight: 1.6,
+        }}
+      >
+        Create a centralized Git repository for your agent skills. This allows
+        you to:
       </p>
-      <ul style={{
-        textAlign: 'left',
-        color: theme.colors.textSecondary,
-        listStyle: 'none',
-        padding: 0,
-        marginBottom: 32,
-      }}>
-        <li style={{ marginBottom: 12 }}>✅ Keep skills synced across all your projects</li>
-        <li style={{ marginBottom: 12 }}>✅ Version control your skills with Git</li>
-        <li style={{ marginBottom: 12 }}>✅ Share skills across multiple machines</li>
-        <li style={{ marginBottom: 12 }}>✅ Backup your skills to a remote repository</li>
+      <ul
+        style={{
+          textAlign: 'left',
+          color: theme.colors.textSecondary,
+          listStyle: 'none',
+          padding: 0,
+          marginBottom: 32,
+        }}
+      >
+        <li style={{ marginBottom: 12 }}>
+          ✅ Keep skills synced across all your projects
+        </li>
+        <li style={{ marginBottom: 12 }}>
+          ✅ Version control your skills with Git
+        </li>
+        <li style={{ marginBottom: 12 }}>
+          ✅ Share skills across multiple machines
+        </li>
+        <li style={{ marginBottom: 12 }}>
+          ✅ Backup your skills to a remote repository
+        </li>
       </ul>
 
       {!isAuthenticated && (
-        <div style={{
-          padding: 16,
-          backgroundColor: theme.colors.backgroundSecondary,
-          borderRadius: 6,
-          marginBottom: 24,
-          border: `1px solid ${theme.colors.border}`,
-        }}>
-          <div style={{ fontSize: 14, color: theme.colors.text, marginBottom: 8 }}>
+        <div
+          style={{
+            padding: 16,
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: 6,
+            marginBottom: 24,
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <div
+            style={{ fontSize: 14, color: theme.colors.text, marginBottom: 8 }}
+          >
             ⚠️ GitHub Authentication Required
           </div>
           <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
-            You must be logged into GitHub to enable skill syncing. Please log in and try again.
+            You must be logged into GitHub to enable skill syncing. Please log
+            in and try again.
           </div>
         </div>
       )}
@@ -245,24 +281,42 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
       {/* Detected preset directories */}
       {detectedPresets.length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: theme.colors.text }}>
+          <h3
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              marginBottom: 12,
+              color: theme.colors.text,
+            }}
+          >
             Detected Directories with Skills
           </h3>
-          <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 16 }}>
+          <p
+            style={{
+              fontSize: 14,
+              color: theme.colors.textSecondary,
+              marginBottom: 16,
+            }}
+          >
             We found skills in these directories:
           </p>
-          <div style={{
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: 6,
-            marginBottom: 24,
-          }}>
+          <div
+            style={{
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: 6,
+              marginBottom: 24,
+            }}
+          >
             {detectedPresets.map((preset, index) => (
               <div
                 key={preset.id}
                 onClick={() => togglePresetSelection(preset.id)}
                 style={{
                   padding: 16,
-                  borderBottom: index < detectedPresets.length - 1 ? `1px solid ${theme.colors.border}` : 'none',
+                  borderBottom:
+                    index < detectedPresets.length - 1
+                      ? `1px solid ${theme.colors.border}`
+                      : 'none',
                   cursor: 'pointer',
                   backgroundColor: selectedPresets.includes(preset.id)
                     ? theme.colors.primary + '10'
@@ -280,11 +334,20 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
                 />
                 <span style={{ fontSize: 20 }}>{preset.icon}</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: theme.colors.text }}>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 14,
+                      color: theme.colors.text,
+                    }}
+                  >
                     {preset.displayName}
                   </div>
-                  <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
-                    {preset.skillCount} skill{preset.skillCount !== 1 ? 's' : ''} found • {preset.path}
+                  <div
+                    style={{ fontSize: 12, color: theme.colors.textSecondary }}
+                  >
+                    {preset.skillCount} skill
+                    {preset.skillCount !== 1 ? 's' : ''} found • {preset.path}
                   </div>
                 </div>
               </div>
@@ -296,35 +359,53 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
       {/* Existing skills to migrate */}
       {existingSkills.length > 0 && (
         <div>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: theme.colors.text }}>
+          <h3
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              marginBottom: 12,
+              color: theme.colors.text,
+            }}
+          >
             Existing Skills to Migrate
           </h3>
-          <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 16 }}>
+          <p
+            style={{
+              fontSize: 14,
+              color: theme.colors.textSecondary,
+              marginBottom: 16,
+            }}
+          >
             Select which skills to copy to the repository:
           </p>
         </div>
       )}
 
       {existingSkills.length === 0 && detectedPresets.length === 0 ? (
-        <div style={{
-          padding: 24,
-          backgroundColor: theme.colors.backgroundSecondary,
-          borderRadius: 6,
-          textAlign: 'center',
-          marginBottom: 24,
-        }}>
+        <div
+          style={{
+            padding: 24,
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: 6,
+            textAlign: 'center',
+            marginBottom: 24,
+          }}
+        >
           <p style={{ color: theme.colors.textSecondary }}>
-            No existing skills found. You can start fresh with your new repository!
+            No existing skills found. You can start fresh with your new
+            repository!
           </p>
         </div>
       ) : (
-        <div style={{
-          maxHeight: 400,
-          overflow: 'auto',
-          border: `1px solid ${theme.colors.border}`,
-          borderRadius: 6,
-          marginBottom: 24,
-        }}>
+        <div
+          style={{
+            maxHeight: 400,
+            overflow: 'auto',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 6,
+            marginBottom: 24,
+          }}
+        >
           {existingSkills.map((skill) => (
             <div
               key={skill.path}
@@ -351,8 +432,15 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
                 <div style={{ color: theme.colors.text, fontWeight: 500 }}>
                   {skill.name}
                 </div>
-                <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>
-                  {skill.source === 'agents' ? '~/.agents/skills' : '~/.claude/skills'}
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  {skill.source === 'agents'
+                    ? '~/.agents/skills'
+                    : '~/.claude/skills'}
                 </div>
               </div>
             </div>
@@ -360,7 +448,9 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between' }}>
+      <div
+        style={{ display: 'flex', gap: 12, justifyContent: 'space-between' }}
+      >
         <button
           onClick={() => setStep('welcome')}
           style={{
@@ -398,23 +488,41 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
         Configure Repository
       </h2>
       <p style={{ color: theme.colors.textSecondary, marginBottom: 24 }}>
-        Provide a remote Git repository URL to sync your skills across projects. We can create one for you on GitHub, or you can enter an existing repository URL.
+        Provide a remote Git repository URL to sync your skills across projects.
+        We can create one for you on GitHub, or you can enter an existing
+        repository URL.
       </p>
 
       {isAuthenticated && user && !repoUrl && (
-        <div style={{
-          padding: 16,
-          backgroundColor: theme.colors.backgroundSecondary,
-          borderRadius: 6,
-          marginBottom: 24,
-          border: `1px solid ${theme.colors.border}`,
-        }}>
+        <div
+          style={{
+            padding: 16,
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: 6,
+            marginBottom: 24,
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 14, color: theme.colors.text, fontWeight: 500, marginBottom: 6 }}>
+            <div
+              style={{
+                fontSize: 14,
+                color: theme.colors.text,
+                fontWeight: 500,
+                marginBottom: 6,
+              }}
+            >
               Create GitHub Repository
             </div>
-            <div style={{ fontSize: 12, color: theme.colors.textSecondary, marginBottom: 12 }}>
-              Logged in as <strong>{user.login}</strong>. We can automatically create a private repository for you.
+            <div
+              style={{
+                fontSize: 12,
+                color: theme.colors.textSecondary,
+                marginBottom: 12,
+              }}
+            >
+              Logged in as <strong>{user.login}</strong>. We can automatically
+              create a private repository for you.
             </div>
           </div>
           <button
@@ -432,17 +540,21 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
               opacity: creatingRepo ? 0.6 : 1,
             }}
           >
-            {creatingRepo ? 'Creating repository...' : 'Create agent-skills repository'}
+            {creatingRepo
+              ? 'Creating repository...'
+              : 'Create agent-skills repository'}
           </button>
           {createRepoError && (
-            <div style={{
-              marginTop: 12,
-              padding: 12,
-              backgroundColor: theme.colors.error + '20',
-              color: theme.colors.error,
-              borderRadius: 6,
-              fontSize: 12,
-            }}>
+            <div
+              style={{
+                marginTop: 12,
+                padding: 12,
+                backgroundColor: theme.colors.error + '20',
+                color: theme.colors.error,
+                borderRadius: 6,
+                fontSize: 12,
+              }}
+            >
               {createRepoError}
             </div>
           )}
@@ -450,25 +562,31 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
       )}
 
       {isAuthenticated && user && !repoUrl && (
-        <div style={{
-          textAlign: 'center',
-          color: theme.colors.textSecondary,
-          fontSize: 12,
-          marginBottom: 16,
-        }}>
+        <div
+          style={{
+            textAlign: 'center',
+            color: theme.colors.textSecondary,
+            fontSize: 12,
+            marginBottom: 16,
+          }}
+        >
           — or —
         </div>
       )}
 
       <div style={{ marginBottom: 24 }}>
-        <label style={{
-          display: 'block',
-          color: theme.colors.text,
-          marginBottom: 12,
-          fontSize: 14,
-          fontWeight: 500,
-        }}>
-          {isAuthenticated && !repoUrl ? 'Or enter repository URL manually' : 'Git Repository URL'}
+        <label
+          style={{
+            display: 'block',
+            color: theme.colors.text,
+            marginBottom: 12,
+            fontSize: 14,
+            fontWeight: 500,
+          }}
+        >
+          {isAuthenticated && !repoUrl
+            ? 'Or enter repository URL manually'
+            : 'Git Repository URL'}
         </label>
         <input
           type="text"
@@ -486,30 +604,59 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
             boxSizing: 'border-box',
           }}
         />
-        <div style={{ fontSize: 12, color: theme.colors.textSecondary, marginTop: 6 }}>
-          {repoUrl ? 'Skills will be pushed to this remote repository' : 'Required for syncing skills across projects'}
+        <div
+          style={{
+            fontSize: 12,
+            color: theme.colors.textSecondary,
+            marginTop: 6,
+          }}
+        >
+          {repoUrl
+            ? 'Skills will be pushed to this remote repository'
+            : 'Required for syncing skills across projects'}
         </div>
       </div>
 
-      <div style={{
-        padding: 16,
-        backgroundColor: theme.colors.backgroundSecondary,
-        borderRadius: 6,
-        marginBottom: 24,
-      }}>
-        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.text, marginBottom: 12, fontWeight: 500 }}>
+      <div
+        style={{
+          padding: 16,
+          backgroundColor: theme.colors.backgroundSecondary,
+          borderRadius: 6,
+          marginBottom: 24,
+        }}
+      >
+        <div
+          style={{
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.text,
+            marginBottom: 12,
+            fontWeight: 500,
+          }}
+        >
           Summary
         </div>
-        <ul style={{ margin: 0, paddingLeft: 24, color: theme.colors.textSecondary, fontSize: theme.fontSizes[1] }}>
+        <ul
+          style={{
+            margin: 0,
+            paddingLeft: 24,
+            color: theme.colors.textSecondary,
+            fontSize: theme.fontSizes[1],
+          }}
+        >
           <li>Initialize local Git repository</li>
           {selectedSkills.length > 0 && (
-            <li>Migrate {selectedSkills.length} skill{selectedSkills.length !== 1 ? 's' : ''}</li>
+            <li>
+              Migrate {selectedSkills.length} skill
+              {selectedSkills.length !== 1 ? 's' : ''}
+            </li>
           )}
           {repoUrl.trim() && <li>Set remote to {repoUrl}</li>}
         </ul>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between' }}>
+      <div
+        style={{ display: 'flex', gap: 12, justifyContent: 'space-between' }}
+      >
         <button
           onClick={() => setStep('existing-skills')}
           style={{
@@ -528,13 +675,16 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
           disabled={isLoading || !repoUrl.trim()}
           style={{
             padding: '10px 24px',
-            backgroundColor: (isLoading || !repoUrl.trim()) ? theme.colors.textSecondary : theme.colors.primary,
+            backgroundColor:
+              isLoading || !repoUrl.trim()
+                ? theme.colors.textSecondary
+                : theme.colors.primary,
             color: theme.colors.background,
             border: 'none',
             borderRadius: 6,
-            cursor: (isLoading || !repoUrl.trim()) ? 'not-allowed' : 'pointer',
+            cursor: isLoading || !repoUrl.trim() ? 'not-allowed' : 'pointer',
             fontWeight: 600,
-            opacity: (isLoading || !repoUrl.trim()) ? 0.5 : 1,
+            opacity: isLoading || !repoUrl.trim() ? 0.5 : 1,
           }}
         >
           {isLoading ? 'Setting up...' : 'Initialize Repository'}
@@ -551,14 +701,16 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
       </h2>
       {error ? (
         <>
-          <div style={{
-            padding: 16,
-            backgroundColor: theme.colors.error + '20',
-            border: `1px solid ${theme.colors.error}`,
-            borderRadius: 6,
-            color: theme.colors.error,
-            marginBottom: 24,
-          }}>
+          <div
+            style={{
+              padding: 16,
+              backgroundColor: theme.colors.error + '20',
+              border: `1px solid ${theme.colors.error}`,
+              borderRadius: 6,
+              color: theme.colors.error,
+              marginBottom: 24,
+            }}
+          >
             {error}
           </div>
           <button
@@ -578,7 +730,8 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
         </>
       ) : (
         <p style={{ color: theme.colors.textSecondary }}>
-          Please wait while we initialize your repository and migrate your skills...
+          Please wait while we initialize your repository and migrate your
+          skills...
         </p>
       )}
     </div>
@@ -587,11 +740,16 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
   const renderComplete = () => (
     <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
       <div style={{ fontSize: 48, marginBottom: 24 }}>✅</div>
-      <h2 style={{ color: theme.colors.text, marginBottom: 16 }}>
-        All Set!
-      </h2>
-      <p style={{ color: theme.colors.textSecondary, marginBottom: 24, lineHeight: 1.6 }}>
-        Your skills repository has been set up successfully. Your skills are now being synced from the Git repository.
+      <h2 style={{ color: theme.colors.text, marginBottom: 16 }}>All Set!</h2>
+      <p
+        style={{
+          color: theme.colors.textSecondary,
+          marginBottom: 24,
+          lineHeight: 1.6,
+        }}
+      >
+        Your skills repository has been set up successfully. Your skills are now
+        being synced from the Git repository.
       </p>
       <button
         onClick={onComplete}
@@ -643,7 +801,8 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
             transition: 'all 0.2s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
             e.currentTarget.style.color = theme.colors.text;
           }}
           onMouseLeave={(e) => {

@@ -29,8 +29,11 @@ function pathsToFiles(
   }));
 }
 
-async function getWorkingChanges(repoPath: string): Promise<InProgressChangedFile[]> {
-  const status = await RepositoryMonitoringService.getGitStatusWithFiles(repoPath);
+async function getWorkingChanges(
+  repoPath: string,
+): Promise<InProgressChangedFile[]> {
+  const status =
+    await RepositoryMonitoringService.getGitStatusWithFiles(repoPath);
   if (!status) return [];
 
   // Working tree modifications are in modifiedFiles; staged changes are in
@@ -53,7 +56,9 @@ async function getWorkingChanges(repoPath: string): Promise<InProgressChangedFil
 }
 
 /** Parse owner/repo from a git remote URL (SSH or HTTPS). */
-function parseOwnerRepo(remoteUrl: string): { owner: string; repo: string } | null {
+function parseOwnerRepo(
+  remoteUrl: string,
+): { owner: string; repo: string } | null {
   if (!remoteUrl) return null;
   let m = /git@[^:]+:([^/]+)\/(.+?)(?:\.git)?$/.exec(remoteUrl);
   if (m) return { owner: m[1], repo: m[2] };
@@ -65,7 +70,9 @@ function parseOwnerRepo(remoteUrl: string): { owner: string; repo: string } | nu
 /** `1234+user@users.noreply.github.com` (or `user@…`) → the GitHub login. */
 function noreplyLogin(email: string | undefined | null): string | null {
   if (!email) return null;
-  const m = /^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i.exec(email.trim());
+  const m = /^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i.exec(
+    email.trim(),
+  );
   return m ? m[1] : null;
 }
 
@@ -135,7 +142,9 @@ async function getAheadCommits(
  * from the remote. Falls back to the local `git log` list (noreply/initials)
  * when there's no GitHub remote, no token, or the compare call fails.
  */
-async function getBehindCommits(repoPath: string): Promise<InProgressAheadCommit[]> {
+async function getBehindCommits(
+  repoPath: string,
+): Promise<InProgressAheadCommit[]> {
   try {
     const [remoteUrl, upstream, mergeBase] = await Promise.all([
       gitStdout(repoPath, ['remote', 'get-url', 'origin']),
@@ -207,7 +216,8 @@ export function createInProgressActivityPanelActions(
   currentUser: InProgressViewerIdentity | null,
 ): InProgressRepoCardActions {
   return {
-    getFileTreeForLocalRepo: (repoPath) => RepositoryMonitoringService.getFileTree(repoPath),
+    getFileTreeForLocalRepo: (repoPath) =>
+      RepositoryMonitoringService.getFileTree(repoPath),
     getWorkingChanges,
     getAheadCommits: (repoPath) => getAheadCommits(repoPath, currentUser),
     getBehindCommits,

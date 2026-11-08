@@ -9,7 +9,11 @@ import { DEFAULT_NAMESPACE_COLOR } from './layers';
 import { makeOverlayStyle, makeSectionLabelStyle } from './styles';
 
 export const ScopeInfoOverlay: React.FC<{
-  info: { scope: ScopeRecord; ns: NamespaceRecord | null; ev: EventRecord | null };
+  info: {
+    scope: ScopeRecord;
+    ns: NamespaceRecord | null;
+    ev: EventRecord | null;
+  };
 }> = ({ info }) => {
   const { theme } = useTheme();
   const overlayStyle = makeOverlayStyle(theme);
@@ -40,7 +44,13 @@ export const ScopeInfoOverlay: React.FC<{
       <div style={overlayStyle}>
         <div style={{ padding: '14px 16px', borderBottom: sectionDivider }}>
           <div style={sectionLabelStyle}>Event</div>
-          <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], marginTop: 6 }}>
+          <div
+            style={{
+              fontFamily: theme.fonts.monospace,
+              fontSize: theme.fontSizes[1],
+              marginTop: 6,
+            }}
+          >
             {ev.name}
           </div>
           {ev.severity && (
@@ -59,22 +69,56 @@ export const ScopeInfoOverlay: React.FC<{
             </div>
           )}
           {ev.description && (
-            <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, marginTop: 10, lineHeight: 1.5 }}>
+            <div
+              style={{
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textSecondary,
+                marginTop: 10,
+                lineHeight: 1.5,
+              }}
+            >
               {ev.description}
             </div>
           )}
         </div>
         <div style={{ padding: '14px 16px' }}>
           <div style={sectionLabelStyle}>Owning namespace</div>
-          <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: theme.space[2] }}>
+          <div
+            style={{
+              marginTop: 6,
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.space[2],
+            }}
+          >
             <span
-              style={{ width: 12, height: 12, borderRadius: theme.radii[1], background: ns.color ?? DEFAULT_NAMESPACE_COLOR, flexShrink: 0 }}
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: theme.radii[1],
+                background: ns.color ?? DEFAULT_NAMESPACE_COLOR,
+                flexShrink: 0,
+              }}
             />
-            <span style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1] }}>{ns.name}</span>
+            <span
+              style={{
+                fontFamily: theme.fonts.monospace,
+                fontSize: theme.fontSizes[1],
+              }}
+            >
+              {ns.name}
+            </span>
           </div>
-          <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textTertiary, marginTop: 14, fontStyle: 'italic' }}>
-            Files-per-event mapping not wired yet — for now the event highlights its parent
-            namespace&apos;s paths.
+          <div
+            style={{
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textTertiary,
+              marginTop: 14,
+              fontStyle: 'italic',
+            }}
+          >
+            Files-per-event mapping not wired yet — for now the event highlights
+            its parent namespace&apos;s paths.
           </div>
         </div>
       </div>
@@ -87,23 +131,66 @@ export const ScopeInfoOverlay: React.FC<{
       <div style={overlayStyle}>
         <div style={{ padding: '14px 16px', borderBottom: sectionDivider }}>
           <div style={sectionLabelStyle}>Namespace</div>
-          <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: theme.space[2] }}>
+          <div
+            style={{
+              marginTop: 6,
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.space[2],
+            }}
+          >
             <span
-              style={{ width: 12, height: 12, borderRadius: theme.radii[1], background: ns.color ?? DEFAULT_NAMESPACE_COLOR, flexShrink: 0 }}
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: theme.radii[1],
+                background: ns.color ?? DEFAULT_NAMESPACE_COLOR,
+                flexShrink: 0,
+              }}
             />
-            <span style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1] }}>{ns.name}</span>
+            <span
+              style={{
+                fontFamily: theme.fonts.monospace,
+                fontSize: theme.fontSizes[1],
+              }}
+            >
+              {ns.name}
+            </span>
           </div>
-          <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted, marginTop: theme.space[2], lineHeight: 1.5 }}>
+          <div
+            style={{
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textMuted,
+              marginTop: theme.space[2],
+              lineHeight: 1.5,
+            }}
+          >
             {ns.description}
           </div>
-          <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textTertiary, marginTop: theme.space[2] }}>
-            in <span style={{ fontFamily: theme.fonts.monospace }}>{scope.name}</span>
+          <div
+            style={{
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textTertiary,
+              marginTop: theme.space[2],
+            }}
+          >
+            in{' '}
+            <span style={{ fontFamily: theme.fonts.monospace }}>
+              {scope.name}
+            </span>
           </div>
         </div>
         <div style={{ padding: '14px 16px', borderBottom: sectionDivider }}>
           <div style={sectionLabelStyle}>Claimed paths ({ns.paths.length})</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: theme.space[1], marginTop: 6 }}>
-            {ns.paths.map(p => (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: theme.space[1],
+              marginTop: 6,
+            }}
+          >
+            {ns.paths.map((p) => (
               <code key={p} style={codeChipStyle}>
                 {p}
               </code>
@@ -112,8 +199,15 @@ export const ScopeInfoOverlay: React.FC<{
         </div>
         <div style={{ padding: '14px 16px' }}>
           <div style={sectionLabelStyle}>Events ({ns.events.length})</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: theme.space[1], marginTop: 6 }}>
-            {ns.events.map(e => (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: theme.space[1],
+              marginTop: 6,
+            }}
+          >
+            {ns.events.map((e) => (
               <div
                 key={e.name}
                 style={{
@@ -121,7 +215,8 @@ export const ScopeInfoOverlay: React.FC<{
                   alignItems: 'center',
                   gap: 6,
                   padding: '4px 6px',
-                  background: theme.colors.backgroundDark ?? theme.colors.background,
+                  background:
+                    theme.colors.backgroundDark ?? theme.colors.background,
                   borderRadius: theme.radii[2],
                 }}
               >
@@ -139,7 +234,12 @@ export const ScopeInfoOverlay: React.FC<{
                     {e.severity}
                   </span>
                 )}
-                <code style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>
+                <code
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textSecondary,
+                  }}
+                >
                   {e.name}
                 </code>
               </div>
@@ -156,11 +256,34 @@ export const ScopeInfoOverlay: React.FC<{
     <div style={overlayStyle}>
       <div style={{ padding: '14px 16px', borderBottom: sectionDivider }}>
         <div style={sectionLabelStyle}>Scope</div>
-        <div style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[1], marginTop: 6 }}>{scope.name}</div>
-        <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted, marginTop: theme.space[2], lineHeight: 1.5 }}>
+        <div
+          style={{
+            fontFamily: theme.fonts.monospace,
+            fontSize: theme.fontSizes[1],
+            marginTop: 6,
+          }}
+        >
+          {scope.name}
+        </div>
+        <div
+          style={{
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textMuted,
+            marginTop: theme.space[2],
+            lineHeight: 1.5,
+          }}
+        >
           {scope.description ?? ''}
         </div>
-        <div style={{ display: 'flex', gap: theme.space[3], marginTop: 12, fontSize: theme.fontSizes[0], color: theme.colors.textTertiary }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: theme.space[3],
+            marginTop: 12,
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textTertiary,
+          }}
+        >
           <div>
             <div>{scope.paths.length}</div>
             <div style={sectionLabelStyle}>scope paths</div>
@@ -177,9 +300,18 @@ export const ScopeInfoOverlay: React.FC<{
       </div>
       {scope.paths.length > 0 && (
         <div style={{ padding: '14px 16px', borderBottom: sectionDivider }}>
-          <div style={sectionLabelStyle}>Scope-level paths ({scope.paths.length})</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: theme.space[1], marginTop: 6 }}>
-            {scope.paths.map(p => (
+          <div style={sectionLabelStyle}>
+            Scope-level paths ({scope.paths.length})
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: theme.space[1],
+              marginTop: 6,
+            }}
+          >
+            {scope.paths.map((p) => (
               <code key={p} style={codeChipStyle}>
                 {p}
               </code>
@@ -189,17 +321,31 @@ export const ScopeInfoOverlay: React.FC<{
       )}
       <div style={{ padding: '14px 16px' }}>
         <div style={sectionLabelStyle}>Namespaces</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: theme.space[2], marginTop: theme.space[2] }}>
-          {scope.namespaces.map(n => (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: theme.space[2],
+            marginTop: theme.space[2],
+          }}
+        >
+          {scope.namespaces.map((n) => (
             <div
               key={n.name}
               style={{
                 padding: theme.space[2],
-                background: theme.colors.backgroundDark ?? theme.colors.background,
+                background:
+                  theme.colors.backgroundDark ?? theme.colors.background,
                 borderRadius: theme.radii[3],
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: theme.space[2] }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: theme.space[2],
+                }}
+              >
                 <span
                   style={{
                     width: 10,
@@ -209,8 +355,21 @@ export const ScopeInfoOverlay: React.FC<{
                     flexShrink: 0,
                   }}
                 />
-                <span style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0] }}>{n.name}</span>
-                <span style={{ fontSize: theme.fontSizes[0], color: theme.colors.textTertiary, marginLeft: 'auto' }}>
+                <span
+                  style={{
+                    fontFamily: theme.fonts.monospace,
+                    fontSize: theme.fontSizes[0],
+                  }}
+                >
+                  {n.name}
+                </span>
+                <span
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textTertiary,
+                    marginLeft: 'auto',
+                  }}
+                >
                   {n.events.length} event{n.events.length === 1 ? '' : 's'}
                 </span>
               </div>

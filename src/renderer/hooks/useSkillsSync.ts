@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { type SkillsRepoConfig, type SyncState } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import {
+  type SkillsRepoConfig,
+  type SyncState,
+} from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 
 interface LocalSkill {
@@ -21,7 +24,9 @@ interface UseSkillsSyncReturn {
 
   // Actions
   getConfig: () => Promise<SkillsRepoConfig | null>;
-  updateConfig: (updates: Partial<SkillsRepoConfig>) => Promise<SkillsRepoConfig | null>;
+  updateConfig: (
+    updates: Partial<SkillsRepoConfig>,
+  ) => Promise<SkillsRepoConfig | null>;
   sync: () => Promise<boolean>;
   getSyncStatus: () => Promise<SyncState | null>;
 
@@ -31,9 +36,15 @@ interface UseSkillsSyncReturn {
   migrateSkills: (skillPaths: string[]) => Promise<boolean>;
 
   // Skill-level actions
-  enableSkillSync: (skillPath: string, syncSource: 'git-global' | 'github') => Promise<boolean>;
+  enableSkillSync: (
+    skillPath: string,
+    syncSource: 'git-global' | 'github',
+  ) => Promise<boolean>;
   disableSkillSync: (skillPath: string) => Promise<boolean>;
-  resolveConflict: (skillPath: string, resolution: 'keep-local' | 'use-remote') => Promise<boolean>;
+  resolveConflict: (
+    skillPath: string,
+    resolution: 'keep-local' | 'use-remote',
+  ) => Promise<boolean>;
 }
 
 /**
@@ -88,24 +99,29 @@ export function useSkillsSync(): UseSkillsSyncReturn {
     }
   }, []);
 
-  const updateConfig = useCallback(async (updates: Partial<SkillsRepoConfig>): Promise<SkillsRepoConfig | null> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await FileSystemService.updateSyncConfig(updates);
-      if (result) {
-        setConfig(result);
+  const updateConfig = useCallback(
+    async (
+      updates: Partial<SkillsRepoConfig>,
+    ): Promise<SkillsRepoConfig | null> => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const result = await FileSystemService.updateSyncConfig(updates);
+        if (result) {
+          setConfig(result);
+        }
+        return result;
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setError(errorMsg);
+        console.error('[useSkillsSync] Failed to update config:', err);
+        return null;
+      } finally {
+        setIsLoading(false);
       }
-      return result;
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      setError(errorMsg);
-      console.error('[useSkillsSync] Failed to update config:', err);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   const sync = useCallback(async (): Promise<boolean> => {
     try {
@@ -151,80 +167,107 @@ export function useSkillsSync(): UseSkillsSyncReturn {
     }
   }, []);
 
-  const initializeRepo = useCallback(async (repoUrl?: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await FileSystemService.initializeSkillsRepo(repoUrl);
-      if (result?.success) {
-        await loadConfig(); // Refresh config
+  const initializeRepo = useCallback(
+    async (repoUrl?: string): Promise<boolean> => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const result = await FileSystemService.initializeSkillsRepo(repoUrl);
+        if (result?.success) {
+          await loadConfig(); // Refresh config
+        }
+        return result?.success || false;
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setError(errorMsg);
+        console.error('[useSkillsSync] Failed to initialize repo:', err);
+        return false;
+      } finally {
+        setIsLoading(false);
       }
-      return result?.success || false;
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      setError(errorMsg);
-      console.error('[useSkillsSync] Failed to initialize repo:', err);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadConfig]);
+    },
+    [loadConfig],
+  );
 
-  const migrateSkills = useCallback(async (skillPaths: string[]): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await FileSystemService.migrateSkillsToRepo(skillPaths);
-      return result?.success || false;
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      setError(errorMsg);
-      console.error('[useSkillsSync] Failed to migrate skills:', err);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const migrateSkills = useCallback(
+    async (skillPaths: string[]): Promise<boolean> => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const result = await FileSystemService.migrateSkillsToRepo(skillPaths);
+        return result?.success || false;
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setError(errorMsg);
+        console.error('[useSkillsSync] Failed to migrate skills:', err);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
 
-  const enableSkillSync = useCallback(async (skillPath: string, syncSource: 'git-global' | 'github'): Promise<boolean> => {
-    try {
-      setError(null);
-      const result = await FileSystemService.enableSkillSync(skillPath, syncSource);
-      return result?.success || false;
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      setError(errorMsg);
-      console.error('[useSkillsSync] Failed to enable skill sync:', err);
-      return false;
-    }
-  }, []);
+  const enableSkillSync = useCallback(
+    async (
+      skillPath: string,
+      syncSource: 'git-global' | 'github',
+    ): Promise<boolean> => {
+      try {
+        setError(null);
+        const result = await FileSystemService.enableSkillSync(
+          skillPath,
+          syncSource,
+        );
+        return result?.success || false;
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setError(errorMsg);
+        console.error('[useSkillsSync] Failed to enable skill sync:', err);
+        return false;
+      }
+    },
+    [],
+  );
 
-  const disableSkillSync = useCallback(async (skillPath: string): Promise<boolean> => {
-    try {
-      setError(null);
-      const result = await FileSystemService.disableSkillSync(skillPath);
-      return result?.success || false;
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      setError(errorMsg);
-      console.error('[useSkillsSync] Failed to disable skill sync:', err);
-      return false;
-    }
-  }, []);
+  const disableSkillSync = useCallback(
+    async (skillPath: string): Promise<boolean> => {
+      try {
+        setError(null);
+        const result = await FileSystemService.disableSkillSync(skillPath);
+        return result?.success || false;
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setError(errorMsg);
+        console.error('[useSkillsSync] Failed to disable skill sync:', err);
+        return false;
+      }
+    },
+    [],
+  );
 
-  const resolveConflict = useCallback(async (skillPath: string, resolution: 'keep-local' | 'use-remote'): Promise<boolean> => {
-    try {
-      setError(null);
-      const result = await FileSystemService.resolveSkillConflict(skillPath, resolution);
-      await loadSyncStatus(); // Refresh sync status
-      return result?.success || false;
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      setError(errorMsg);
-      console.error('[useSkillsSync] Failed to resolve conflict:', err);
-      return false;
-    }
-  }, [loadSyncStatus]);
+  const resolveConflict = useCallback(
+    async (
+      skillPath: string,
+      resolution: 'keep-local' | 'use-remote',
+    ): Promise<boolean> => {
+      try {
+        setError(null);
+        const result = await FileSystemService.resolveSkillConflict(
+          skillPath,
+          resolution,
+        );
+        await loadSyncStatus(); // Refresh sync status
+        return result?.success || false;
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setError(errorMsg);
+        console.error('[useSkillsSync] Failed to resolve conflict:', err);
+        return false;
+      }
+    },
+    [loadSyncStatus],
+  );
 
   const isConfigured = config !== null && config.repoUrl.length > 0;
   const isEnabled = config !== null && config.enabled;

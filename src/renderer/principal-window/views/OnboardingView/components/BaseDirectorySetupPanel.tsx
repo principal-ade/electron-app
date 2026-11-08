@@ -9,11 +9,9 @@ export interface BaseDirectorySetupPanelProps {
   currentDirectory?: string | null;
 }
 
-export const BaseDirectorySetupPanel: React.FC<BaseDirectorySetupPanelProps> = ({
-  onDirectorySelected,
-  onSkip,
-  currentDirectory,
-}) => {
+export const BaseDirectorySetupPanel: React.FC<
+  BaseDirectorySetupPanelProps
+> = ({ onDirectorySelected, onSkip, currentDirectory }) => {
   const { theme } = useTheme();
   const [isSelecting, setIsSelecting] = useState(false);
 
@@ -33,7 +31,10 @@ export const BaseDirectorySetupPanel: React.FC<BaseDirectorySetupPanelProps> = (
       const selectedPath = result.filePaths[0];
       onDirectorySelected(selectedPath);
     } catch (error) {
-      console.error('[BaseDirectorySetupPanel] Failed to select directory:', error);
+      console.error(
+        '[BaseDirectorySetupPanel] Failed to select directory:',
+        error,
+      );
     } finally {
       setIsSelecting(false);
     }
@@ -114,7 +115,11 @@ export const BaseDirectorySetupPanel: React.FC<BaseDirectorySetupPanelProps> = (
             gap: 12,
           }}
         >
-          <Info size={20} color={theme.colors.primary} style={{ flexShrink: 0, marginTop: 2 }} />
+          <Info
+            size={20}
+            color={theme.colors.primary}
+            style={{ flexShrink: 0, marginTop: 2 }}
+          />
           <div>
             <h3
               style={{
@@ -235,7 +240,11 @@ export const BaseDirectorySetupPanel: React.FC<BaseDirectorySetupPanelProps> = (
           }}
         >
           <FolderOpen size={18} />
-          {isSelecting ? 'Selecting...' : currentDirectory ? 'Change Directory' : 'Choose Directory'}
+          {isSelecting
+            ? 'Selecting...'
+            : currentDirectory
+              ? 'Change Directory'
+              : 'Choose Directory'}
         </button>
 
         <button
@@ -255,7 +264,8 @@ export const BaseDirectorySetupPanel: React.FC<BaseDirectorySetupPanelProps> = (
           }}
           onMouseEnter={(e) => {
             if (!isSelecting) {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
               e.currentTarget.style.borderColor = theme.colors.textSecondary;
             }
           }}

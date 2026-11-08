@@ -12,16 +12,10 @@
 export type WatchedPullRequestState = 'open' | 'closed' | 'merged';
 
 export type PullRequestChecksStatus =
-  | 'none'
-  | 'pending'
-  | 'success'
-  | 'failure';
+  'none' | 'pending' | 'success' | 'failure';
 
 export type PullRequestReviewState =
-  | 'none'
-  | 'pending'
-  | 'approved'
-  | 'changes_requested';
+  'none' | 'pending' | 'approved' | 'changes_requested';
 
 export interface PullRequestChecksSummary {
   status: PullRequestChecksStatus;

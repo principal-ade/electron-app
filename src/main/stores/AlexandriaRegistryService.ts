@@ -234,9 +234,8 @@ export class AlexandriaRegistryService {
       }
 
       if (deleteLocal) {
-        const { getSessionManagerInstance } = await import(
-          '../terminal/sessionManagerSingleton'
-        );
+        const { getSessionManagerInstance } =
+          await import('../terminal/sessionManagerSingleton');
         await closeRepositoryTerminals(getSessionManagerInstance(), path);
         await FileSystemService.deleteDirectory(path);
         console.log(`Deleted local files for repository at ${path}`);

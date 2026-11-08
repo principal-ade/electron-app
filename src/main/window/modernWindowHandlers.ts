@@ -7,10 +7,7 @@ import { ipcMain, BrowserWindow } from 'electron';
 import { focusOrCreateMainWindow } from './modernWindowManager';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
-import type {
-  IModernApplicationWindow,
-  TabTransferData,
-} from './types';
+import type { IModernApplicationWindow, TabTransferData } from './types';
 import { PrimaryWindowType } from './types';
 
 /**

@@ -20,6 +20,10 @@ import type { HomeRepositoryRefreshInterest } from '../homeRepositoryRefresh';
 
 // Extended RepositoryMonitoringAPI with app-specific methods
 export interface ExtendedRepositoryMonitoringAPI extends RepositoryMonitoringAPI {
+  /** Fired after the monitor has removed a repository and its cached slices. */
+  onRepositoryUnregistered: (
+    callback: (event: { repoPath: string }) => void,
+  ) => () => void;
   setHomeRefreshInterest: (
     interest: HomeRepositoryRefreshInterest,
   ) => Promise<GitStatusWithFiles[]>;

@@ -2,9 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
-import {
-  Radar,
-} from 'lucide-react';
+import { Radar } from 'lucide-react';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 import { StudioHeaderButton } from '../../../components/Titlebar/StudioHeaderButton';
 import { OpenBotHeaderButton } from '../../../components/Titlebar/OpenBotHeaderButton';
@@ -84,7 +82,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             display: 'flex',
             alignItems: 'center',
             paddingLeft: '12px',
-            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            WebkitAppRegion:
+              'no-drag' as React.CSSProperties['WebkitAppRegion'],
           }}
         >
           <button
@@ -149,7 +148,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             height: '56px',
             display: 'flex',
             alignItems: 'center',
-            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            WebkitAppRegion:
+              'no-drag' as React.CSSProperties['WebkitAppRegion'],
             zIndex: 101,
           }}
         >
@@ -299,8 +299,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           </button>
         </div>
       )}
-
-
     </div>
   );
 };

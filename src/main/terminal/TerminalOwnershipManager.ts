@@ -37,9 +37,7 @@ export class TerminalOwnershipManager {
    */
   unregisterRemoteClient(clientId: string): void {
     this.remoteClients.delete(clientId);
-    console.log(
-      `[OwnershipManager] Unregistered remote client ${clientId}`,
-    );
+    console.log(`[OwnershipManager] Unregistered remote client ${clientId}`);
   }
 
   /**
@@ -194,7 +192,11 @@ export class TerminalOwnershipManager {
    * Release ownership of a session (legacy - for local windows).
    */
   releaseOwnership(sessionId: string, windowId: number): OwnershipResult {
-    return this.releaseOwnershipGeneric(sessionId, windowId.toString(), 'local');
+    return this.releaseOwnershipGeneric(
+      sessionId,
+      windowId.toString(),
+      'local',
+    );
   }
 
   /**
@@ -249,9 +251,7 @@ export class TerminalOwnershipManager {
   ): boolean {
     const owner = this.ownership.get(sessionId);
     return (
-      owner !== undefined &&
-      owner.type === ownerType &&
-      owner.id === ownerId
+      owner !== undefined && owner.type === ownerType && owner.id === ownerId
     );
   }
 

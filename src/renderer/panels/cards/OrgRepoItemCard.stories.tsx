@@ -3,7 +3,9 @@ import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import { OrgRepoItemCard, type OrgRepoItemCardData } from './OrgRepoItemCard';
 
-const createMockRepo = (overrides: Partial<OrgRepoItemCardData> = {}): OrgRepoItemCardData => ({
+const createMockRepo = (
+  overrides: Partial<OrgRepoItemCardData> = {},
+): OrgRepoItemCardData => ({
   name: 'my-library',
   ...overrides,
 });
@@ -13,7 +15,9 @@ const Wrapper: React.FC<{ children: React.ReactNode; width?: number }> = ({
   width = 320,
 }) => (
   <ThemeProvider>
-    <div style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+    <div
+      style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}
+    >
       <div style={{ maxWidth: width }}>{children}</div>
     </div>
   </ThemeProvider>
@@ -41,7 +45,10 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   render: () => (
     <Wrapper>
-      <OrgRepoItemCard repo={createMockRepo()} onClick={() => console.info('clicked')} />
+      <OrgRepoItemCard
+        repo={createMockRepo()}
+        onClick={() => console.info('clicked')}
+      />
     </Wrapper>
   ),
 };

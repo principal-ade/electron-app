@@ -49,7 +49,10 @@ export function registerStoreHandlers(): void {
     ) => {
       try {
         const typedNamespace = await verifyNamespace(namespace);
-        const result = await typedNamespace.get(key, defaultValue as NamespaceData<typeof namespace> | undefined);
+        const result = await typedNamespace.get(
+          key,
+          defaultValue as NamespaceData<typeof namespace> | undefined,
+        );
         if (!result) {
           throw new Error(`Key ${key} not found in namespace ${namespace}`);
         }

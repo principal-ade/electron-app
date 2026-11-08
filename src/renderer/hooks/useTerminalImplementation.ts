@@ -8,7 +8,8 @@ export type TerminalImplementation = 'xterm' | 'ghostty';
  * Default terminal renderer. We default to ghostty; users can switch to xterm
  * via the `terminalImplementation` preference.
  */
-export const DEFAULT_TERMINAL_IMPLEMENTATION: TerminalImplementation = 'ghostty';
+export const DEFAULT_TERMINAL_IMPLEMENTATION: TerminalImplementation =
+  'ghostty';
 
 function normalize(value: unknown): TerminalImplementation {
   return value === 'xterm' ? 'xterm' : DEFAULT_TERMINAL_IMPLEMENTATION;

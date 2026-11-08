@@ -40,7 +40,11 @@ export const ReviewCommitPanel: React.FC<ReviewCommitPanelProps> = ({
         const diff = repoPath
           ? await GitService.getCommitDiff(repoPath, commit.hash)
           : githubOwner && githubRepoName
-            ? await GithubService.getCommitDiff(githubOwner, githubRepoName, commit.hash)
+            ? await GithubService.getCommitDiff(
+                githubOwner,
+                githubRepoName,
+                commit.hash,
+              )
             : '';
         setDiffText(diff);
       } catch (err) {
@@ -60,10 +64,12 @@ export const ReviewCommitPanel: React.FC<ReviewCommitPanelProps> = ({
   // the upstream parser drop every file in the patch.
   const fileDiffs = useMemo<FileDiffMetadata[]>(() => {
     if (!diffText) return [];
-    const chunks = diffText.split(/(?=^diff --git )/m).filter(c => c.trim().length > 0);
+    const chunks = diffText
+      .split(/(?=^diff --git )/m)
+      .filter((c) => c.trim().length > 0);
     if (chunks.length === 0) {
       try {
-        return parsePatchFiles(diffText).flatMap(p => p.files);
+        return parsePatchFiles(diffText).flatMap((p) => p.files);
       } catch (err) {
         console.warn('Failed to parse patch:', err);
         return [];
@@ -73,7 +79,7 @@ export const ReviewCommitPanel: React.FC<ReviewCommitPanelProps> = ({
     for (const chunk of chunks) {
       try {
         const parsed = parsePatchFiles(chunk);
-        out.push(...parsed.flatMap(p => p.files));
+        out.push(...parsed.flatMap((p) => p.files));
       } catch (err) {
         console.warn('Skipping unparseable file in diff:', err);
       }

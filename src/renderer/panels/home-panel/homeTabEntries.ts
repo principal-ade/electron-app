@@ -221,8 +221,7 @@ export function resolveRepoPath(
           path.startsWith(String(repo.path).replace(/\/+$/, '') + '/')),
     )
     .sort((a, b) => String(b.path).length - String(a.path).length)[0]?.path as
-    | string
-    | undefined;
+    string | undefined;
 }
 
 function findRepoByPath(

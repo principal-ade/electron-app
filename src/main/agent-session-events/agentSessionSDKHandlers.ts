@@ -10,9 +10,7 @@
  */
 
 import { ipcMain } from 'electron';
-import {
-  AgentSessionSDKAPIEvents,
-} from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
+import { AgentSessionSDKAPIEvents } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
 import { AgentSessionAPIEvents } from '../../shared/main-process-api-interfaces/AgentSessionAPI';
 import { getEventServerManager } from './EventServerManager';
 
@@ -203,7 +201,9 @@ export function registerAgentSessionSDKHandlers(): void {
     },
   );
 
-  console.log('[SDK Handlers] Agent session SDK handlers registered (cache disabled)');
+  console.log(
+    '[SDK Handlers] Agent session SDK handlers registered (cache disabled)',
+  );
 }
 
 /**

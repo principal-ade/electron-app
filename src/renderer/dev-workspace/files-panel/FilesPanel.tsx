@@ -322,7 +322,9 @@ export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {
                 <span
                   style={{
                     fontSize: 10,
-                    color: active ? theme.colors.textOnPrimary : theme.colors.textSecondary,
+                    color: active
+                      ? theme.colors.textOnPrimary
+                      : theme.colors.textSecondary,
                     fontWeight: 400,
                   }}
                 >
@@ -344,7 +346,11 @@ export const FilesPanel: React.FC<FilesPanelProps> = ({ context, events }) => {
         onPointerDownCapture={handlePointerDownCapture}
         onClickCapture={handleClickCapture}
       >
-        <ThemedFileTree model={model} gitStatusColors style={{ paddingTop: 8 }} />
+        <ThemedFileTree
+          model={model}
+          gitStatusColors
+          style={{ paddingTop: 8 }}
+        />
       </div>
     </div>
   );

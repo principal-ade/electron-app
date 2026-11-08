@@ -746,11 +746,7 @@ export const ProcessesLeftPanel: React.FC<ProcessesLeftPanelProps> = ({
           flexShrink: 0,
         }}
       >
-        <Cpu
-          size={16}
-          color={theme.colors.text}
-          style={{ marginLeft: 4 }}
-        />
+        <Cpu size={16} color={theme.colors.text} style={{ marginLeft: 4 }} />
         <span
           style={{
             flex: 1,

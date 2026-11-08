@@ -114,10 +114,7 @@ export type AlexandriaRouterType = Record<
   };
 
   alexandria_clearAllData: {
-    action: (args: {
-      context: ActionContext;
-      input?: void;
-    }) => Promise<{
+    action: (args: { context: ActionContext; input?: void }) => Promise<{
       repositoriesRemoved: number;
       workspacesRemoved: number;
     }>;
@@ -152,10 +149,7 @@ export type AlexandriaRouterType = Record<
   };
 
   alexandria_getRepositoryCount: {
-    action: (args: {
-      context: ActionContext;
-      input?: void;
-    }) => Promise<number>;
+    action: (args: { context: ActionContext; input?: void }) => Promise<number>;
   };
 
   alexandria_getCodebaseViews: {

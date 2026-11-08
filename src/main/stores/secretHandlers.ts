@@ -57,7 +57,8 @@ export function registerSecretHandlers(): void {
         );
       } catch (error: unknown) {
         console.error('[SecretHandlers] Error storing secrets:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },
@@ -88,7 +89,8 @@ export function registerSecretHandlers(): void {
         return { success: true };
       } catch (error: unknown) {
         console.error('[SecretHandlers] Error deleting secrets:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },
@@ -162,7 +164,8 @@ export function registerSecretHandlers(): void {
         );
       } catch (error: unknown) {
         console.error('[SecretHandlers] Error updating secrets:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },
@@ -208,7 +211,8 @@ export function registerSecretHandlers(): void {
         );
       } catch (error: unknown) {
         console.error('[SecretHandlers] Error removing keys:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },
@@ -396,7 +400,8 @@ export function registerSecretHandlers(): void {
         return { success: true };
       } catch (error: unknown) {
         console.error('[SecretHandlers] Error copying to clipboard:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },

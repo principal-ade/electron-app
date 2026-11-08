@@ -90,7 +90,10 @@ export function BookmarksDrawer({
               onClose={onClose}
             />
           ) : (
-            <div className="flex h-full w-full flex-col justify-center items-center gap-2 text-sm" style={{ color: theme.colors.textMuted }}>
+            <div
+              className="flex h-full w-full flex-col justify-center items-center gap-2 text-sm"
+              style={{ color: theme.colors.textMuted }}
+            >
               Loading repository metadata...
             </div>
           )

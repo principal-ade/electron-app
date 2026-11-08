@@ -47,9 +47,7 @@ export const NewTopicModal: React.FC<NewTopicModalProps> = ({
       onClose();
     } catch (err) {
       console.error('[NewTopicModal] Failed to create topic:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to create topic',
-      );
+      setError(err instanceof Error ? err.message : 'Failed to create topic');
       setIsSubmitting(false);
     }
   }, [title, onClose]);
@@ -215,8 +213,7 @@ export const NewTopicModal: React.FC<NewTopicModalProps> = ({
               border: 'none',
               borderRadius: 8,
               padding: '8px 14px',
-              cursor:
-                isSubmitting || !title.trim() ? 'not-allowed' : 'pointer',
+              cursor: isSubmitting || !title.trim() ? 'not-allowed' : 'pointer',
               fontSize: theme.fontSizes[1],
               fontWeight: theme.fontWeights.semibold,
               opacity: isSubmitting || !title.trim() ? 0.6 : 1,

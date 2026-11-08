@@ -10,7 +10,8 @@ import type { CommitActivityPanelActions } from './CommitActivityPanel';
 
 export const commitActivityPanelActions: CommitActivityPanelActions = {
   ...repoActivityCardActions,
-  getOwnerActivity: (login, type) => GithubService.getOwnerActivity(login, type),
+  getOwnerActivity: (login, type) =>
+    GithubService.getOwnerActivity(login, type),
   getRepoActivity: (owner, repo) => GithubService.getRepoActivity(owner, repo),
   getOwnerIsOrg: async (owner) => {
     const user = await GithubService.getUser(owner);

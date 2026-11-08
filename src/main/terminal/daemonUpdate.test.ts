@@ -24,7 +24,11 @@ import {
   TerminalSessionManager,
   initializeDaemonModeSetting,
 } from './TerminalSessionManager';
-import { ensureDaemonRunning, restartDaemon, stopDaemon } from './daemonSpawner';
+import {
+  ensureDaemonRunning,
+  restartDaemon,
+  stopDaemon,
+} from './daemonSpawner';
 import type { TerminalSession } from './types';
 import type { DaemonBuildMismatch } from '../../shared/pty-daemon/buildIdentity';
 import type { DaemonStatusInfo } from '../../shared/pty-daemon/protocol';
@@ -37,7 +41,9 @@ const mockWindows: Array<{
 const mockedEnsure = ensureDaemonRunning as jest.MockedFunction<
   typeof ensureDaemonRunning
 >;
-const mockedRestart = restartDaemon as jest.MockedFunction<typeof restartDaemon>;
+const mockedRestart = restartDaemon as jest.MockedFunction<
+  typeof restartDaemon
+>;
 const mockedStop = stopDaemon as jest.MockedFunction<typeof stopDaemon>;
 
 const outdated: DaemonBuildMismatch = {
@@ -95,7 +101,10 @@ async function flush() {
 describe('outdated PTY daemon replacement', () => {
   beforeEach(() => {
     mockWindows.length = 0;
-    mockWindows.push({ isDestroyed: () => false, webContents: { send: jest.fn() } });
+    mockWindows.push({
+      isDestroyed: () => false,
+      webContents: { send: jest.fn() },
+    });
     mockedEnsure.mockReset();
     mockedRestart.mockReset();
     mockedRestart.mockResolvedValue();
@@ -103,7 +112,11 @@ describe('outdated PTY daemon replacement', () => {
 
   it('leaves an up-to-date daemon alone', async () => {
     const manager = setup();
-    mockedEnsure.mockResolvedValue({ spawned: false, status: status(2), outdated: null });
+    mockedEnsure.mockResolvedValue({
+      spawned: false,
+      status: status(2),
+      outdated: null,
+    });
 
     await manager['initializeDaemonConnection']();
 
@@ -114,7 +127,11 @@ describe('outdated PTY daemon replacement', () => {
 
   it('replaces an outdated daemon at launch when it owns no sessions', async () => {
     const manager = setup();
-    mockedEnsure.mockResolvedValue({ spawned: false, status: status(0), outdated });
+    mockedEnsure.mockResolvedValue({
+      spawned: false,
+      status: status(0),
+      outdated,
+    });
 
     await manager['initializeDaemonConnection']();
 
@@ -127,15 +144,23 @@ describe('outdated PTY daemon replacement', () => {
 
   it('defers the update while the outdated daemon owns sessions', async () => {
     const manager = setup();
-    mockedEnsure.mockResolvedValue({ spawned: false, status: status(2), outdated });
+    mockedEnsure.mockResolvedValue({
+      spawned: false,
+      status: status(2),
+      outdated,
+    });
     await manager['initializeDaemonConnection']();
 
     expect(mockedRestart).not.toHaveBeenCalled();
     expect(manager.hasPendingDaemonUpdate()).toBe(true);
     expect(broadcastPhases()).toEqual([]);
 
-    manager.getAllSessions().set('a', { id: 'a', directory: '/a' } as TerminalSession);
-    manager.getAllSessions().set('b', { id: 'b', directory: '/b' } as TerminalSession);
+    manager
+      .getAllSessions()
+      .set('a', { id: 'a', directory: '/a' } as TerminalSession);
+    manager
+      .getAllSessions()
+      .set('b', { id: 'b', directory: '/b' } as TerminalSession);
 
     exitSession(manager, 'a');
     await flush();
@@ -156,9 +181,15 @@ describe('outdated PTY daemon replacement', () => {
 
   it('runs a deferred update once even if cleanup fires twice', async () => {
     const manager = setup();
-    mockedEnsure.mockResolvedValue({ spawned: false, status: status(1), outdated });
+    mockedEnsure.mockResolvedValue({
+      spawned: false,
+      status: status(1),
+      outdated,
+    });
     await manager['initializeDaemonConnection']();
-    manager.getAllSessions().set('a', { id: 'a', directory: '/a' } as TerminalSession);
+    manager
+      .getAllSessions()
+      .set('a', { id: 'a', directory: '/a' } as TerminalSession);
 
     exitSession(manager, 'a');
     exitSession(manager, 'a');
@@ -169,16 +200,25 @@ describe('outdated PTY daemon replacement', () => {
 
   it('reports a failed replacement and settles waiting callers', async () => {
     const manager = setup();
-    mockedEnsure.mockResolvedValue({ spawned: false, status: status(1), outdated });
+    mockedEnsure.mockResolvedValue({
+      spawned: false,
+      status: status(1),
+      outdated,
+    });
     mockedRestart.mockRejectedValue(new Error('spawn failed'));
     await manager['initializeDaemonConnection']();
-    manager.getAllSessions().set('a', { id: 'a', directory: '/a' } as TerminalSession);
+    manager
+      .getAllSessions()
+      .set('a', { id: 'a', directory: '/a' } as TerminalSession);
 
     exitSession(manager, 'a');
     await flush();
 
     expect(broadcastPhases()).toEqual(['updating', 'failed']);
-    expect(workerMessages(manager)).toEqual(['CONNECT_DAEMON', 'DISCONNECT_DAEMON']);
+    expect(workerMessages(manager)).toEqual([
+      'CONNECT_DAEMON',
+      'DISCONNECT_DAEMON',
+    ]);
     expect(manager['daemonConnectedPromise']).toBeNull();
     expect(manager['daemonUpdateInFlight']).toBe(false);
   });
@@ -189,12 +229,19 @@ describe('stopping and starting the PTY daemon from the monitor', () => {
 
   beforeEach(() => {
     mockWindows.length = 0;
-    mockWindows.push({ isDestroyed: () => false, webContents: { send: jest.fn() } });
+    mockWindows.push({
+      isDestroyed: () => false,
+      webContents: { send: jest.fn() },
+    });
     mockedEnsure.mockReset();
     mockedRestart.mockReset();
     mockedStop.mockReset();
     mockedStop.mockResolvedValue();
-    mockedEnsure.mockResolvedValue({ spawned: true, status: null, outdated: null });
+    mockedEnsure.mockResolvedValue({
+      spawned: true,
+      status: null,
+      outdated: null,
+    });
   });
 
   function connect(manager: TerminalSessionManager) {
@@ -223,11 +270,16 @@ describe('stopping and starting the PTY daemon from the monitor', () => {
     const manager = setup();
     await manager['initializeDaemonConnection']();
     connect(manager);
-    manager.getAllSessions().set('a', { id: 'a', directory: '/a' } as TerminalSession);
+    manager
+      .getAllSessions()
+      .set('a', { id: 'a', directory: '/a' } as TerminalSession);
 
     await manager.stopDaemon();
 
-    expect(workerMessages(manager)).toEqual(['CONNECT_DAEMON', 'DISCONNECT_DAEMON']);
+    expect(workerMessages(manager)).toEqual([
+      'CONNECT_DAEMON',
+      'DISCONNECT_DAEMON',
+    ]);
     expect(mockedStop).toHaveBeenCalledTimes(1);
     expect(exitBroadcasts(manager)).toEqual(['a']);
     expect(manager.getAllSessions().size).toBe(0);
@@ -262,14 +314,19 @@ describe('stopping and starting the PTY daemon from the monitor', () => {
     manager['isWorkerReady'] = true;
     await manager['initializeDaemonConnection']();
     connect(manager);
-    manager.getAllSessions().set('a', { id: 'a', directory: '/a' } as TerminalSession);
+    manager
+      .getAllSessions()
+      .set('a', { id: 'a', directory: '/a' } as TerminalSession);
 
     disconnect(manager);
     expect(exitBroadcasts(manager)).toEqual(['a']);
 
     const ready = manager['ensureDaemonReady']();
     await flush();
-    expect(workerMessages(manager)).toEqual(['CONNECT_DAEMON', 'CONNECT_DAEMON']);
+    expect(workerMessages(manager)).toEqual([
+      'CONNECT_DAEMON',
+      'CONNECT_DAEMON',
+    ]);
     connect(manager);
 
     expect(await ready).toBe(true);

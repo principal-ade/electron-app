@@ -31,7 +31,9 @@ export class RepositoryMonitoringService {
   static setHomeRefreshInterest(
     interest: HomeRepositoryRefreshInterest,
   ): Promise<GitStatusWithFiles[]> {
-    return window.mainProcess.repositoryMonitoring.setHomeRefreshInterest(interest);
+    return window.mainProcess.repositoryMonitoring.setHomeRefreshInterest(
+      interest,
+    );
   }
 
   static refreshGitStatus(repoPath: string): Promise<GitStatusWithFiles> {
@@ -367,6 +369,15 @@ export class RepositoryMonitoringService {
     return window.mainProcess.repositoryMonitoring.onCacheSync(callback);
   }
 
+  /** Subscribe to repository removal events from the monitoring daemon. */
+  static onRepositoryUnregistered(
+    callback: (event: { repoPath: string }) => void,
+  ): () => void {
+    return window.mainProcess.repositoryMonitoring.onRepositoryUnregistered(
+      callback,
+    );
+  }
+
   /**
    * Subscribe to build artifacts detected events
    */
@@ -425,10 +436,7 @@ export class RepositoryMonitoringService {
     try {
       return await window.mainProcess.repositoryMonitoring.getDiagnostics();
     } catch (error) {
-      console.error(
-        '[RepositoryMonitoring] Error getting diagnostics:',
-        error,
-      );
+      console.error('[RepositoryMonitoring] Error getting diagnostics:', error);
       return {
         phase: 'idle',
         connected: false,
@@ -462,9 +470,7 @@ export class RepositoryMonitoringService {
   /**
    * Read the tail of the main + daemon log files.
    */
-  static async getLogTail(
-    request?: LogTailRequest,
-  ): Promise<LogTailResponse> {
+  static async getLogTail(request?: LogTailRequest): Promise<LogTailResponse> {
     try {
       return await window.mainProcess.repositoryMonitoring.getLogTail(request);
     } catch (error) {
@@ -525,18 +531,17 @@ export class RepositoryMonitoringService {
    * Manually trigger workspace sync to otel-events-manager
    * This pushes the current FileTree state to the events manager for trace matching
    */
-  static async syncWorkspace(
-    repoPath: string,
-  ): Promise<{ success: boolean; registeredScopes?: string[]; error?: string }> {
+  static async syncWorkspace(repoPath: string): Promise<{
+    success: boolean;
+    registeredScopes?: string[];
+    error?: string;
+  }> {
     try {
       return await window.mainProcess.repositoryMonitoring.syncWorkspace(
         repoPath,
       );
     } catch (error) {
-      console.error(
-        '[RepositoryMonitoring] Error syncing workspace:',
-        error,
-      );
+      console.error('[RepositoryMonitoring] Error syncing workspace:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

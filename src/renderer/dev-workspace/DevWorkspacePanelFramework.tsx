@@ -1809,11 +1809,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // - Other files: use git diff panel for modified files, file editor for new/untracked files
         // - Code/text opens from the 3D file-city panel use the Pierre <File> viewer (diagnostic)
         let contentType:
-          | 'markdown'
-          | 'git-diff'
-          | 'file-editor'
-          | 'pierre-file'
-          | 'media';
+          'markdown' | 'git-diff' | 'file-editor' | 'pierre-file' | 'media';
         if (isMedia) {
           contentType = 'media';
         } else if (isMarkdown) {
@@ -1904,11 +1900,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // Create new tab
           // Use file path for deterministic ID (sanitize for valid ID)
           let newTab:
-            | FileEditorTab
-            | PierreFileTab
-            | MarkdownTab
-            | GitDiffTab
-            | MediaTab;
+            FileEditorTab | PierreFileTab | MarkdownTab | GitDiffTab | MediaTab;
           if (contentType === 'media') {
             tabId = `media-${sanitizedPath}`;
             newTab = {
@@ -3753,8 +3745,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                   repositoryPath={context.currentScope?.repository?.path}
                   repositoryOwner={
                     context.currentScope?.repository?.owner as
-                      | string
-                      | undefined
+                      string | undefined
                   }
                   repositoryName={context.currentScope?.repository?.name}
                   currentLayout={

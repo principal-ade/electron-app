@@ -195,10 +195,13 @@ if (process.env.NODE_ENV === 'development') {
   app.commandLine.appendSwitch('remote-debugging-port', debugPort);
 
   const inspectPort = Number(process.env.ELECTRON_INSPECT_PORT ?? '9223');
-  const { open: openInspector } = require('node:inspector') as typeof import('node:inspector');
+  const { open: openInspector } =
+    require('node:inspector') as typeof import('node:inspector');
   try {
     openInspector(inspectPort);
-    console.info(`[Main] Node inspector listening on ws://localhost:${inspectPort}`);
+    console.info(
+      `[Main] Node inspector listening on ws://localhost:${inspectPort}`,
+    );
   } catch (err) {
     console.warn('[Main] Could not open inspector:', err);
   }

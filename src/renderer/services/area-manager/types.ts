@@ -37,10 +37,7 @@ export class AreaManagerError extends Error {
   constructor(
     message: string,
     public code:
-      | 'duplicate-area'
-      | 'missing-area'
-      | 'invalid-input'
-      | 'overlaps-scope',
+      'duplicate-area' | 'missing-area' | 'invalid-input' | 'overlaps-scope',
   ) {
     super(message);
     this.name = 'AreaManagerError';

@@ -12,7 +12,11 @@ interface KeychainStatus {
 
 export const SecuritySettings: React.FC = () => {
   const { theme } = useTheme();
-  const { status: consentStatus, requestConsent, revokeConsent } = useKeychainConsentContext();
+  const {
+    status: consentStatus,
+    requestConsent,
+    revokeConsent,
+  } = useKeychainConsentContext();
   const [isRevoking, setIsRevoking] = useState(false);
   const [keychainStatus, setKeychainStatus] = useState<KeychainStatus | null>(
     null,
@@ -341,7 +345,8 @@ export const SecuritySettings: React.FC = () => {
                     marginTop: '8px',
                   }}
                 >
-                  Your stored credentials will be preserved but not used until re-enabled.
+                  Your stored credentials will be preserved but not used until
+                  re-enabled.
                 </p>
               </div>
             )}

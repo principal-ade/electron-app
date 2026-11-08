@@ -144,13 +144,26 @@ export const KeychainConsentModal: React.FC<KeychainConsentModalProps> = ({
               lineHeight: '1.8',
             }}
           >
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+            <li
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                marginBottom: '8px',
+              }}
+            >
               <Key size={14} style={{ marginTop: '4px', flexShrink: 0 }} />
-              <span>macOS will ask you to allow keychain access (one-time only)</span>
+              <span>
+                macOS will ask you to allow keychain access (one-time only)
+              </span>
             </li>
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+            <li
+              style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}
+            >
               <Lock size={14} style={{ marginTop: '4px', flexShrink: 0 }} />
-              <span>Your credentials will be encrypted and stored securely</span>
+              <span>
+                Your credentials will be encrypted and stored securely
+              </span>
             </li>
           </ul>
         </div>

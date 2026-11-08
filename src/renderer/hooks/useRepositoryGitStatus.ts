@@ -68,14 +68,14 @@ export function useRepositoryGitStatus(repoPath: string | null) {
     // Subscribe to git status changes from monitoring service
     // Event now includes file arrays (GitStatusWithFiles), no extra fetch needed
     const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
-        (status: GitStatusWithFiles) => {
-          // Only update if the status is for our repository
-          if (status.repoPath === repoPath) {
-            setGitStatus(status);
-            setGitStatusWithFiles(status);
-          }
-        },
-      );
+      (status: GitStatusWithFiles) => {
+        // Only update if the status is for our repository
+        if (status.repoPath === repoPath) {
+          setGitStatus(status);
+          setGitStatusWithFiles(status);
+        }
+      },
+    );
 
     return () => {
       unsubscribe();

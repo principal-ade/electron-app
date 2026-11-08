@@ -15,7 +15,12 @@ export interface RecentRepo {
 
 export interface RecentReposAPI {
   getRecentRepos: () => Promise<RecentRepo[]>;
-  addRecentRepo: (repo: Omit<RecentRepo, 'lastVisited'>) => Promise<{ success: boolean; error?: string }>;
-  removeRecentRepo: (owner: string, repo: string) => Promise<{ success: boolean; error?: string }>;
+  addRecentRepo: (
+    repo: Omit<RecentRepo, 'lastVisited'>,
+  ) => Promise<{ success: boolean; error?: string }>;
+  removeRecentRepo: (
+    owner: string,
+    repo: string,
+  ) => Promise<{ success: boolean; error?: string }>;
   clearRecentRepos: () => Promise<{ success: boolean; error?: string }>;
 }

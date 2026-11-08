@@ -264,7 +264,8 @@ export class FileSystemService {
       }
 
       console.error(`Failed to delete directory ${dirPath}:`, error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`Failed to delete directory: ${errorMessage}`);
     }
   }

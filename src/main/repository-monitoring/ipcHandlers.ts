@@ -157,7 +157,8 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
   // (e.g. first run before the store is initialized) we default to 'parcel'.
   let watcherImpl: FileWatcherImpl = 'parcel';
   try {
-    const prefs = await UserPreferencesHandler.getInstance().getUserPreferences();
+    const prefs =
+      await UserPreferencesHandler.getInstance().getUserPreferences();
     if (prefs.repositoryMonitoringWatcherImpl === 'chokidar') {
       watcherImpl = 'chokidar';
     }
@@ -376,45 +377,42 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
   });
 
   // Get rich diagnostics snapshot (phase, daemon PID, lifecycle history)
-  ipcMain.handle(
-    RepositoryMonitoringAPIEvent.GET_DIAGNOSTICS,
-    async () => {
-      try {
-        return manager.getDiagnostics();
-      } catch (error) {
-        console.error(
-          '[RepositoryMonitoring] Error getting diagnostics:',
-          error,
-        );
-        // Return an inert diagnostic snapshot on error so the UI can render
-        // "no data" rather than crashing.
-        return {
-          phase: 'idle' as const,
-          connected: false,
-          daemonPid: null,
-          startedAt: null,
-          lastConnectedAt: null,
-          phaseEnteredAt: Date.now(),
-          reconnectAttempts: 0,
-          disconnectRequested: false,
-          lastError: {
-            message: error instanceof Error ? error.message : String(error),
-          },
-          lastDisconnect: null,
-          watcherImpl: null,
-          requestedWatcherImpl: 'parcel' as const,
-          watcherImplFallbackReason: null,
-          lifecycleHistory: [],
-          daemon: null,
-        };
-      }
-    },
-  );
+  ipcMain.handle(RepositoryMonitoringAPIEvent.GET_DIAGNOSTICS, async () => {
+    try {
+      return manager.getDiagnostics();
+    } catch (error) {
+      console.error('[RepositoryMonitoring] Error getting diagnostics:', error);
+      // Return an inert diagnostic snapshot on error so the UI can render
+      // "no data" rather than crashing.
+      return {
+        phase: 'idle' as const,
+        connected: false,
+        daemonPid: null,
+        startedAt: null,
+        lastConnectedAt: null,
+        phaseEnteredAt: Date.now(),
+        reconnectAttempts: 0,
+        disconnectRequested: false,
+        lastError: {
+          message: error instanceof Error ? error.message : String(error),
+        },
+        lastDisconnect: null,
+        watcherImpl: null,
+        requestedWatcherImpl: 'parcel' as const,
+        watcherImplFallbackReason: null,
+        lifecycleHistory: [],
+        daemon: null,
+      };
+    }
+  });
 
   // Daemon-wide snapshot: process status plus every repo's cache slices
-  ipcMain.handle(RepositoryMonitoringAPIEvent.GET_DAEMON_DIAGNOSTICS, async () => {
-    return manager.getDaemonDiagnostics();
-  });
+  ipcMain.handle(
+    RepositoryMonitoringAPIEvent.GET_DAEMON_DIAGNOSTICS,
+    async () => {
+      return manager.getDaemonDiagnostics();
+    },
+  );
 
   // Get tail of the main + daemon log files
   ipcMain.handle(
@@ -441,7 +439,10 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
     RepositoryMonitoringAPIEvent.SET_WATCHER_IMPL,
     async (_event, impl: FileWatcherImpl) => {
       if (impl !== 'parcel' && impl !== 'chokidar') {
-        return { success: false, error: `Invalid watcher impl: ${String(impl)}` };
+        return {
+          success: false,
+          error: `Invalid watcher impl: ${String(impl)}`,
+        };
       }
       try {
         const changed = manager.setWatcherImpl(impl);
@@ -708,10 +709,7 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
         );
         return result;
       } catch (error) {
-        console.error(
-          '[RepositoryMonitoring] Error syncing workspace:',
-          error,
-        );
+        console.error('[RepositoryMonitoring] Error syncing workspace:', error);
         return {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error',

@@ -17,13 +17,15 @@ describe('normalizeOtlpEndpoint', () => {
   });
 
   it('adds a scheme to a bare host:port', () => {
-    expect(normalizeOtlpEndpoint('localhost:4318')).toBe('http://localhost:4318');
+    expect(normalizeOtlpEndpoint('localhost:4318')).toBe(
+      'http://localhost:4318',
+    );
   });
 
   it('strips a pasted full trace path back to the base', () => {
-    expect(
-      normalizeOtlpEndpoint('https://ingest.example.com/v1/traces'),
-    ).toBe('https://ingest.example.com');
+    expect(normalizeOtlpEndpoint('https://ingest.example.com/v1/traces')).toBe(
+      'https://ingest.example.com',
+    );
   });
 
   it('treats blank input as unset', () => {
@@ -95,9 +97,9 @@ describe('resolveTelemetrySettings', () => {
   });
 
   it('honours DISABLE_TELEMETRY while no preference is saved', () => {
-    expect(resolveTelemetrySettings({ env: { DISABLE_TELEMETRY: 'true' } }).enabled).toBe(
-      false,
-    );
+    expect(
+      resolveTelemetrySettings({ env: { DISABLE_TELEMETRY: 'true' } }).enabled,
+    ).toBe(false);
   });
 
   it('lets an explicit saved choice beat DISABLE_TELEMETRY', () => {

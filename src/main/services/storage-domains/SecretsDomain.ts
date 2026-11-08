@@ -109,7 +109,8 @@ export class SecretsDomain {
 
       return { success: true, metadata };
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to store secrets', {
         repoId,
         error: errorMessage,
@@ -118,7 +119,9 @@ export class SecretsDomain {
     }
   }
 
-  async getSecrets(repoId: string): Promise<Record<string, SecretValue> | null> {
+  async getSecrets(
+    repoId: string,
+  ): Promise<Record<string, SecretValue> | null> {
     try {
       const data = await this.storage.getData();
       const storedSecret = data.secrets[repoId] as StoredSecret | undefined;
@@ -130,7 +133,8 @@ export class SecretsDomain {
       this.logAudit('info', 'Retrieved secrets for repository', { repoId });
       return storedSecret.data;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to retrieve secrets', {
         repoId,
         error: errorMessage,
@@ -150,7 +154,8 @@ export class SecretsDomain {
 
       return storedSecret;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to retrieve secrets with metadata', {
         repoId,
         error: errorMessage,

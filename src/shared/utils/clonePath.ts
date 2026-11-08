@@ -94,7 +94,9 @@ function pathsEqual(a: string, b: string): boolean {
 }
 
 function isUnder(child: string, parent: string): boolean {
-  return child.toLowerCase().startsWith(stripTrailingSlash(parent).toLowerCase() + '/');
+  return child
+    .toLowerCase()
+    .startsWith(stripTrailingSlash(parent).toLowerCase() + '/');
 }
 
 /**

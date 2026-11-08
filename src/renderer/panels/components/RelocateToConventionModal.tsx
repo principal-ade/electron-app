@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, Loader2, AlertCircle, Check, FolderTree, ArrowRight } from 'lucide-react';
+import {
+  X,
+  Loader2,
+  AlertCircle,
+  Check,
+  FolderTree,
+  ArrowRight,
+} from 'lucide-react';
 
 interface RelocateToConventionModalProps {
   isOpen: boolean;
@@ -245,8 +252,8 @@ export const RelocateToConventionModal: React.FC<
                   {'{base}/{owner}/{repo}'}
                 </code>{' '}
                 layout. Move it under its owner folder so it matches your other
-                projects. The files move on disk and the repository
-                re-registers at its new path.
+                projects. The files move on disk and the repository re-registers
+                at its new path.
               </p>
 
               <PathRow label="Current" path={currentPath} tone="current" />
@@ -275,7 +282,10 @@ export const RelocateToConventionModal: React.FC<
                     fontFamily: theme.fonts.body,
                   }}
                 >
-                  <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <AlertCircle
+                    size={16}
+                    style={{ flexShrink: 0, marginTop: 1 }}
+                  />
                   <span>{error}</span>
                 </div>
               )}
@@ -358,7 +368,10 @@ export const RelocateToConventionModal: React.FC<
                 justifyContent: 'center',
               }}
             >
-              <Check size={32} style={{ color: theme.colors.success ?? '#22c55e' }} />
+              <Check
+                size={32}
+                style={{ color: theme.colors.success ?? '#22c55e' }}
+              />
             </div>
             <div style={{ textAlign: 'center' }}>
               <h3

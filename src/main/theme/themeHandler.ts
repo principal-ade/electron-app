@@ -37,7 +37,9 @@ export class ThemeHandler {
    * Update a theme property
    * Updates preferences directly in main process, then notifies renderer to reload
    */
-  async updateProperty(update: ThemePropertyUpdate): Promise<ThemeUpdateResult> {
+  async updateProperty(
+    update: ThemePropertyUpdate,
+  ): Promise<ThemeUpdateResult> {
     try {
       const { propertyPath, value, themeName } = update;
       const targetThemeName = themeName || 'principalAI';
@@ -179,7 +181,8 @@ export class ThemeHandler {
       // Get overrides from preferences
       const prefsHandler = UserPreferencesHandler.getInstance();
       const prefs = await prefsHandler.getUserPreferences();
-      const overrides = prefs.customThemeOverrides?.[targetThemeName]?.overrides;
+      const overrides =
+        prefs.customThemeOverrides?.[targetThemeName]?.overrides;
 
       if (!overrides) {
         return baseTheme;

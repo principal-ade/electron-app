@@ -19,7 +19,9 @@ export interface OnboardingViewProps {
   onComplete?: () => void;
 }
 
-export const OnboardingView: React.FC<OnboardingViewProps> = ({ onComplete }) => {
+export const OnboardingView: React.FC<OnboardingViewProps> = ({
+  onComplete,
+}) => {
   const { theme } = useTheme();
   const [onboardingState, setOnboardingState] = useState<OnboardingState>(
     DEFAULT_ONBOARDING_STATE,
@@ -50,7 +52,10 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ onComplete }) =>
           });
         }
       } catch (error) {
-        console.error('[OnboardingView] Failed to load onboarding state:', error);
+        console.error(
+          '[OnboardingView] Failed to load onboarding state:',
+          error,
+        );
       } finally {
         setLoading(false);
       }
@@ -89,7 +94,10 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ onComplete }) =>
       UserPreferencesService.updatePreferences({
         onboarding: newState,
       }).catch((error) => {
-        console.error('[OnboardingView] Failed to save card completion:', error);
+        console.error(
+          '[OnboardingView] Failed to save card completion:',
+          error,
+        );
       });
 
       return newState;
@@ -132,7 +140,10 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ onComplete }) =>
           onboarding: newState,
         });
       } catch (error) {
-        console.error('[OnboardingView] Failed to save base directory state:', error);
+        console.error(
+          '[OnboardingView] Failed to save base directory state:',
+          error,
+        );
       }
     },
     [onboardingState],
@@ -157,7 +168,10 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ onComplete }) =>
         onboarding: newState,
       });
     } catch (error) {
-      console.error('[OnboardingView] Failed to reset onboarding state:', error);
+      console.error(
+        '[OnboardingView] Failed to reset onboarding state:',
+        error,
+      );
     } finally {
       isSavingRef.current = false;
     }

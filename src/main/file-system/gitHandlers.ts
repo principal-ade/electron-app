@@ -193,8 +193,10 @@ export function registerGitHandlers(): void {
         if (process.env.PATH) cloneEnv.PATH = process.env.PATH;
         if (process.env.HOME) cloneEnv.HOME = process.env.HOME;
         if (process.env.USER) cloneEnv.USER = process.env.USER;
-        if (process.env.SSH_AUTH_SOCK) cloneEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
-        if (process.env.SSH_AGENT_PID) cloneEnv.SSH_AGENT_PID = process.env.SSH_AGENT_PID;
+        if (process.env.SSH_AUTH_SOCK)
+          cloneEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
+        if (process.env.SSH_AGENT_PID)
+          cloneEnv.SSH_AGENT_PID = process.env.SSH_AGENT_PID;
 
         if (isSSH) {
           diagnostics.sshAgent = !!process.env.SSH_AUTH_SOCK;
@@ -251,7 +253,7 @@ export function registerGitHandlers(): void {
           const secs = Math.round((rawErr.duration ?? 120000) / 1000);
           userMessage = `Clone timed out after ${secs}s.`;
           suggestions.push(
-            '**The clone operation hit Principal\'s 2-minute internal timeout:**',
+            "**The clone operation hit Principal's 2-minute internal timeout:**",
             '',
             '• Large repositories or slow connections can exceed this limit',
             '• Cloning from a terminal has no such timeout and may succeed',

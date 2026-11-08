@@ -815,13 +815,16 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                     borderRadius: '6px',
                     border: `1px solid ${theme.colors.border}`,
                     backgroundColor: theme.colors.backgroundSecondary,
-                    color: (customDirectory || baseDefaultDirectory) ? theme.colors.textSecondary : theme.colors.error || '#ef4444',
+                    color:
+                      customDirectory || baseDefaultDirectory
+                        ? theme.colors.textSecondary
+                        : theme.colors.error || '#ef4444',
                     fontSize: '13px',
                     fontFamily: 'monospace',
                     marginBottom: '8px',
                   }}
                 >
-                  {(customDirectory || baseDefaultDirectory)
+                  {customDirectory || baseDefaultDirectory
                     ? (() => {
                         const base = customDirectory || baseDefaultDirectory;
                         const owner = extractOwner(gitUrl);
@@ -855,10 +858,11 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                   }}
                 >
                   <FolderOpen size={14} />
-                  {(customDirectory || baseDefaultDirectory) ? 'Change Directory' : 'Select Directory'}
+                  {customDirectory || baseDefaultDirectory
+                    ? 'Change Directory'
+                    : 'Select Directory'}
                 </button>
               </div>
-
 
               {error && (
                 <div

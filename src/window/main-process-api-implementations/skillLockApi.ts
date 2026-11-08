@@ -21,19 +21,19 @@ export const skillLockAPI: SkillLockAPI = {
   },
 
   addSkillToLock: async (
-    options: AddSkillToLockOptions
+    options: AddSkillToLockOptions,
   ): Promise<{ success: boolean; error?: string }> => {
     return ipcRenderer.invoke(SkillLockAPIEvent.ADD_SKILL_TO_LOCK, options);
   },
 
   removeSkillFromLock: async (
-    name: string
+    name: string,
   ): Promise<{ success: boolean; error?: string }> => {
     return ipcRenderer.invoke(SkillLockAPIEvent.REMOVE_SKILL_FROM_LOCK, name);
   },
 
   updateSkillInLock: async (
-    options: UpdateSkillInLockOptions
+    options: UpdateSkillInLockOptions,
   ): Promise<{ success: boolean; error?: string }> => {
     return ipcRenderer.invoke(SkillLockAPIEvent.UPDATE_SKILL_IN_LOCK, options);
   },
@@ -48,9 +48,12 @@ export const skillLockAPI: SkillLockAPI = {
 
   // Event listeners for broadcasts from main process
   onSkillInstalled: (
-    callback: (payload: SkillInstalledPayload) => void
+    callback: (payload: SkillInstalledPayload) => void,
   ): (() => void) => {
-    const handler = (_event: IpcRendererEvent, payload: SkillInstalledPayload) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      payload: SkillInstalledPayload,
+    ) => {
       callback(payload);
     };
     ipcRenderer.on(SkillLockAPIEvent.SKILL_INSTALLED, handler);
@@ -60,9 +63,12 @@ export const skillLockAPI: SkillLockAPI = {
   },
 
   onSkillUninstalled: (
-    callback: (payload: SkillUninstalledPayload) => void
+    callback: (payload: SkillUninstalledPayload) => void,
   ): (() => void) => {
-    const handler = (_event: IpcRendererEvent, payload: SkillUninstalledPayload) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      payload: SkillUninstalledPayload,
+    ) => {
       callback(payload);
     };
     ipcRenderer.on(SkillLockAPIEvent.SKILL_UNINSTALLED, handler);
@@ -72,9 +78,12 @@ export const skillLockAPI: SkillLockAPI = {
   },
 
   onSkillUpdated: (
-    callback: (payload: SkillUpdatedPayload) => void
+    callback: (payload: SkillUpdatedPayload) => void,
   ): (() => void) => {
-    const handler = (_event: IpcRendererEvent, payload: SkillUpdatedPayload) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      payload: SkillUpdatedPayload,
+    ) => {
       callback(payload);
     };
     ipcRenderer.on(SkillLockAPIEvent.SKILL_UPDATED, handler);
@@ -84,8 +93,13 @@ export const skillLockAPI: SkillLockAPI = {
   },
 
   // Skill editing methods
-  checkEditPermission: async (skillName: string): Promise<SkillEditPermissionResult> => {
-    return ipcRenderer.invoke(SkillLockAPIEvent.CHECK_SKILL_EDIT_PERMISSION, skillName);
+  checkEditPermission: async (
+    skillName: string,
+  ): Promise<SkillEditPermissionResult> => {
+    return ipcRenderer.invoke(
+      SkillLockAPIEvent.CHECK_SKILL_EDIT_PERMISSION,
+      skillName,
+    );
   },
 
   getSkillFiles: async (skillName: string): Promise<string[]> => {
@@ -94,12 +108,18 @@ export const skillLockAPI: SkillLockAPI = {
 
   getSkillFileContent: async (
     skillName: string,
-    filePath: string
+    filePath: string,
   ): Promise<{ content: string; isLocal: boolean }> => {
-    return ipcRenderer.invoke(SkillLockAPIEvent.GET_SKILL_FILE_CONTENT, skillName, filePath);
+    return ipcRenderer.invoke(
+      SkillLockAPIEvent.GET_SKILL_FILE_CONTENT,
+      skillName,
+      filePath,
+    );
   },
 
-  commitSkillFile: async (options: SkillCommitOptions): Promise<SkillCommitResult> => {
+  commitSkillFile: async (
+    options: SkillCommitOptions,
+  ): Promise<SkillCommitResult> => {
     return ipcRenderer.invoke(SkillLockAPIEvent.COMMIT_SKILL_FILE, options);
   },
 };

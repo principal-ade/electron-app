@@ -23,8 +23,10 @@ try {
 
     // Listen for goodbye screen data
     onData: (callback: (data: GoodbyeScreenData) => void) => {
-      const listener = (_: Electron.IpcRendererEvent, data: GoodbyeScreenData) =>
-        callback(data);
+      const listener = (
+        _: Electron.IpcRendererEvent,
+        data: GoodbyeScreenData,
+      ) => callback(data);
       ipcRenderer.on('goodbye-screen:data', listener);
       return () => {
         ipcRenderer.removeListener('goodbye-screen:data', listener);
@@ -36,10 +38,7 @@ try {
   });
   console.info('[Preload-GoodbyeScreen] electronAPI exposed');
 } catch (error) {
-  console.error(
-    '[Preload-GoodbyeScreen] Failed to expose electronAPI:',
-    error,
-  );
+  console.error('[Preload-GoodbyeScreen] Failed to expose electronAPI:', error);
 }
 
 // Expose app name

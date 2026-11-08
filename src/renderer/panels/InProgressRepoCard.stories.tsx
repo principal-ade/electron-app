@@ -16,23 +16,74 @@ import {
   type InProgressSummary,
 } from './InProgressRepoCard';
 
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const sampleFiles: InProgressChangedFile[] = [
-  { path: 'src/components/Button.tsx', status: 'modified', additions: 24, deletions: 8, staged: true },
-  { path: 'src/components/Button.test.tsx', status: 'modified', additions: 12, deletions: 3, staged: true },
-  { path: 'src/hooks/useAuth.ts', status: 'modified', additions: 5, deletions: 5, staged: false },
-  { path: 'src/utils/format.ts', status: 'added', additions: 42, deletions: 0, staged: false },
-  { path: 'src/legacy/old-helper.ts', status: 'deleted', additions: 0, deletions: 37, staged: true },
-  { path: 'README.md', status: 'modified', additions: 3, deletions: 1, staged: false },
-  { path: '.env.local', status: 'untracked', additions: 4, deletions: 0, staged: false },
+  {
+    path: 'src/components/Button.tsx',
+    status: 'modified',
+    additions: 24,
+    deletions: 8,
+    staged: true,
+  },
+  {
+    path: 'src/components/Button.test.tsx',
+    status: 'modified',
+    additions: 12,
+    deletions: 3,
+    staged: true,
+  },
+  {
+    path: 'src/hooks/useAuth.ts',
+    status: 'modified',
+    additions: 5,
+    deletions: 5,
+    staged: false,
+  },
+  {
+    path: 'src/utils/format.ts',
+    status: 'added',
+    additions: 42,
+    deletions: 0,
+    staged: false,
+  },
+  {
+    path: 'src/legacy/old-helper.ts',
+    status: 'deleted',
+    additions: 0,
+    deletions: 37,
+    staged: true,
+  },
+  {
+    path: 'README.md',
+    status: 'modified',
+    additions: 3,
+    deletions: 1,
+    staged: false,
+  },
+  {
+    path: '.env.local',
+    status: 'untracked',
+    additions: 4,
+    deletions: 0,
+    staged: false,
+  },
 ];
 
 const singleFileWorking: InProgressChangedFile[] = [
-  { path: 'src/scheduler/perf.ts', status: 'modified', additions: 18, deletions: 4, staged: false },
+  {
+    path: 'src/scheduler/perf.ts',
+    status: 'modified',
+    additions: 18,
+    deletions: 4,
+    staged: false,
+  },
 ];
 
-const baseActions = (files: InProgressChangedFile[]): InProgressRepoCardActions => ({
+const baseActions = (
+  files: InProgressChangedFile[],
+): InProgressRepoCardActions => ({
   getFileTreeForLocalRepo: async () => null,
   getWorkingChanges: async () => {
     await delay(200);
@@ -58,10 +109,15 @@ class MockEventEmitter implements PanelEventEmitter {
 
   emit<T>(event: PanelEvent<T>): void {
     console.info('[Mock Event]:', event);
-    (this.listeners.get(event.type) || []).forEach((l) => l(event as PanelEvent<unknown>));
+    (this.listeners.get(event.type) || []).forEach((l) =>
+      l(event as PanelEvent<unknown>),
+    );
   }
 
-  on<T>(eventType: string, handler: (event: PanelEvent<T>) => void): () => void {
+  on<T>(
+    eventType: string,
+    handler: (event: PanelEvent<T>) => void,
+  ): () => void {
     const listeners = this.listeners.get(eventType) || [];
     const wrapped = handler as EventHandler;
     listeners.push(wrapped);
@@ -97,7 +153,9 @@ const createMockEntry = (repoName: string): AlexandriaEntry => ({
   },
 });
 
-const createMockSummary = (overrides: Partial<InProgressSummary> = {}): InProgressSummary => {
+const createMockSummary = (
+  overrides: Partial<InProgressSummary> = {},
+): InProgressSummary => {
   const repoName = overrides.repoName || 'my-awesome-project';
   return {
     repoPath: overrides.repoPath || `/Users/developer/projects/${repoName}`,
@@ -144,7 +202,9 @@ const Wrapper: React.FC<{ children: React.ReactNode; width?: number }> = ({
   width = 900,
 }) => (
   <ThemeProvider>
-    <div style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+    <div
+      style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}
+    >
       <div style={{ maxWidth: width }}>{children}</div>
     </div>
   </ThemeProvider>
@@ -155,7 +215,9 @@ const GridWrapper: React.FC<{ children: React.ReactNode; width?: number }> = ({
   width = 900,
 }) => (
   <ThemeProvider>
-    <div style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+    <div
+      style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}
+    >
       <div
         style={{
           maxWidth: width,
@@ -286,11 +348,29 @@ export const Grid: Story = {
       'my-awesome-project': sampleFiles,
       scheduler: singleFileWorking,
       'docs-site': [
-        { path: 'docs/getting-started.md', status: 'modified', additions: 6, deletions: 2, staged: true },
-        { path: 'docs/api/overview.md', status: 'modified', additions: 2, deletions: 2, staged: true },
+        {
+          path: 'docs/getting-started.md',
+          status: 'modified',
+          additions: 6,
+          deletions: 2,
+          staged: true,
+        },
+        {
+          path: 'docs/api/overview.md',
+          status: 'modified',
+          additions: 2,
+          deletions: 2,
+          staged: true,
+        },
       ],
       'api-gateway': [
-        { path: 'src/middleware/rateLimit.ts', status: 'modified', additions: 15, deletions: 3, staged: false },
+        {
+          path: 'src/middleware/rateLimit.ts',
+          status: 'modified',
+          additions: 15,
+          deletions: 3,
+          staged: false,
+        },
       ],
     };
     return (

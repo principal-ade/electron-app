@@ -27,10 +27,7 @@ export interface CommandResult {
 
 export interface DialogOptions {
   properties?: (
-    | 'openFile'
-    | 'openDirectory'
-    | 'multiSelections'
-    | 'createDirectory'
+    'openFile' | 'openDirectory' | 'multiSelections' | 'createDirectory'
   )[];
   title?: string;
   defaultPath?: string;

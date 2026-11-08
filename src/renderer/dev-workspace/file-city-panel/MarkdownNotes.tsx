@@ -203,7 +203,7 @@ export const MarkdownNotePanel: React.FC<NotePanelProps> = ({
   const headerQuote =
     selection.kind === 'composer'
       ? selection.anchor.exact
-      : threadNotes[0]?.anchor.exact ?? '';
+      : (threadNotes[0]?.anchor.exact ?? '');
 
   return (
     <aside
@@ -230,8 +230,19 @@ export const MarkdownNotePanel: React.FC<NotePanelProps> = ({
           flexShrink: 0,
         }}
       >
-        <MessageSquare size={14} color={theme.colors.primary} style={{ marginTop: 3 }} />
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+        <MessageSquare
+          size={14}
+          color={theme.colors.primary}
+          style={{ marginTop: 3 }}
+        />
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
           <span
             style={{
               fontSize: theme.fontSizes[0],

@@ -3,7 +3,8 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Download, Sparkles } from 'lucide-react';
 import { AppVersionManagerService } from '../../main-process-api/AppVersionManagerService';
 
-type UpdateState = 'idle' | 'available' | 'downloading' | 'downloaded' | 'error';
+type UpdateState =
+  'idle' | 'available' | 'downloading' | 'downloaded' | 'error';
 
 /**
  * Inline titlebar button that mirrors the Updates settings download flow:
@@ -35,7 +36,10 @@ export const TitlebarUpdateInlineButton: React.FC = () => {
     const unsubscribe = [
       AppVersionManagerService.onUpdateAvailable(() => {
         // Don't clobber a download already in flight or a completed download.
-        if (stateRef.current === 'downloading' || stateRef.current === 'downloaded') {
+        if (
+          stateRef.current === 'downloading' ||
+          stateRef.current === 'downloaded'
+        ) {
           return;
         }
         setState('available');
@@ -43,7 +47,10 @@ export const TitlebarUpdateInlineButton: React.FC = () => {
         setErrorMessage(null);
       }),
       AppVersionManagerService.onUpdateNotAvailable(() => {
-        if (stateRef.current === 'downloaded' || stateRef.current === 'downloading') {
+        if (
+          stateRef.current === 'downloaded' ||
+          stateRef.current === 'downloading'
+        ) {
           return;
         }
         setState('idle');
@@ -63,7 +70,8 @@ export const TitlebarUpdateInlineButton: React.FC = () => {
         setState('downloaded');
       }),
       AppVersionManagerService.onUpdateError((err) => {
-        const message = (err && (err.message || err.toString())) || 'Update failed';
+        const message =
+          (err && (err.message || err.toString())) || 'Update failed';
         setErrorMessage(message);
         // Only flip to error visual state if a download was in flight; otherwise
         // a silent check error shouldn't reveal the button at all.

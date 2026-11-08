@@ -5,7 +5,11 @@ import {
   ConfigurablePanelLayout,
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
-import { PanelEventBus, type PanelContextValue, type DataSlice } from '@principal-ade/panel-framework-core';
+import {
+  PanelEventBus,
+  type PanelContextValue,
+  type DataSlice,
+} from '@principal-ade/panel-framework-core';
 import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
 import {
   CodeCityPanel,
@@ -51,11 +55,22 @@ const createMockFileTree = () => {
 
   // Add some random files to show changes
   const extraFiles = [
-    { path: `src/Component${randomNum}.tsx`, size: 500 + randomNum, lastModified: new Date() },
-    { path: `src/utils/helper${randomNum}.ts`, size: 300 + randomNum, lastModified: new Date() },
+    {
+      path: `src/Component${randomNum}.tsx`,
+      size: 500 + randomNum,
+      lastModified: new Date(),
+    },
+    {
+      path: `src/utils/helper${randomNum}.ts`,
+      size: 300 + randomNum,
+      lastModified: new Date(),
+    },
   ];
 
-  const files = [...baseFiles, ...extraFiles.slice(0, Math.floor(Math.random() * 2) + 1)];
+  const files = [
+    ...baseFiles,
+    ...extraFiles.slice(0, Math.floor(Math.random() * 2) + 1),
+  ];
 
   const tree = builder.build({
     commitSha: `mock-sha-${randomNum}`,
@@ -132,7 +147,9 @@ const MockRepositoryPanelProvider: React.FC<{
   // Listen for git:statusChanged events and regenerate git status
   React.useEffect(() => {
     const unsubscribe = events.on('git:statusChanged', () => {
-      console.info('[MockProvider] git:statusChanged - regenerating git status');
+      console.info(
+        '[MockProvider] git:statusChanged - regenerating git status',
+      );
       setGitStatus(createMockGitStatus());
     });
 
@@ -166,17 +183,18 @@ const MockRepositoryPanelProvider: React.FC<{
     [gitStatus],
   );
 
-  const fileCityColorModesSlice: DataSlice<FileCityColorModesSliceData> = useMemo(
-    () => ({
-      scope: 'repository' as const,
-      name: 'fileCityColorModes',
-      data: { mode: 'git' } as FileCityColorModesSliceData,
-      loading: false,
-      error: null,
-      refresh: async () => {},
-    }),
-    [],
-  );
+  const fileCityColorModesSlice: DataSlice<FileCityColorModesSliceData> =
+    useMemo(
+      () => ({
+        scope: 'repository' as const,
+        name: 'fileCityColorModes',
+        data: { mode: 'git' } as FileCityColorModesSliceData,
+        loading: false,
+        error: null,
+        refresh: async () => {},
+      }),
+      [],
+    );
 
   const packagesSlice: DataSlice<null> = useMemo(
     () => ({
@@ -204,11 +222,19 @@ const MockRepositoryPanelProvider: React.FC<{
       gitStatusWithFiles: gitStatusWithFilesSlice,
       fileCityColorModes: fileCityColorModesSlice,
       packages: packagesSlice,
-      refresh: async (_scope?: 'workspace' | 'repository', _slice?: string): Promise<void> => {
+      refresh: async (
+        _scope?: 'workspace' | 'repository',
+        _slice?: string,
+      ): Promise<void> => {
         // Mock refresh - no-op
       },
     }),
-    [fileTreeSlice, gitStatusWithFilesSlice, fileCityColorModesSlice, packagesSlice],
+    [
+      fileTreeSlice,
+      gitStatusWithFilesSlice,
+      fileCityColorModesSlice,
+      packagesSlice,
+    ],
   );
 
   const actions = useMemo(
@@ -306,239 +332,244 @@ const PanelInteractionsStoryInner: React.FC = () => {
 
   return (
     <MockRepositoryPanelProvider>
-        {({ context, actions, events }) => (
-          <MockTerminalProvider>
-            {({ terminalContext, terminalActions }) => {
-              // Merge terminal context into panel context
-              const terminalPanelContext = {
-                ...context,
-                ...terminalContext,
-                terminal: {
-                  scope: 'repository' as const,
-                  name: 'terminal',
-                  data: [],
-                  loading: false,
-                  error: null,
-                  refresh: async () => {},
-                },
-              };
+      {({ context, actions, events }) => (
+        <MockTerminalProvider>
+          {({ terminalContext, terminalActions }) => {
+            // Merge terminal context into panel context
+            const terminalPanelContext = {
+              ...context,
+              ...terminalContext,
+              terminal: {
+                scope: 'repository' as const,
+                name: 'terminal',
+                data: [],
+                loading: false,
+                error: null,
+                refresh: async () => {},
+              },
+            };
 
-              // Define panels
-              const panels = [
-                {
-                  id: 'gitChanges',
-                  label: 'Git Changes',
-                  content: GitChangesPanelComponent ? (
-                    <div
-                      style={{
-                        height: '100%',
-                        width: '100%',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        display: 'flex',
-                        flexDirection: 'column',
-                      }}
-                    >
-                      <GitChangesPanelComponent
-                        context={context}
-                        actions={actions}
-                        events={events}
-                      />
-                    </div>
-                  ) : (
-                    <div style={{ padding: '2rem', color: '#999' }}>
-                      Git Changes panel not available
-                    </div>
-                  ),
-                },
-                {
-                  id: 'terminal',
-                  label: 'Terminal',
-                  content: TabbedTerminalPanel ? (
-                    <div
-                      style={{
-                        height: '100%',
-                        width: '100%',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                      }}
-                    >
-                      <TabbedTerminalPanel
-                        context={terminalPanelContext}
-                        actions={terminalActions}
-                        events={events}
-                        terminalContext="terminal:default"
-                        directory="/mock-repo"
-                        initialTabs={[]}
-                        onTabsChange={() => {}}
-                        renderTabContent={() => null}
-                        width={800}
-                      />
-                    </div>
-                  ) : (
-                    <div style={{ padding: '2rem', color: '#999' }}>
-                      Terminal panel not available
-                    </div>
-                  ),
-                },
-                {
-                  id: 'fileCity',
-                  label: 'File City',
-                  content: FileCityPanelComponent ? (
-                    <div
-                      style={{
-                        height: '100%',
-                        width: '100%',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        display: 'flex',
-                        flexDirection: 'column',
-                      }}
-                    >
-                      <FileCityPanelComponent
-                        context={context}
-                        actions={actions}
-                        events={events}
-                      />
-                    </div>
-                  ) : (
-                    <div style={{ padding: '2rem', color: '#999' }}>
-                      File City panel not available
-                    </div>
-                  ),
-                },
-              ];
-
-              // Check if required components are available
-              if (!ConfigurablePanelLayout) {
-                return (
-                  <div style={{ padding: '2rem', color: '#fff' }}>
-                    Error: ConfigurablePanelLayout not available
-                  </div>
-                );
-              }
-
-              return (
-                <div
-                  style={{
-                    width: '100vw',
-                    height: '100vh',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    background: '#1a1a1a',
-                  }}
-                >
-                  {/* Control Panel - Space for file tree event controls */}
+            // Define panels
+            const panels = [
+              {
+                id: 'gitChanges',
+                label: 'Git Changes',
+                content: GitChangesPanelComponent ? (
                   <div
                     style={{
-                      height: '120px',
-                      borderBottom: '1px solid #333',
-                      padding: '16px',
-                      background: '#252525',
+                      height: '100%',
+                      width: '100%',
+                      overflow: 'hidden',
+                      position: 'relative',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '12px',
                     }}
                   >
-                    <h3
-                      style={{
-                        margin: 0,
-                        color: '#fff',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                      }}
-                    >
-                      File Tree Event Controls
-                    </h3>
-                    <div
-                      style={{
-                        display: 'flex',
-                        gap: '12px',
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <button
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#444',
-                          color: '#fff',
-                          border: '1px solid #666',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                        }}
-                        onClick={() => {
-                          console.info('Emit workspace:changed event');
-                          events.emit({
-                            type: 'workspace:changed',
-                            source: 'story-control',
-                            timestamp: Date.now(),
-                            payload: {},
-                          });
-                        }}
-                      >
-                        Trigger File Tree Refresh
-                      </button>
-                      <button
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#444',
-                          color: '#fff',
-                          border: '1px solid #666',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                        }}
-                        onClick={() => {
-                          console.info('Emit git:statusChanged event');
-                          events.emit({
-                            type: 'git:statusChanged',
-                            source: 'story-control',
-                            timestamp: Date.now(),
-                            payload: {},
-                          });
-                        }}
-                      >
-                        Trigger Git Status Update
-                      </button>
-                      <div
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#333',
-                          color: '#6495ed',
-                          border: '1px solid #555',
-                          borderRadius: '4px',
-                          fontSize: '13px',
-                          display: 'flex',
-                          alignItems: 'center',
-                        }}
-                      >
-                        Current Layout: {typeof layout.left === 'string' ? layout.left : 'none'} | {typeof layout.middle === 'string' ? layout.middle : 'none'} |{' '}
-                        {typeof layout.right === 'string' ? layout.right : 'none'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Panel Layout */}
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <ConfigurablePanelLayout
-                      panels={panels}
-                      layout={layout}
-                      collapsiblePanels={{ left: true, right: true }}
-                      defaultSizes={panelSizes}
-                      collapsed={collapsed}
-                      showCollapseButtons={true}
-                      onPanelResize={setPanelSizes}
-                      theme={theme}
+                    <GitChangesPanelComponent
+                      context={context}
+                      actions={actions}
+                      events={events}
                     />
                   </div>
+                ) : (
+                  <div style={{ padding: '2rem', color: '#999' }}>
+                    Git Changes panel not available
+                  </div>
+                ),
+              },
+              {
+                id: 'terminal',
+                label: 'Terminal',
+                content: TabbedTerminalPanel ? (
+                  <div
+                    style={{
+                      height: '100%',
+                      width: '100%',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                  >
+                    <TabbedTerminalPanel
+                      context={terminalPanelContext}
+                      actions={terminalActions}
+                      events={events}
+                      terminalContext="terminal:default"
+                      directory="/mock-repo"
+                      initialTabs={[]}
+                      onTabsChange={() => {}}
+                      renderTabContent={() => null}
+                      width={800}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ padding: '2rem', color: '#999' }}>
+                    Terminal panel not available
+                  </div>
+                ),
+              },
+              {
+                id: 'fileCity',
+                label: 'File City',
+                content: FileCityPanelComponent ? (
+                  <div
+                    style={{
+                      height: '100%',
+                      width: '100%',
+                      overflow: 'hidden',
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                  >
+                    <FileCityPanelComponent
+                      context={context}
+                      actions={actions}
+                      events={events}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ padding: '2rem', color: '#999' }}>
+                    File City panel not available
+                  </div>
+                ),
+              },
+            ];
+
+            // Check if required components are available
+            if (!ConfigurablePanelLayout) {
+              return (
+                <div style={{ padding: '2rem', color: '#fff' }}>
+                  Error: ConfigurablePanelLayout not available
                 </div>
               );
-            }}
-          </MockTerminalProvider>
-        )}
-      </MockRepositoryPanelProvider>
+            }
+
+            return (
+              <div
+                style={{
+                  width: '100vw',
+                  height: '100vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: '#1a1a1a',
+                }}
+              >
+                {/* Control Panel - Space for file tree event controls */}
+                <div
+                  style={{
+                    height: '120px',
+                    borderBottom: '1px solid #333',
+                    padding: '16px',
+                    background: '#252525',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: 0,
+                      color: '#fff',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                    }}
+                  >
+                    File Tree Event Controls
+                  </h3>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '12px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <button
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#444',
+                        color: '#fff',
+                        border: '1px solid #666',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                      }}
+                      onClick={() => {
+                        console.info('Emit workspace:changed event');
+                        events.emit({
+                          type: 'workspace:changed',
+                          source: 'story-control',
+                          timestamp: Date.now(),
+                          payload: {},
+                        });
+                      }}
+                    >
+                      Trigger File Tree Refresh
+                    </button>
+                    <button
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#444',
+                        color: '#fff',
+                        border: '1px solid #666',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                      }}
+                      onClick={() => {
+                        console.info('Emit git:statusChanged event');
+                        events.emit({
+                          type: 'git:statusChanged',
+                          source: 'story-control',
+                          timestamp: Date.now(),
+                          payload: {},
+                        });
+                      }}
+                    >
+                      Trigger Git Status Update
+                    </button>
+                    <div
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#333',
+                        color: '#6495ed',
+                        border: '1px solid #555',
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      Current Layout:{' '}
+                      {typeof layout.left === 'string' ? layout.left : 'none'} |{' '}
+                      {typeof layout.middle === 'string'
+                        ? layout.middle
+                        : 'none'}{' '}
+                      |{' '}
+                      {typeof layout.right === 'string' ? layout.right : 'none'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Panel Layout */}
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <ConfigurablePanelLayout
+                    panels={panels}
+                    layout={layout}
+                    collapsiblePanels={{ left: true, right: true }}
+                    defaultSizes={panelSizes}
+                    collapsed={collapsed}
+                    showCollapseButtons={true}
+                    onPanelResize={setPanelSizes}
+                    theme={theme}
+                  />
+                </div>
+              </div>
+            );
+          }}
+        </MockTerminalProvider>
+      )}
+    </MockRepositoryPanelProvider>
   );
 };
 

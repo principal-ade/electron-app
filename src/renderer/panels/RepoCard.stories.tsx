@@ -1,11 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
-import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+import {
+  PathsFileTreeBuilder,
+  type FileTree,
+} from '@principal-ai/repository-abstraction';
 import { RepoCard, type RepoCardData, type Contributor } from './RepoCard';
 
 // Generate mock file tree using PathsFileTreeBuilder
-const createMockFileTree = (repoName: string, projectType: 'typescript' | 'python' | 'rust' | 'go' = 'typescript'): FileTree => {
+const createMockFileTree = (
+  repoName: string,
+  projectType: 'typescript' | 'python' | 'rust' | 'go' = 'typescript',
+): FileTree => {
   let files: string[] = [];
 
   switch (projectType) {
@@ -135,7 +141,9 @@ const createMockContributors = (count: number = 5): Contributor[] => {
 };
 
 // Create mock repository data
-const createMockRepo = (overrides: Partial<RepoCardData> = {}): RepoCardData => {
+const createMockRepo = (
+  overrides: Partial<RepoCardData> = {},
+): RepoCardData => {
   // Default to 2 years ago
   const twoYearsAgo = new Date();
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
@@ -144,7 +152,8 @@ const createMockRepo = (overrides: Partial<RepoCardData> = {}): RepoCardData => 
     repoName: 'my-awesome-project',
     githubOwner: 'octocat',
     githubRepoName: 'my-awesome-project',
-    description: 'A fantastic open source project built with React and TypeScript',
+    description:
+      'A fantastic open source project built with React and TypeScript',
     language: 'TypeScript',
     stars: 1234,
     isOwnerOrg: false,
@@ -163,12 +172,20 @@ const RepoCardStory: React.FC<{
 
   return (
     <ThemeProvider>
-      <div style={{ padding: '24px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+      <div
+        style={{
+          padding: '24px',
+          backgroundColor: '#1a1a1a',
+          minHeight: '100vh',
+        }}
+      >
         <div style={{ maxWidth: '600px' }}>
           <RepoCard
             repo={repo}
             onClick={() => console.info('Card clicked:', repo.repoName)}
-            onDoubleClick={() => console.info('Card double-clicked:', repo.repoName)}
+            onDoubleClick={() =>
+              console.info('Card double-clicked:', repo.repoName)
+            }
             fileTree={fileTree}
           />
         </div>
@@ -320,7 +337,8 @@ export const RustRepo: Story = {
           repoName: 'rust',
           githubOwner: 'rust-lang',
           githubRepoName: 'rust',
-          description: 'Empowering everyone to build reliable and efficient software',
+          description:
+            'Empowering everyone to build reliable and efficient software',
           language: 'Rust',
           stars: 92000,
           isOwnerOrg: true,
@@ -430,7 +448,10 @@ export const GridLayout: Story = {
       new Date(Date.now() - 24 * 60 * 60 * 1000 * 3).toISOString(), // 3 days ago
     ];
 
-    const repos: Array<{ repo: RepoCardData; type: 'typescript' | 'python' | 'rust' | 'go' }> = [
+    const repos: Array<{
+      repo: RepoCardData;
+      type: 'typescript' | 'python' | 'rust' | 'go';
+    }> = [
       {
         repo: createMockRepo({
           repoName: 'frontend-app',
@@ -495,7 +516,13 @@ export const GridLayout: Story = {
 
     return (
       <ThemeProvider>
-        <div style={{ padding: '24px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+        <div
+          style={{
+            padding: '24px',
+            backgroundColor: '#1a1a1a',
+            minHeight: '100vh',
+          }}
+        >
           <div
             style={{
               display: 'grid',
@@ -510,7 +537,9 @@ export const GridLayout: Story = {
                   key={repo.repoName}
                   repo={repo}
                   onClick={() => console.info('Card clicked:', repo.repoName)}
-                  onDoubleClick={() => console.info('Card double-clicked:', repo.repoName)}
+                  onDoubleClick={() =>
+                    console.info('Card double-clicked:', repo.repoName)
+                  }
                   fileTree={fileTree}
                 />
               );
@@ -529,7 +558,13 @@ export const NonInteractive: Story = {
     const fileTree = createMockFileTree(repo.repoName, 'typescript');
     return (
       <ThemeProvider>
-        <div style={{ padding: '24px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+        <div
+          style={{
+            padding: '24px',
+            backgroundColor: '#1a1a1a',
+            minHeight: '100vh',
+          }}
+        >
           <div style={{ maxWidth: '600px' }}>
             <RepoCard repo={repo} fileTree={fileTree} />
           </div>

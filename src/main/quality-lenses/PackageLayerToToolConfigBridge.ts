@@ -4,9 +4,7 @@
  * This prototype helps identify gaps in the data model
  */
 
-import type {
-  PackageLayer,
-} from '@principal-ai/codebase-composition';
+import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type { ToolConfiguration } from '@principal-ai/codebase-quality-lenses';
 
 export interface BridgeAnalysis {

@@ -13,9 +13,8 @@ try {
 } catch (err) {
   // Fallback: try to require from relative paths
   try {
-    const resolved = require.resolve(
-      '@principal-ai/repository-monitoring-server/dist/daemon/repository-monitoring-daemon.js'
-    );
+    const resolved =
+      require.resolve('@principal-ai/repository-monitoring-server/dist/daemon/repository-monitoring-daemon.js');
     require(resolved);
   } catch {
     // Last resort - rethrow

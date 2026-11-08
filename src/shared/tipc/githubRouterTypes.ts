@@ -202,26 +202,37 @@ export interface FileContentResponse {
  */
 export type GithubRouterType = Record<
   string,
-  { action: (args: { context: ActionContext; input: unknown }) => Promise<unknown> }
+  {
+    action: (args: {
+      context: ActionContext;
+      input: unknown;
+    }) => Promise<unknown>;
+  }
 > & {
   // User & Auth
   getCurrentUser: {
     action: (args: {
       context: ActionContext;
       input?: void;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubUser | null>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').GitHubUser | null
+    >;
   };
   getTokenInfo: {
     action: (args: {
       context: ActionContext;
       input?: void;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').TokenInfo | null>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').TokenInfo | null
+    >;
   };
   getUserSSHKeys: {
     action: (args: {
       context: ActionContext;
       input?: void;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').SSHKeysResponse>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').SSHKeysResponse
+    >;
   };
 
   // User Repositories
@@ -229,13 +240,17 @@ export type GithubRouterType = Record<
     action: (args: {
       context: ActionContext;
       input: GetUserRepositoriesInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubRepository[]>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').GitHubRepository[]
+    >;
   };
   getUserStarredRepositories: {
     action: (args: {
       context: ActionContext;
       input: GetUserStarredRepositoriesInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubRepository[]>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').GitHubRepository[]
+    >;
   };
 
   // Organizations
@@ -243,19 +258,25 @@ export type GithubRouterType = Record<
     action: (args: {
       context: ActionContext;
       input?: void;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubOrganization[]>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').GitHubOrganization[]
+    >;
   };
   getOrgRepositories: {
     action: (args: {
       context: ActionContext;
       input: GetOrgRepositoriesInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubRepository[]>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').GitHubRepository[]
+    >;
   };
   getOrgMembers: {
     action: (args: {
       context: ActionContext;
       input: GetOrgMembersInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubOrgMember[]>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').GitHubOrgMember[]
+    >;
   };
   getRepositoryCollaborators: {
     action: (args: {
@@ -269,19 +290,25 @@ export type GithubRouterType = Record<
     action: (args: {
       context: ActionContext;
       input: GetUserInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubUser | null>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').GitHubUser | null
+    >;
   };
   getUserOrganizationsForUser: {
     action: (args: {
       context: ActionContext;
       input: GetUserOrgsForUserInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubOrganization[]>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').GitHubOrganization[]
+    >;
   };
   getUserStarredRepositoriesForUser: {
     action: (args: {
       context: ActionContext;
       input: GetUserStarredForUserInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubRepository[]>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').GitHubRepository[]
+    >;
   };
   isFollowingUser: {
     action: (args: {
@@ -307,19 +334,27 @@ export type GithubRouterType = Record<
     action: (args: {
       context: ActionContext;
       input: GetRepositoryInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubRepositoryWithPermissions | null>;
+    }) => Promise<
+      | import('../main-process-api-interfaces/GitHubAPI').GitHubRepositoryWithPermissions
+      | null
+    >;
   };
   createRepository: {
     action: (args: {
       context: ActionContext;
       input: CreateRepositoryInput2;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubRepositoryCreated>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').GitHubRepositoryCreated
+    >;
   };
   forkRepository: {
     action: (args: {
       context: ActionContext;
       input: ForkRepositoryInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubRepositoryCreated | null>;
+    }) => Promise<
+      | import('../main-process-api-interfaces/GitHubAPI').GitHubRepositoryCreated
+      | null
+    >;
   };
   getTree: {
     action: (args: {
@@ -345,7 +380,9 @@ export type GithubRouterType = Record<
     action: (args: {
       context: ActionContext;
       input?: void;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').GitHubLicenseTemplate[]>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').GitHubLicenseTemplate[]
+    >;
   };
 
   // Skills
@@ -353,7 +390,9 @@ export type GithubRouterType = Record<
     action: (args: {
       context: ActionContext;
       input: InstallSkillInput;
-    }) => Promise<import('../main-process-api-interfaces/GitHubAPI').InstallSkillResult>;
+    }) => Promise<
+      import('../main-process-api-interfaces/GitHubAPI').InstallSkillResult
+    >;
   };
 
   // Star / Unstar

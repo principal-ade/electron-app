@@ -391,11 +391,7 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
           color: iconColor,
         }}
       >
-        {homeTabIcon(
-          entry,
-          depth > 0 ? 13 : 14,
-          iconColor,
-        )}
+        {homeTabIcon(entry, depth > 0 ? 13 : 14, iconColor)}
       </span>
       <span
         style={{

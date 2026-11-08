@@ -165,7 +165,12 @@ export interface DaemonControlResult {
  */
 export type TerminalRouterType = Record<
   string,
-  { action: (args: { context: ActionContext; input: unknown }) => Promise<unknown> }
+  {
+    action: (args: {
+      context: ActionContext;
+      input: unknown;
+    }) => Promise<unknown>;
+  }
 > & {
   createTerminalSession: {
     action: (args: {
@@ -275,4 +280,4 @@ export type TerminalRouterType = Record<
       input?: void;
     }) => Promise<DaemonControlResult>;
   };
-}
+};

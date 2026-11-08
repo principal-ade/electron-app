@@ -28,10 +28,15 @@ class MockEventEmitter implements PanelEventEmitter {
 
   emit<T>(event: PanelEvent<T>): void {
     console.info('[Mock Event]:', event);
-    (this.listeners.get(event.type) || []).forEach((l) => l(event as PanelEvent<unknown>));
+    (this.listeners.get(event.type) || []).forEach((l) =>
+      l(event as PanelEvent<unknown>),
+    );
   }
 
-  on<T>(eventType: string, handler: (event: PanelEvent<T>) => void): () => void {
+  on<T>(
+    eventType: string,
+    handler: (event: PanelEvent<T>) => void,
+  ): () => void {
     const listeners = this.listeners.get(eventType) || [];
     const wrapped = handler as EventHandler;
     listeners.push(wrapped);
@@ -50,15 +55,17 @@ class MockEventEmitter implements PanelEventEmitter {
   }
 }
 
-const createRepoPayload = (overrides: {
-  owner?: string;
-  name?: string;
-  description?: string;
-  stars?: number;
-  language?: string;
-  createdAt?: string;
-  localClones?: RepositorySelectedPayload['localClones'];
-} = {}): RepositorySelectedPayload => {
+const createRepoPayload = (
+  overrides: {
+    owner?: string;
+    name?: string;
+    description?: string;
+    stars?: number;
+    language?: string;
+    createdAt?: string;
+    localClones?: RepositorySelectedPayload['localClones'];
+  } = {},
+): RepositorySelectedPayload => {
   const owner = overrides.owner ?? 'octocat';
   const name = overrides.name ?? 'my-awesome-project';
   const twoYearsAgo = new Date();
@@ -67,7 +74,9 @@ const createRepoPayload = (overrides: {
   const payload = payloadFromGithub({
     owner,
     name,
-    description: overrides.description ?? 'A fantastic open source project built with React and TypeScript',
+    description:
+      overrides.description ??
+      'A fantastic open source project built with React and TypeScript',
     stars: overrides.stars ?? 1234,
     primaryLanguage: overrides.language ?? 'TypeScript',
     createdAt: overrides.createdAt ?? twoYearsAgo.toISOString(),
@@ -134,7 +143,10 @@ export const WithClones: Story = {
   render: () => {
     const repo = createRepoPayload({
       localClones: [
-        { path: '/Users/developer/projects/my-awesome-project', addedAt: Date.now() - 86400_000 },
+        {
+          path: '/Users/developer/projects/my-awesome-project',
+          addedAt: Date.now() - 86400_000,
+        },
       ],
     });
     return (
@@ -153,8 +165,14 @@ export const MultipleClones: Story = {
   render: () => {
     const repo = createRepoPayload({
       localClones: [
-        { path: '/Users/developer/projects/my-awesome-project', addedAt: Date.now() - 86400_000 * 30 },
-        { path: '/Users/developer/backup/my-awesome-project', addedAt: Date.now() - 86400_000 },
+        {
+          path: '/Users/developer/projects/my-awesome-project',
+          addedAt: Date.now() - 86400_000 * 30,
+        },
+        {
+          path: '/Users/developer/backup/my-awesome-project',
+          addedAt: Date.now() - 86400_000,
+        },
       ],
     });
     return (
@@ -268,7 +286,10 @@ export const PopularRepo: Story = {
       stars: 225000,
       createdAt: tenYearsAgo.toISOString(),
       localClones: [
-        { path: '/Users/developer/projects/react', addedAt: Date.now() - 86400_000 * 60 },
+        {
+          path: '/Users/developer/projects/react',
+          addedAt: Date.now() - 86400_000 * 60,
+        },
       ],
     });
     return (

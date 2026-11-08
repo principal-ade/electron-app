@@ -999,33 +999,33 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       />
       <div className="flex-1 overflow-hidden">
         <ScopeManagerProvider repositoryPath={repositoryPath}>
-        <AreaManagerProvider repositoryPath={repositoryPath}>
-        <DevWorkspacePanelFramework
-          key={resetKey}
-          repositoryPath={repositoryPath}
-          repository={repository}
-          collapsed={collapsed}
-          onCollapsedChange={setCollapsed}
-          layout={layout}
-          onLayoutChange={setLayout}
-          panelSizes={panelSizes}
-          onPanelSizesChange={handlePanelSizesChange}
-          onPanelControlReady={handlePanelControlReady}
-          events={events}
-          onLeftCollapseComplete={handleLeftCollapseComplete}
-          onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
-          onOpenGitHubActions={
+          <AreaManagerProvider repositoryPath={repositoryPath}>
+            <DevWorkspacePanelFramework
+              key={resetKey}
+              repositoryPath={repositoryPath}
+              repository={repository}
+              collapsed={collapsed}
+              onCollapsedChange={setCollapsed}
+              layout={layout}
+              onLayoutChange={setLayout}
+              panelSizes={panelSizes}
+              onPanelSizesChange={handlePanelSizesChange}
+              onPanelControlReady={handlePanelControlReady}
+              events={events}
+              onLeftCollapseComplete={handleLeftCollapseComplete}
+              onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
+              onOpenGitHubActions={
                 githubInfo && hasGitHubFolder
                   ? handleOpenGitHubActions
                   : undefined
-          }
-          onOpenGitHubRepo={githubInfo ? handleOpenGitHubRepo : undefined}
-          sidebarsHidden={sidebarsHidden}
-          leftSidebarIconVisibility={devWorkspaceConfig.leftSidebarIcons}
-          rightSidebarIconVisibility={devWorkspaceConfig.rightSidebarIcons}
-          storybook={storybook}
-        />
-        </AreaManagerProvider>
+              }
+              onOpenGitHubRepo={githubInfo ? handleOpenGitHubRepo : undefined}
+              sidebarsHidden={sidebarsHidden}
+              leftSidebarIconVisibility={devWorkspaceConfig.leftSidebarIcons}
+              rightSidebarIconVisibility={devWorkspaceConfig.rightSidebarIcons}
+              storybook={storybook}
+            />
+          </AreaManagerProvider>
         </ScopeManagerProvider>
       </div>
 

@@ -231,12 +231,14 @@ export const NoSelection: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createMockFileSystemWithSkills(),
-          },
-        } as any}
+        contextOverrides={
+          {
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createMockFileSystemWithSkills(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillDetailPanel {...props} />}
       </MockPanelProvider>
@@ -280,12 +282,14 @@ export const WithSelection: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createMockFileSystemWithSkills(),
-          },
-        } as any}
+        contextOverrides={
+          {
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createMockFileSystemWithSkills(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillDetailWithSelection {...props} />}
       </MockPanelProvider>
@@ -310,18 +314,20 @@ export const Loading: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          slices: mockSlices,
-          adapters: {
-            fileSystem: {
-              readFile: async () => {
-                // Simulate slow loading
-                await new Promise((resolve) => setTimeout(resolve, 10000));
-                return '';
+        contextOverrides={
+          {
+            slices: mockSlices,
+            adapters: {
+              fileSystem: {
+                readFile: async () => {
+                  // Simulate slow loading
+                  await new Promise((resolve) => setTimeout(resolve, 10000));
+                  return '';
+                },
               },
             },
-          },
-        } as any}
+          } as any
+        }
       >
         {(props) => <SkillDetailPanel {...props} />}
       </MockPanelProvider>
@@ -363,12 +369,14 @@ export const MCPBuilderSelected: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createMockFileSystemWithSkills(),
-          },
-        } as any}
+        contextOverrides={
+          {
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createMockFileSystemWithSkills(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillDetailWithSelection {...props} />}
       </MockPanelProvider>
@@ -410,12 +418,14 @@ export const DOCXSelected: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createMockFileSystemWithSkills(),
-          },
-        } as any}
+        contextOverrides={
+          {
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createMockFileSystemWithSkills(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillDetailWithSelection {...props} />}
       </MockPanelProvider>
@@ -526,7 +536,8 @@ const mockFileTreeWithInvalidSkills = builderWithInvalid.build({
 const createMockFileSystemWithInvalidSkills = () => {
   const skillContents: Record<string, string> = {
     'missing-name/SKILL.md': INVALID_FRONTMATTER_SKILLS['missing-name'],
-    'missing-description/SKILL.md': INVALID_FRONTMATTER_SKILLS['missing-description'],
+    'missing-description/SKILL.md':
+      INVALID_FRONTMATTER_SKILLS['missing-description'],
     'missing-both/SKILL.md': INVALID_FRONTMATTER_SKILLS['missing-both'],
     'no-frontmatter/SKILL.md': INVALID_FRONTMATTER_SKILLS['no-frontmatter'],
   };
@@ -576,12 +587,14 @@ export const MissingNameField: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createMockFileSystemWithInvalidSkills(),
-          },
-        } as any}
+        contextOverrides={
+          {
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createMockFileSystemWithInvalidSkills(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillDetailWithSelection {...props} />}
       </MockPanelProvider>
@@ -623,12 +636,14 @@ export const MissingDescriptionField: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createMockFileSystemWithInvalidSkills(),
-          },
-        } as any}
+        contextOverrides={
+          {
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createMockFileSystemWithInvalidSkills(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillDetailWithSelection {...props} />}
       </MockPanelProvider>
@@ -670,12 +685,14 @@ export const MissingBothFields: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createMockFileSystemWithInvalidSkills(),
-          },
-        } as any}
+        contextOverrides={
+          {
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createMockFileSystemWithInvalidSkills(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillDetailWithSelection {...props} />}
       </MockPanelProvider>
@@ -717,12 +734,14 @@ export const NoFrontmatter: Story = {
 
     return (
       <MockPanelProvider
-        contextOverrides={{
-          slices: mockSlices,
-          adapters: {
-            fileSystem: createMockFileSystemWithInvalidSkills(),
-          },
-        } as any}
+        contextOverrides={
+          {
+            slices: mockSlices,
+            adapters: {
+              fileSystem: createMockFileSystemWithInvalidSkills(),
+            },
+          } as any
+        }
       >
         {(props) => <SkillDetailWithSelection {...props} />}
       </MockPanelProvider>

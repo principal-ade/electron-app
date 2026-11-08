@@ -25,9 +25,9 @@ export const DEFAULT_NAMESPACE_COLOR = NAMESPACE_PALETTE[0];
 export const AREA_PANEL_COLOR = '#64748b';
 
 export function pickNamespaceColor(scopes: readonly ScopeRecord[]): string {
-  const used = new Set(scopes.flatMap(s => s.namespaces.map(n => n.color)));
+  const used = new Set(scopes.flatMap((s) => s.namespaces.map((n) => n.color)));
   return (
-    NAMESPACE_PALETTE.find(c => !used.has(c)) ??
+    NAMESPACE_PALETTE.find((c) => !used.has(c)) ??
     NAMESPACE_PALETTE[scopes.length % NAMESPACE_PALETTE.length]
   );
 }
@@ -44,8 +44,8 @@ export function buildLayersForScope(
   scope: ScopeRecord,
   toCityPath: (scopePath: string) => string,
 ): HighlightLayer[] {
-  const layers: HighlightLayer[] = scope.namespaces.map(ns => {
-    const maxDepth = Math.max(1, ...ns.paths.map(p => p.split('/').length));
+  const layers: HighlightLayer[] = scope.namespaces.map((ns) => {
+    const maxDepth = Math.max(1, ...ns.paths.map((p) => p.split('/').length));
     return {
       id: `${scope.name}::${ns.name}`,
       name: ns.name,
@@ -53,7 +53,7 @@ export function buildLayersForScope(
       color: ns.color ?? DEFAULT_NAMESPACE_COLOR,
       opacity: 0.55,
       priority: maxDepth,
-      items: ns.paths.map(p => ({
+      items: ns.paths.map((p) => ({
         path: toCityPath(p),
         type: 'directory' as const,
         renderStrategy: 'fill' as const,
@@ -68,7 +68,7 @@ export function buildLayersForScope(
       color: '#64748b',
       opacity: 0.4,
       priority: 0,
-      items: scope.paths.map(p => ({
+      items: scope.paths.map((p) => ({
         path: toCityPath(p),
         type: 'directory' as const,
         renderStrategy: 'fill' as const,

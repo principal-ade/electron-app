@@ -124,10 +124,7 @@ export function addNamespace(
 ): ScopeWorkspace {
   const namespaceName = input.name.trim();
   if (!namespaceName) {
-    throw new ScopeManagerError(
-      'Namespace name is required.',
-      'invalid-input',
-    );
+    throw new ScopeManagerError('Namespace name is required.', 'invalid-input');
   }
   const scope = requireScope(workspace, input.scopeName);
   if (scope.namespaces.some((ns) => ns.name === namespaceName)) {

@@ -275,15 +275,20 @@ class WindowSwitcher {
       this.windowList.map(async (win) => {
         if (win.alexandriaEntry?.path) {
           try {
-            const imageUrl = await fileCityService.getImageForRepository(win.alexandriaEntry.path);
+            const imageUrl = await fileCityService.getImageForRepository(
+              win.alexandriaEntry.path,
+            );
             if (imageUrl) {
               win.fileCityImageUrl = imageUrl;
             }
           } catch (error) {
-            log.warn(`[Window Switcher] Failed to get File City image for ${win.alexandriaEntry.path}:`, error);
+            log.warn(
+              `[Window Switcher] Failed to get File City image for ${win.alexandriaEntry.path}:`,
+              error,
+            );
           }
         }
-      })
+      }),
     );
   }
 

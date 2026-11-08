@@ -4,9 +4,14 @@ const USER_PREFERENCES_UPDATED_EVENT = 'user-preferences-updated';
 
 // Subscribe to main process preference changes (e.g., from HTTP API)
 // This bridges IPC notifications to the local CustomEvent system
-if (typeof window !== 'undefined' && window.mainProcess?.userPreferences?.onPreferencesChanged) {
+if (
+  typeof window !== 'undefined' &&
+  window.mainProcess?.userPreferences?.onPreferencesChanged
+) {
   window.mainProcess.userPreferences.onPreferencesChanged((preferences) => {
-    console.info('[UserPreferencesService] Preferences changed from main process');
+    console.info(
+      '[UserPreferencesService] Preferences changed from main process',
+    );
     window.dispatchEvent(
       new CustomEvent<UserPreferences>(USER_PREFERENCES_UPDATED_EVENT, {
         detail: preferences,

@@ -44,7 +44,7 @@ export interface PendingSkillChanges {
  */
 export type PendingChangesEmitter = (
   directoryId: string,
-  changes: PendingSkillChanges
+  changes: PendingSkillChanges,
 ) => void;
 
 /**
@@ -64,7 +64,10 @@ export class SkillsSyncService {
   private watchReferences: Map<string, string> = new Map(); // directoryId -> watchReferenceId
   private pendingChangesEmitter: PendingChangesEmitter | null = null;
 
-  constructor(configService: SkillsConfigService, gitService: SkillsGitService) {
+  constructor(
+    configService: SkillsConfigService,
+    gitService: SkillsGitService,
+  ) {
     this.configService = configService;
     this.gitService = gitService;
     this.syncState = {
@@ -94,7 +97,9 @@ export class SkillsSyncService {
 
     // Only proceed if sync is enabled and repo URL is configured
     if (!config.enabled || !config.repoUrl) {
-      console.log('[SkillsSync] Sync not enabled or no repo URL configured, skipping initialization');
+      console.log(
+        '[SkillsSync] Sync not enabled or no repo URL configured, skipping initialization',
+      );
       return;
     }
 
@@ -105,23 +110,25 @@ export class SkillsSyncService {
       if (directory.enabled && directory.localClonePath) {
         try {
           // Check if clone exists
-          const isCloned = await this.gitService.isDirectoryRepositoryCloned(directory.id);
+          const isCloned = await this.gitService.isDirectoryRepositoryCloned(
+            directory.id,
+          );
 
           if (!isCloned) {
             console.log(
-              `[SkillsSync] Clone doesn't exist for ${directory.displayName}, creating initial clone...`
+              `[SkillsSync] Clone doesn't exist for ${directory.displayName}, creating initial clone...`,
             );
             // Perform initial clone without copying to target directory
             await this.gitService.ensureCloneExists(directory.id);
           } else {
             console.log(
-              `[SkillsSync] Clone already exists for ${directory.displayName}`
+              `[SkillsSync] Clone already exists for ${directory.displayName}`,
             );
           }
         } catch (error) {
           console.error(
             `[SkillsSync] Failed to ensure clone exists for ${directory.displayName}:`,
-            error
+            error,
           );
           // Continue with other directories
           continue;
@@ -129,7 +136,9 @@ export class SkillsSyncService {
       }
     }
 
-    console.log('[SkillsSync] Registering clone directories with Repository Monitoring...');
+    console.log(
+      '[SkillsSync] Registering clone directories with Repository Monitoring...',
+    );
 
     // Now register clone directories with Repository Monitoring Server
     const repoMonitoringManager = getRepositoryMonitoringManager();
@@ -138,26 +147,31 @@ export class SkillsSyncService {
       if (directory.enabled && directory.localClonePath) {
         try {
           console.log(
-            `[SkillsSync] Registering clone directory: ${directory.localClonePath}`
+            `[SkillsSync] Registering clone directory: ${directory.localClonePath}`,
           );
 
           // Register the repository
-          await repoMonitoringManager.registerRepository(directory.localClonePath);
+          await repoMonitoringManager.registerRepository(
+            directory.localClonePath,
+          );
 
           // Acquire a watch reference
           const watchRef = `skills-sync-${directory.id}`;
-          await repoMonitoringManager.acquireWatch(directory.localClonePath, watchRef);
+          await repoMonitoringManager.acquireWatch(
+            directory.localClonePath,
+            watchRef,
+          );
 
           // Store the watch reference for cleanup
           this.watchReferences.set(directory.id, watchRef);
 
           console.log(
-            `[SkillsSync] Successfully registered ${directory.displayName} for monitoring`
+            `[SkillsSync] Successfully registered ${directory.displayName} for monitoring`,
           );
         } catch (error) {
           console.error(
             `[SkillsSync] Failed to register ${directory.displayName} for monitoring:`,
-            error
+            error,
           );
         }
       }
@@ -179,18 +193,26 @@ export class SkillsSyncService {
     const repoMonitoringManager = getRepositoryMonitoringManager();
 
     // Listen for workspace changes (file add/change/delete)
-    repoMonitoringManager.on('workspace-changed', (payload: WorkspaceChangeEventPayload) => {
-      if (payload.changes) {
-        this.handleCloneChange(payload.repoPath, payload.changes);
-      }
-    });
+    repoMonitoringManager.on(
+      'workspace-changed',
+      (payload: WorkspaceChangeEventPayload) => {
+        if (payload.changes) {
+          this.handleCloneChange(payload.repoPath, payload.changes);
+        }
+      },
+    );
 
     // Listen for git status changes (commits, branch switches)
-    repoMonitoringManager.on('git-status-changed', (payload: GitStatusWithFiles) => {
-      this.handleGitStatusChange(payload.repoPath, payload);
-    });
+    repoMonitoringManager.on(
+      'git-status-changed',
+      (payload: GitStatusWithFiles) => {
+        this.handleGitStatusChange(payload.repoPath, payload);
+      },
+    );
 
-    console.log('[SkillsSync] Repository monitoring event listeners registered');
+    console.log(
+      '[SkillsSync] Repository monitoring event listeners registered',
+    );
   }
 
   /**
@@ -199,19 +221,22 @@ export class SkillsSyncService {
    */
   private async handleCloneChange(
     clonePath: string,
-    changes: Array<{ path: string; type: string }>
+    changes: Array<{ path: string; type: string }>,
   ): Promise<void> {
     // Find the directory that owns this clone
     const config = await this.configService.getConfig();
     const directory = config.directories.find(
-      (d: GlobalSkillDirectory) => d.localClonePath === clonePath
+      (d: GlobalSkillDirectory) => d.localClonePath === clonePath,
     );
 
     if (!directory || !directory.enabled) {
       return;
     }
 
-    console.log(`[SkillsSync] File changes detected in ${directory.displayName}:`, changes);
+    console.log(
+      `[SkillsSync] File changes detected in ${directory.displayName}:`,
+      changes,
+    );
 
     // Filter to only skill files (*.md)
     const skillChanges = changes.filter((change) => {
@@ -243,14 +268,14 @@ export class SkillsSyncService {
         this.pendingChanges.set(directory.id, pendingChange);
 
         console.log(
-          `[SkillsSync] Stored ${skillChanges.length} pending changes for ${directory.displayName}`
+          `[SkillsSync] Stored ${skillChanges.length} pending changes for ${directory.displayName}`,
         );
 
         // Emit event to UI to notify user of pending changes
         if (this.pendingChangesEmitter) {
           this.pendingChangesEmitter(directory.id, pendingChange);
         }
-      }, 1000)
+      }, 1000),
     );
   }
 
@@ -260,12 +285,12 @@ export class SkillsSyncService {
    */
   private async handleGitStatusChange(
     clonePath: string,
-    status: GitStatusWithFiles
+    status: GitStatusWithFiles,
   ): Promise<void> {
     // Find the directory
     const config = await this.configService.getConfig();
     const directory = config.directories.find(
-      (d: GlobalSkillDirectory) => d.localClonePath === clonePath
+      (d: GlobalSkillDirectory) => d.localClonePath === clonePath,
     );
 
     if (!directory || !directory.enabled) {
@@ -273,12 +298,15 @@ export class SkillsSyncService {
     }
 
     // Log git status for debugging
-    console.log(`[SkillsSync] Git status changed in ${directory.displayName}:`, {
-      branch: status.branch,
-      ahead: status.ahead,
-      behind: status.behind,
-      isDirty: status.isDirty,
-    });
+    console.log(
+      `[SkillsSync] Git status changed in ${directory.displayName}:`,
+      {
+        branch: status.branch,
+        ahead: status.ahead,
+        behind: status.behind,
+        isDirty: status.isDirty,
+      },
+    );
 
     // Note: We don't auto-sync here
     // User will manually trigger sync via the pending changes UI
@@ -300,19 +328,26 @@ export class SkillsSyncService {
         const watchRef = this.watchReferences.get(directory.id);
         if (watchRef) {
           try {
-            await repoMonitoringManager.releaseWatch(directory.localClonePath, watchRef);
-            console.log(`[SkillsSync] Released watch for ${directory.displayName}`);
+            await repoMonitoringManager.releaseWatch(
+              directory.localClonePath,
+              watchRef,
+            );
+            console.log(
+              `[SkillsSync] Released watch for ${directory.displayName}`,
+            );
           } catch (error) {
             console.error(
               `[SkillsSync] Failed to release watch for ${directory.displayName}:`,
-              error
+              error,
             );
           }
         }
 
         // Optionally unregister (if no other watchers)
         try {
-          await repoMonitoringManager.unregisterRepository(directory.localClonePath);
+          await repoMonitoringManager.unregisterRepository(
+            directory.localClonePath,
+          );
         } catch (_error) {
           // Ignore errors - other watchers might still be using it
         }
@@ -345,7 +380,9 @@ export class SkillsSyncService {
    */
   clearPendingChanges(directoryId: string): void {
     this.pendingChanges.delete(directoryId);
-    console.log(`[SkillsSync] Cleared pending changes for directory: ${directoryId}`);
+    console.log(
+      `[SkillsSync] Cleared pending changes for directory: ${directoryId}`,
+    );
   }
 
   /**
@@ -365,7 +402,9 @@ export class SkillsSyncService {
     }
 
     const intervalMs = intervalMinutes * 60 * 1000;
-    console.log(`[SkillsSync] Starting periodic sync every ${intervalMinutes} minutes`);
+    console.log(
+      `[SkillsSync] Starting periodic sync every ${intervalMinutes} minutes`,
+    );
 
     this.syncInterval = setInterval(() => {
       this.sync().catch((error) => {
@@ -405,7 +444,9 @@ export class SkillsSyncService {
       const fetchResult = await this.gitService.fetchUpdates();
 
       if (fetchResult.hasUpdates) {
-        console.log(`[SkillsSync] ${fetchResult.changedPaths.length} files changed remotely`);
+        console.log(
+          `[SkillsSync] ${fetchResult.changedPaths.length} files changed remotely`,
+        );
 
         // Pull changes
         const pullSuccess = await this.gitService.pullChanges();
@@ -421,7 +462,7 @@ export class SkillsSyncService {
 
         // Update changed skills list
         this.syncState.changedSkills = await this.getChangedSkillsFromPaths(
-          fetchResult.changedPaths
+          fetchResult.changedPaths,
         );
 
         console.log('[SkillsSync] Sync completed successfully');
@@ -454,7 +495,7 @@ export class SkillsSyncService {
    */
   async detectChanges(
     skillPath: string,
-    metadata: SkillMetadata
+    metadata: SkillMetadata,
   ): Promise<ChangeDetectionResult> {
     try {
       // Get current local SHA (file hash)
@@ -496,7 +537,7 @@ export class SkillsSyncService {
    */
   async getSkillSyncStatus(
     skillPath: string,
-    metadata?: SkillMetadata
+    metadata?: SkillMetadata,
   ): Promise<SkillSyncStatus> {
     // If no metadata or sync not enabled, return disabled
     if (!metadata || !metadata.syncEnabled) {
@@ -531,16 +572,20 @@ export class SkillsSyncService {
   async syncProjectSkill(
     projectSkillPath: string,
     globalSkillPath: string,
-    metadata: SkillMetadata
+    metadata: SkillMetadata,
   ): Promise<boolean> {
     try {
-      console.log(`[SkillsSync] Syncing skill from ${globalSkillPath} to ${projectSkillPath}`);
+      console.log(
+        `[SkillsSync] Syncing skill from ${globalSkillPath} to ${projectSkillPath}`,
+      );
 
       // Check for conflicts
       const changes = await this.detectChanges(projectSkillPath, metadata);
 
       if (changes.hasLocalModifications && changes.hasChanges) {
-        console.log('[SkillsSync] Conflict detected, applying resolution strategy');
+        console.log(
+          '[SkillsSync] Conflict detected, applying resolution strategy',
+        );
 
         // Apply conflict resolution strategy
         const strategy = metadata.conflictResolution || 'prompt';
@@ -588,16 +633,15 @@ export class SkillsSyncService {
    */
   async resolveConflict(
     skillPath: string,
-    resolution: 'keep-local' | 'use-remote'
+    resolution: 'keep-local' | 'use-remote',
   ): Promise<boolean> {
     try {
       const skillName = path.basename(skillPath);
 
       if (resolution === 'keep-local') {
         // Remove from conflicting list
-        this.syncState.conflictingSkills = this.syncState.conflictingSkills.filter(
-          (s) => s !== skillName
-        );
+        this.syncState.conflictingSkills =
+          this.syncState.conflictingSkills.filter((s) => s !== skillName);
         return true;
       }
 
@@ -608,19 +652,25 @@ export class SkillsSyncService {
           return false;
         }
 
-        const globalPath = await this.getGlobalSkillPath(skillName, metadata.syncSource);
+        const globalPath = await this.getGlobalSkillPath(
+          skillName,
+          metadata.syncSource,
+        );
         if (!globalPath) {
           return false;
         }
 
         // Sync from global
-        const success = await this.syncProjectSkill(skillPath, globalPath, metadata);
+        const success = await this.syncProjectSkill(
+          skillPath,
+          globalPath,
+          metadata,
+        );
 
         if (success) {
           // Remove from conflicting list
-          this.syncState.conflictingSkills = this.syncState.conflictingSkills.filter(
-            (s) => s !== skillName
-          );
+          this.syncState.conflictingSkills =
+            this.syncState.conflictingSkills.filter((s) => s !== skillName);
         }
 
         return success;
@@ -638,7 +688,7 @@ export class SkillsSyncService {
    */
   async enableSkillSync(
     skillPath: string,
-    syncSource: 'git-global' | 'github'
+    syncSource: 'git-global' | 'github',
   ): Promise<boolean> {
     try {
       const metadata = await this.readSkillMetadata(skillPath);
@@ -718,7 +768,10 @@ export class SkillsSyncService {
   /**
    * Copy skill directory recursively
    */
-  private async copySkillDirectory(source: string, target: string): Promise<void> {
+  private async copySkillDirectory(
+    source: string,
+    target: string,
+  ): Promise<void> {
     await fs.mkdir(target, { recursive: true });
 
     const entries = await fs.readdir(source, { withFileTypes: true });
@@ -771,7 +824,7 @@ export class SkillsSyncService {
    */
   private async writeSkillMetadata(
     skillPath: string,
-    metadata: SkillMetadata
+    metadata: SkillMetadata,
   ): Promise<void> {
     const skillName = path.basename(skillPath);
     const lockService = getSkillLockFileService();
@@ -794,7 +847,10 @@ export class SkillsSyncService {
       await lockService.addSkill({
         name: skillName,
         entry: {
-          source: metadata.owner && metadata.repo ? `${metadata.owner}/${metadata.repo}` : 'local',
+          source:
+            metadata.owner && metadata.repo
+              ? `${metadata.owner}/${metadata.repo}`
+              : 'local',
           sourceType: 'local',
           sourceUrl: metadata.installedFrom || '',
           skillPath: metadata.skillPath,
@@ -809,7 +865,7 @@ export class SkillsSyncService {
    */
   private async getGlobalSkillPath(
     skillName: string,
-    _source: 'git-global' | 'github'
+    _source: 'git-global' | 'github',
   ): Promise<string | null> {
     const home = process.env.HOME || process.env.USERPROFILE;
     if (!home) {

@@ -61,14 +61,16 @@ export interface TestGoodbyeScreenResult {
  */
 export type AppVersionRouterType = Record<
   string,
-  { action: (args: { context: ActionContext; input: unknown }) => Promise<unknown> }
+  {
+    action: (args: {
+      context: ActionContext;
+      input: unknown;
+    }) => Promise<unknown>;
+  }
 > & {
   // Version Info
   getVersion: {
-    action: (args: {
-      context: ActionContext;
-      input?: void;
-    }) => Promise<string>;
+    action: (args: { context: ActionContext; input?: void }) => Promise<string>;
   };
 
   getVersionInfo: {

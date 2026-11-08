@@ -188,7 +188,8 @@ export class QualityLensService {
       };
     } catch (error: unknown) {
       console.error(`[QualityLensService] Error:`, error);
-      const errorObj = error instanceof Error ? error : new Error(String(error));
+      const errorObj =
+        error instanceof Error ? error : new Error(String(error));
       return this.createErrorResponse(
         packageCommand.lensId || packageCommand.name,
         packageCommand.command,
@@ -224,7 +225,8 @@ export class QualityLensService {
         stderr: result.stderr,
       };
     } catch (error: unknown) {
-      const errorObj = error instanceof Error ? error : new Error(String(error));
+      const errorObj =
+        error instanceof Error ? error : new Error(String(error));
       return this.createErrorResponse(
         packageCommand.name,
         packageCommand.command,

@@ -13,7 +13,7 @@ interface AgentCardProps {
  * Helper function to get source badge info
  */
 const getSourceBadge = (
-  source: Agent['source']
+  source: Agent['source'],
 ): { label: string; icon: React.ReactNode; color: string; bgColor: string } => {
   switch (source) {
     case 'project-root':
@@ -40,13 +40,21 @@ const getSourceBadge = (
   }
 };
 
-export const AgentCard: React.FC<AgentCardProps> = ({ agent, onClick, isSelected }) => {
+export const AgentCard: React.FC<AgentCardProps> = ({
+  agent,
+  onClick,
+  isSelected,
+}) => {
   const { theme } = useTheme();
   const sourceBadge = getSourceBadge(agent.source);
   const [pathCopied, setPathCopied] = React.useState(false);
 
   // Extract a preview from content (first paragraph or section)
-  const preview = agent.content.split('\n').find(line => line.trim() && !line.startsWith('#'))?.substring(0, 150) || 'No description available';
+  const preview =
+    agent.content
+      .split('\n')
+      .find((line) => line.trim() && !line.startsWith('#'))
+      ?.substring(0, 150) || 'No description available';
 
   const handleCopyPath = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering card onClick
@@ -134,7 +142,9 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onClick, isSelected
           fontSize: theme.fontSizes[0],
           color: pathCopied ? theme.colors.success : theme.colors.textMuted,
           fontFamily: theme.fonts.monospace,
-          background: pathCopied ? `${theme.colors.success}15` : theme.colors.background,
+          background: pathCopied
+            ? `${theme.colors.success}15`
+            : theme.colors.background,
           padding: '4px 8px',
           borderRadius: theme.radii[1],
           overflow: 'hidden',
@@ -147,7 +157,8 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onClick, isSelected
         title={pathCopied ? 'Copied!' : `Click to copy: ${agent.path}`}
         onMouseEnter={(e) => {
           if (!pathCopied) {
-            e.currentTarget.style.background = theme.colors.backgroundTertiary || theme.colors.border;
+            e.currentTarget.style.background =
+              theme.colors.backgroundTertiary || theme.colors.border;
           }
         }}
         onMouseLeave={(e) => {

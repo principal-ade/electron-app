@@ -3,7 +3,11 @@
  * Provides methods for extracting TypeScript types from packages and layers
  */
 
-import type { ExtractedType, PackageTypes, PackageLayer } from '@principal-ai/codebase-composition';
+import type {
+  ExtractedType,
+  PackageTypes,
+  PackageLayer,
+} from '@principal-ai/codebase-composition';
 
 export class TypeExtractionService {
   async extractTypes(packagePath: string): Promise<ExtractedType[] | null> {
@@ -17,7 +21,9 @@ export class TypeExtractionService {
 
   async extractPackageTypes(packagePath: string): Promise<PackageTypes | null> {
     try {
-      return await window.mainProcess.typeExtraction.extractPackageTypes(packagePath);
+      return await window.mainProcess.typeExtraction.extractPackageTypes(
+        packagePath,
+      );
     } catch (error) {
       console.error(
         '[TypeExtractionService] Error extracting package types:',
@@ -33,7 +39,9 @@ export class TypeExtractionService {
     error?: string;
   } | null> {
     try {
-      return await window.mainProcess.typeExtraction.generateDefinitionFile(packagePath);
+      return await window.mainProcess.typeExtraction.generateDefinitionFile(
+        packagePath,
+      );
     } catch (error) {
       console.error(
         '[TypeExtractionService] Error generating definition file:',
@@ -48,7 +56,10 @@ export class TypeExtractionService {
     workingDirectory: string,
   ): Promise<PackageTypes | null> {
     try {
-      return await window.mainProcess.typeExtraction.extractPackageTypesFromLayer(layer, workingDirectory);
+      return await window.mainProcess.typeExtraction.extractPackageTypesFromLayer(
+        layer,
+        workingDirectory,
+      );
     } catch (error) {
       console.error(
         '[TypeExtractionService] Error extracting types from layer:',

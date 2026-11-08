@@ -25,11 +25,16 @@ export function useCommitHeatMap(repoPath: string | null, days = 365) {
     setError(null);
 
     try {
-      const commitDates = await GitService.getCommitDatesForHeatMap(repoPath, days);
+      const commitDates = await GitService.getCommitDatesForHeatMap(
+        repoPath,
+        days,
+      );
       setCommits(commitDates);
     } catch (err) {
       console.error('[useCommitHeatMap] Error loading commit data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load commit history');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load commit history',
+      );
       setCommits(EMPTY_COMMITS);
     } finally {
       setLoading(false);

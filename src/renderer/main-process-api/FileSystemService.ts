@@ -1,4 +1,7 @@
-import type { GlobalSkillDirectory, SkillsRepoConfig } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import type {
+  GlobalSkillDirectory,
+  SkillsRepoConfig,
+} from '../../shared/main-process-api-interfaces/FileSystemAPI';
 
 export class FileSystemService {
   static async getFileStats(filePath: string) {
@@ -62,7 +65,9 @@ export class FileSystemService {
     fileTypes?: string[];
     isSubdirectory?: boolean;
   }) {
-    console.info(`[FileSystemService] Watching directory: ${options.directoryPath}`);
+    console.info(
+      `[FileSystemService] Watching directory: ${options.directoryPath}`,
+    );
     return window.mainProcess.fileSystem.watchDirectory(options);
   }
 
@@ -141,12 +146,12 @@ export class FileSystemService {
   static async getFileContentAtRevision(
     repositoryPath: string,
     filePath: string,
-    revision: string = 'HEAD'
+    revision: string = 'HEAD',
   ): Promise<string | null> {
     return window.mainProcess.fileSystem.getFileContentAtRevision(
       repositoryPath,
       filePath,
-      revision
+      revision,
     );
   }
 
@@ -167,16 +172,28 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.updateSyncConfig(updates);
   }
 
-  static async enableSkillSync(skillPath: string, syncSource: 'git-global' | 'github') {
-    return window.mainProcess.fileSystem.enableSkillSync({ skillPath, syncSource });
+  static async enableSkillSync(
+    skillPath: string,
+    syncSource: 'git-global' | 'github',
+  ) {
+    return window.mainProcess.fileSystem.enableSkillSync({
+      skillPath,
+      syncSource,
+    });
   }
 
   static async disableSkillSync(skillPath: string) {
     return window.mainProcess.fileSystem.disableSkillSync({ skillPath });
   }
 
-  static async resolveSkillConflict(skillPath: string, resolution: 'keep-local' | 'use-remote') {
-    return window.mainProcess.fileSystem.resolveSkillConflict({ skillPath, resolution });
+  static async resolveSkillConflict(
+    skillPath: string,
+    resolution: 'keep-local' | 'use-remote',
+  ) {
+    return window.mainProcess.fileSystem.resolveSkillConflict({
+      skillPath,
+      resolution,
+    });
   }
 
   // Skills repository initialization
@@ -209,11 +226,16 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.getSkillDirectories();
   }
 
-  static async addSkillDirectory(directory: Omit<GlobalSkillDirectory, 'id' | 'localClonePath'>) {
+  static async addSkillDirectory(
+    directory: Omit<GlobalSkillDirectory, 'id' | 'localClonePath'>,
+  ) {
     return window.mainProcess.fileSystem.addSkillDirectory(directory);
   }
 
-  static async updateSkillDirectory(id: string, updates: Partial<GlobalSkillDirectory>) {
+  static async updateSkillDirectory(
+    id: string,
+    updates: Partial<GlobalSkillDirectory>,
+  ) {
     return window.mainProcess.fileSystem.updateSkillDirectory({ id, updates });
   }
 
@@ -233,7 +255,9 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.deleteAgentDirectory(agentId);
   }
 
-  static async deleteSkill(skillPath: string): Promise<{ success: boolean; error?: string }> {
+  static async deleteSkill(
+    skillPath: string,
+  ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.fileSystem.deleteSkill(skillPath);
   }
 
@@ -271,7 +295,14 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.scanFoldersForRepos(folderPaths);
   }
 
-  static onRepoScanProgress(callback: (progress: { current: number; total: number; currentFolder: string; foundRepos: number }) => void): () => void {
+  static onRepoScanProgress(
+    callback: (progress: {
+      current: number;
+      total: number;
+      currentFolder: string;
+      foundRepos: number;
+    }) => void,
+  ): () => void {
     return window.mainProcess.fileSystem.onRepoScanProgress(callback);
   }
 }

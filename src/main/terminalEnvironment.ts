@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import * as os from 'os';
 import * as path from 'path';
 import { EnvironmentConfig } from './utils/environmentConfig';
-import { stripTsNodeEnv } from '../shared/nodeOptions';
+import { sanitizeTerminalEnv } from '../shared/terminalEnv';
 
 /**
  * Professional terminal environment manager for Electron apps
@@ -97,12 +97,7 @@ export class TerminalEnvironment {
           const result = execSync(`${shell} -l -c "echo $PATH"`, {
             encoding: 'utf8',
             timeout: 5000,
-            env: {
-              ...process.env,
-              // Ensure we get a clean environment
-              ELECTRON_RUN_AS_NODE: undefined,
-              NODE_OPTIONS: undefined,
-            },
+            env: sanitizeTerminalEnv({ ...process.env }),
           });
 
           if (result && result.trim()) {
@@ -242,11 +237,7 @@ export class TerminalEnvironment {
     // dev/build process. Inherited by a shell they break every `node`/`npm`
     // command started outside the project root with
     // "TS5083: Cannot read file '<cwd>/tsconfig.node.json'".
-    const cleanEnv = stripTsNodeEnv({ ...process.env });
-
-    // Remove Electron/Node specific variables that might interfere
-    delete cleanEnv.NODE_OPTIONS;
-    delete cleanEnv.ELECTRON_RUN_AS_NODE;
+    const cleanEnv = sanitizeTerminalEnv({ ...process.env });
 
     // Build the terminal environment
     const env: NodeJS.ProcessEnv = {

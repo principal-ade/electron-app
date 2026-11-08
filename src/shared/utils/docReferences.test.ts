@@ -103,7 +103,9 @@ describe('extractDocReferences', () => {
   });
 
   it('honors balanced parens in the destination', () => {
-    const refs = extractDocReferences('[x](https://en.wikipedia.org/wiki/Foo_(bar))');
+    const refs = extractDocReferences(
+      '[x](https://en.wikipedia.org/wiki/Foo_(bar))',
+    );
     expect(refs[0].value).toBe('https://en.wikipedia.org/wiki/Foo_(bar)');
   });
 

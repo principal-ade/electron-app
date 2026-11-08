@@ -4,8 +4,8 @@ import type { PanelContextValue } from '@principal-ade/panel-framework-core';
 import type { AgentsPanelContext } from '../../types';
 
 export type SubagentSource =
-  | 'project-claude'    // ./.claude/agents/
-  | 'global-claude';    // ~/.claude/agents/ (from globalSubagents slice)
+  | 'project-claude' // ./.claude/agents/
+  | 'global-claude'; // ~/.claude/agents/ (from globalSubagents slice)
 
 export interface SubagentFrontmatter {
   name: string;
@@ -13,7 +13,8 @@ export interface SubagentFrontmatter {
   tools?: string;
   disallowedTools?: string;
   model?: 'sonnet' | 'opus' | 'haiku' | 'inherit';
-  permissionMode?: 'default' | 'acceptEdits' | 'dontAsk' | 'bypassPermissions' | 'plan';
+  permissionMode?:
+    'default' | 'acceptEdits' | 'dontAsk' | 'bypassPermissions' | 'plan';
   skills?: string;
   hooks?: unknown;
 }
@@ -23,7 +24,7 @@ export interface Subagent {
   name: string;
   path: string;
   content: string; // Full markdown content
-  prompt: string;  // The markdown body (after frontmatter)
+  prompt: string; // The markdown body (after frontmatter)
   frontmatter: SubagentFrontmatter;
   source: SubagentSource;
   priority: 1 | 2; // 1=project-claude, 2=global-claude
@@ -54,7 +55,7 @@ interface UseSubagentsDataReturn {
  * Helper function to determine subagent source and priority from path
  */
 const determineSubagentSource = (
-  path: string
+  path: string,
 ): { source: SubagentSource; priority: 1 | 2 } => {
   if (path.includes('.claude/agents/')) {
     return { source: 'project-claude', priority: 1 };
@@ -68,7 +69,7 @@ const determineSubagentSource = (
  */
 const findSubagentFiles = (fileTree: FileTree): string[] => {
   // Filter allFiles for .md files in .claude/agents/ directory
-  const subagentFiles = fileTree.allFiles.filter(file => {
+  const subagentFiles = fileTree.allFiles.filter((file) => {
     const path = file.relativePath;
     const isMarkdown = file.name.endsWith('.md');
     const isInAgentsDir = path.startsWith('.claude/agents/');
@@ -77,16 +78,20 @@ const findSubagentFiles = (fileTree: FileTree): string[] => {
   });
 
   // Return their relative paths
-  return subagentFiles.map(file => file.relativePath);
+  return subagentFiles.map((file) => file.relativePath);
 };
 
 /**
  * Helper function to parse YAML frontmatter from markdown
  */
-const parseFrontmatter = (content: string): { frontmatter: SubagentFrontmatter; body: string } => {
+const parseFrontmatter = (
+  content: string,
+): { frontmatter: SubagentFrontmatter; body: string } => {
   // Check if content starts with frontmatter delimiter
   if (!content.trim().startsWith('---')) {
-    throw new Error('No frontmatter found - subagent must have YAML frontmatter');
+    throw new Error(
+      'No frontmatter found - subagent must have YAML frontmatter',
+    );
   }
 
   const lines = content.split('\n');
@@ -106,7 +111,10 @@ const parseFrontmatter = (content: string): { frontmatter: SubagentFrontmatter; 
 
   // Extract frontmatter lines (between the two ---)
   const frontmatterLines = lines.slice(1, frontmatterEnd);
-  const body = lines.slice(frontmatterEnd + 1).join('\n').trim();
+  const body = lines
+    .slice(frontmatterEnd + 1)
+    .join('\n')
+    .trim();
 
   // Parse YAML frontmatter (simple key: value parser)
   const frontmatter: Partial<SubagentFrontmatter> = {};
@@ -129,7 +137,9 @@ const parseFrontmatter = (content: string): { frontmatter: SubagentFrontmatter; 
 
   // Validate required fields
   if (!frontmatter.name || !frontmatter.description) {
-    throw new Error('Subagent frontmatter must have "name" and "description" fields');
+    throw new Error(
+      'Subagent frontmatter must have "name" and "description" fields',
+    );
   }
 
   return {
@@ -183,7 +193,7 @@ export const useSubagentsData = ({
   // Memoize globalSubagents to prevent infinite re-renders
   const globalSubagents = useMemo(
     () => globalSubagentsSlice?.data?.subagents ?? EMPTY_SUBAGENTS_ARRAY,
-    [globalSubagentsSlice?.data?.subagents]
+    [globalSubagentsSlice?.data?.subagents],
   );
   const globalSubagentsCount = globalSubagents.length; // Use count as stable primitive
 
@@ -197,7 +207,10 @@ export const useSubagentsData = ({
 
   const loadSubagents = useCallback(async () => {
     // Skip if we've already loaded this exact data
-    if (fileTreeSha === lastLoadedSha.current && globalSubagentsCount === lastGlobalSubagentsCount.current) {
+    if (
+      fileTreeSha === lastLoadedSha.current &&
+      globalSubagentsCount === lastGlobalSubagentsCount.current
+    ) {
       return;
     }
 
@@ -224,7 +237,7 @@ export const useSubagentsData = ({
         });
 
         localSubagents = (await Promise.all(subagentPromises)).filter(
-          (subagent): subagent is Subagent => subagent !== null
+          (subagent): subagent is Subagent => subagent !== null,
         );
       }
 
@@ -237,13 +250,21 @@ export const useSubagentsData = ({
       lastLoadedSha.current = fileTreeSha;
       lastGlobalSubagentsCount.current = globalSubagentsCount;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load subagents';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to load subagents';
       setError(errorMessage);
       console.error('Error loading subagents:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [fileTree, fileTreeSha, globalSubagents, globalSubagentsCount, repoPath, fileSystem]);
+  }, [
+    fileTree,
+    fileTreeSha,
+    globalSubagents,
+    globalSubagentsCount,
+    repoPath,
+    fileSystem,
+  ]);
 
   const refreshSubagents = useCallback(async () => {
     // Force reload by clearing the tracking refs

@@ -45,7 +45,10 @@ export function applyTelemetryPreference(
 ): void {
   const next = resolveTelemetrySettings({ preference, env: process.env });
 
-  if (next.enabled === settings.enabled && next.endpoint === settings.endpoint) {
+  if (
+    next.enabled === settings.enabled &&
+    next.endpoint === settings.endpoint
+  ) {
     return;
   }
 

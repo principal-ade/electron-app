@@ -55,7 +55,7 @@ const PRESET_SKILL_DIRECTORIES: PresetDirectoryConfig[] = [
     path: '{HOME}/.claude/skills',
     agentRootPath: '{HOME}/.claude',
     displayName: 'Claude',
-    description: 'Claude-specific skills for Anthropic\'s Claude',
+    description: "Claude-specific skills for Anthropic's Claude",
     icon: '🎯',
   },
   {
@@ -99,7 +99,7 @@ export class SkillsDetectionService {
    * Get all preset directory configurations
    */
   getPresets(): PresetDirectory[] {
-    return PRESET_SKILL_DIRECTORIES.map(preset => ({
+    return PRESET_SKILL_DIRECTORIES.map((preset) => ({
       ...preset,
       path: preset.path.replace('{HOME}', this.homeDir),
     }));
@@ -115,7 +115,9 @@ export class SkillsDetectionService {
     }
 
     try {
-      const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
+      const entries = await fsPromises.readdir(dirPath, {
+        withFileTypes: true,
+      });
       const skills: string[] = [];
 
       for (const entry of entries) {
@@ -131,7 +133,10 @@ export class SkillsDetectionService {
 
       return skills;
     } catch (error) {
-      console.warn(`[SkillsDetection] Error reading directory ${dirPath}:`, error);
+      console.warn(
+        `[SkillsDetection] Error reading directory ${dirPath}:`,
+        error,
+      );
       return [];
     }
   }
@@ -170,7 +175,9 @@ export class SkillsDetectionService {
       }
     }
 
-    console.log(`[SkillsDetection] Found ${detectedDirs.length} directories with skills`);
+    console.log(
+      `[SkillsDetection] Found ${detectedDirs.length} directories with skills`,
+    );
     return detectedDirs;
   }
 
@@ -183,19 +190,24 @@ export class SkillsDetectionService {
     const skillDirs: LocalSkill[] = [];
 
     // Helper to find skill directories
-    const findSkillDirs = async (baseDir: string, source: LocalSkill['source']) => {
+    const findSkillDirs = async (
+      baseDir: string,
+      source: LocalSkill['source'],
+    ) => {
       try {
         if (!fs.existsSync(baseDir)) {
           return;
         }
 
-        const entries = await fsPromises.readdir(baseDir, { withFileTypes: true });
+        const entries = await fsPromises.readdir(baseDir, {
+          withFileTypes: true,
+        });
         for (const entry of entries) {
           if (entry.isDirectory()) {
             const skillPath = path.join(baseDir, entry.name);
             // Check if it contains SKILL.md or any .md file
             const files = await fsPromises.readdir(skillPath);
-            if (files.some(f => f.endsWith('.md'))) {
+            if (files.some((f) => f.endsWith('.md'))) {
               skillDirs.push({
                 path: skillPath,
                 name: entry.name,
@@ -212,9 +224,15 @@ export class SkillsDetectionService {
     // Scan primary directories
     await findSkillDirs(path.join(this.homeDir, '.agents', 'skills'), 'agents');
     await findSkillDirs(path.join(this.homeDir, '.claude', 'skills'), 'claude');
-    await findSkillDirs(path.join(this.homeDir, '.config', 'opencode', 'skill'), 'opencode');
+    await findSkillDirs(
+      path.join(this.homeDir, '.config', 'opencode', 'skill'),
+      'opencode',
+    );
     await findSkillDirs(path.join(this.homeDir, '.cursor', 'skills'), 'cursor');
-    await findSkillDirs(path.join(this.homeDir, '.windsurf', 'skills'), 'windsurf');
+    await findSkillDirs(
+      path.join(this.homeDir, '.windsurf', 'skills'),
+      'windsurf',
+    );
 
     console.log(`[SkillsDetection] Found ${skillDirs.length} total skills`);
     return skillDirs;
@@ -224,7 +242,7 @@ export class SkillsDetectionService {
    * Check if a specific preset directory exists
    */
   async directoryExists(presetId: string): Promise<boolean> {
-    const preset = PRESET_SKILL_DIRECTORIES.find(p => p.id === presetId);
+    const preset = PRESET_SKILL_DIRECTORIES.find((p) => p.id === presetId);
     if (!preset) {
       return false;
     }
@@ -237,7 +255,7 @@ export class SkillsDetectionService {
    * Get the absolute path for a preset directory
    */
   getPresetPath(presetId: string): string | null {
-    const preset = PRESET_SKILL_DIRECTORIES.find(p => p.id === presetId);
+    const preset = PRESET_SKILL_DIRECTORIES.find((p) => p.id === presetId);
     if (!preset) {
       return null;
     }

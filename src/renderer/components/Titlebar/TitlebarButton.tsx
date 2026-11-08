@@ -57,9 +57,7 @@ export const TitlebarButton: React.FC<TitlebarButtonProps> = ({
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.backgroundColor =
-          mode === 'dark'
-            ? 'rgba(255, 255, 255, 0.1)'
-            : 'rgba(0, 0, 0, 0.05)';
+          mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
         e.currentTarget.style.color = theme.colors.text;
       }}
       onMouseLeave={(e) => {

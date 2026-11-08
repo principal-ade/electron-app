@@ -38,8 +38,7 @@ export interface PrepareBuildCheckoutInput {
 export type CheckoutAction = 'cloned' | 'updated' | 'reused';
 
 export type PrepareBuildCheckoutResult =
-  | { ok: true; action: CheckoutAction }
-  | { ok: false; error: string };
+  { ok: true; action: CheckoutAction } | { ok: false; error: string };
 
 export interface PrepareBuildCheckoutDeps {
   git?: GitRunner;

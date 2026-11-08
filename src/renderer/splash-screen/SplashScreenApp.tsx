@@ -27,7 +27,9 @@ const getElectronAPI = (): SplashElectronAPI | undefined => {
 export const SplashScreenApp: React.FC = () => {
   const { theme } = useTheme();
   const [isClosing, setIsClosing] = useState(false);
-  const [logoSize, setLogoSize] = useState(() => Math.round(window.innerHeight * 0.25));
+  const [logoSize, setLogoSize] = useState(() =>
+    Math.round(window.innerHeight * 0.25),
+  );
 
   // Update logo size on window resize
   useEffect(() => {
@@ -93,7 +95,6 @@ export const SplashScreenApp: React.FC = () => {
           color={theme.colors.text}
           background="transparent"
         />
-
       </div>
     </div>
   );

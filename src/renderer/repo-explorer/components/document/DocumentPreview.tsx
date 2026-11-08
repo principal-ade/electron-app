@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 
 // react-pdf / pdf.js are heavy and need bundler-specific worker glue. Load them
 // only when a PDF is actually viewed, so the DOCX and PPTX paths never pay that
 // cost (and a DOCX-only host doesn't need the pdf.js worker wired up).
-const PdfView = lazy(() => import("./PdfView"));
+const PdfView = lazy(() => import('./PdfView'));
 
 /** Which engine to use for DOCX. docx-preview = high visual fidelity (pages,
  * tables, images, styles). mammoth = clean semantic HTML, text-first, loses
  * most layout but is great for search/indexing/diffing. */
-export type DocxRenderer = "docx-preview" | "mammoth";
+export type DocxRenderer = 'docx-preview' | 'mammoth';
 
-export type DocumentKind = "docx" | "pdf" | "pptx";
+export type DocumentKind = 'docx' | 'pdf' | 'pptx';
 
 export interface DocumentPreviewProps {
   /** URL to fetch the document bytes from (static fixture, GitHub download_url, etc.). */
@@ -25,17 +25,17 @@ export interface DocumentPreviewProps {
 }
 
 function inferKind(src: string): DocumentKind | null {
-  const lower = (src.split("?")[0] ?? src).toLowerCase();
-  if (lower.endsWith(".pdf")) return "pdf";
-  if (lower.endsWith(".docx")) return "docx";
-  if (lower.endsWith(".pptx")) return "pptx";
+  const lower = (src.split('?')[0] ?? src).toLowerCase();
+  if (lower.endsWith('.pdf')) return 'pdf';
+  if (lower.endsWith('.docx')) return 'docx';
+  if (lower.endsWith('.pptx')) return 'pptx';
   return null;
 }
 
 export function DocumentPreview({
   src,
   kind,
-  renderer = "docx-preview",
+  renderer = 'docx-preview',
   className,
 }: DocumentPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,14 +45,14 @@ export function DocumentPreview({
   const resolvedKind = kind ?? inferKind(src);
 
   useEffect(() => {
-    if (resolvedKind !== "docx" && resolvedKind !== "pptx") return;
+    if (resolvedKind !== 'docx' && resolvedKind !== 'pptx') return;
     let cancelled = false;
     const container = containerRef.current;
     if (!container) return;
 
     setLoading(true);
     setError(null);
-    container.innerHTML = "";
+    container.innerHTML = '';
 
     (async () => {
       try {
@@ -61,23 +61,25 @@ export function DocumentPreview({
         const buffer = await res.arrayBuffer();
         if (cancelled) return;
 
-        if (resolvedKind === "pptx") {
-          const { init } = await import("../../shims/unsupported-docx");
+        if (resolvedKind === 'pptx') {
+          const { init } = await import('../../shims/unsupported-docx');
           const previewer = init(container, {
             width: container.clientWidth || 960,
             height: Math.round((container.clientWidth || 960) * 0.5625),
-            mode: "list",
+            mode: 'list',
           });
           await previewer.preview(buffer);
-        } else if (renderer === "mammoth") {
-          const mammoth = await import("../../shims/unsupported-docx");
-          const { value } = await mammoth.convertToHtml({ arrayBuffer: buffer });
+        } else if (renderer === 'mammoth') {
+          const mammoth = await import('../../shims/unsupported-docx');
+          const { value } = await mammoth.convertToHtml({
+            arrayBuffer: buffer,
+          });
           if (cancelled) return;
           container.innerHTML = value;
         } else {
-          const { renderAsync } = await import("../../shims/unsupported-docx");
+          const { renderAsync } = await import('../../shims/unsupported-docx');
           await renderAsync(buffer, container, undefined, {
-            className: "docx",
+            className: 'docx',
             inWrapper: true,
             ignoreWidth: false,
             ignoreHeight: false,
@@ -99,11 +101,11 @@ export function DocumentPreview({
     };
   }, [src, resolvedKind, renderer]);
 
-  if (resolvedKind === "pdf") {
+  if (resolvedKind === 'pdf') {
     return (
       <Suspense
         fallback={
-          <div style={{ padding: 24, color: "#888", fontFamily: "system-ui" }}>
+          <div style={{ padding: 24, color: '#888', fontFamily: 'system-ui' }}>
             Loading PDF…
           </div>
         }
@@ -113,19 +115,24 @@ export function DocumentPreview({
     );
   }
 
-  if (resolvedKind !== "docx" && resolvedKind !== "pptx") {
-    return <div className={className}>Unsupported document type for: {src}</div>;
+  if (resolvedKind !== 'docx' && resolvedKind !== 'pptx') {
+    return (
+      <div className={className}>Unsupported document type for: {src}</div>
+    );
   }
 
   return (
-    <div className={className} style={{ position: "relative", overflow: "auto" }}>
+    <div
+      className={className}
+      style={{ position: 'relative', overflow: 'auto' }}
+    >
       {loading && (
-        <div style={{ padding: 24, color: "#888", fontFamily: "system-ui" }}>
+        <div style={{ padding: 24, color: '#888', fontFamily: 'system-ui' }}>
           Rendering document…
         </div>
       )}
       {error && (
-        <div style={{ padding: 24, color: "#c00", fontFamily: "system-ui" }}>
+        <div style={{ padding: 24, color: '#c00', fontFamily: 'system-ui' }}>
           Failed to render: {error}
         </div>
       )}

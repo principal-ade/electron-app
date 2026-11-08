@@ -17,8 +17,7 @@ export function openOrNavigateLocalhostBrowser(
 ): WorkspaceTab[] {
   const id = browserTabId(target);
   const existing = tabs.find((tab) => tab.id === id) as
-    | LocalhostBrowserTab
-    | undefined;
+    LocalhostBrowserTab | undefined;
   const next: LocalhostBrowserTab = {
     ...existing,
     id,

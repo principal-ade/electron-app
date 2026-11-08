@@ -87,7 +87,7 @@ function LoopingBlockDrop({
   const loopRef = useRef(loopMs);
   loopRef.current = loopMs;
   useEffect(() => {
-    const id = window.setInterval(() => setKey(k => k + 1), loopRef.current);
+    const id = window.setInterval(() => setKey((k) => k + 1), loopRef.current);
     return () => window.clearInterval(id);
   }, []);
   return <FileCityBlockDrop {...props} resetKey={key} />;

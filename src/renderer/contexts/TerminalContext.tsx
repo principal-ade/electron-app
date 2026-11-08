@@ -73,7 +73,9 @@ export interface TerminalActivityActions {
   /** Update activity state for a terminal session (sends to main, broadcasts to all windows) */
   updateActivity: (input: UpdateActivityInput) => Promise<void>;
   /** Get activity state for a specific session (from local state) */
-  getActivityForSession: (sessionId: string) => TerminalActivityState | undefined;
+  getActivityForSession: (
+    sessionId: string,
+  ) => TerminalActivityState | undefined;
   /** Check if a session is currently working */
   isSessionWorking: (sessionId: string) => boolean;
 }
@@ -113,7 +115,9 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
   const [terminalSessions, setTerminalSessions] = useState<TerminalInfo[]>([]);
 
   // Track terminal activity states (broadcast from main process across all windows)
-  const [terminalActivities, setTerminalActivities] = useState<TerminalActivityState[]>([]);
+  const [terminalActivities, setTerminalActivities] = useState<
+    TerminalActivityState[]
+  >([]);
 
   // Track OSC 7501 program-status records per session (broadcast from main)
   const programStatus = useTerminalProgramStatusState();
@@ -215,13 +219,19 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     };
   }, []);
 
-  useEffect(() => TerminalService.onCwdChange(({ sessionId, cwd }) => {
-    setTerminalSessions((previous) => previous.map((session) =>
-      session.id === sessionId && session.directory !== cwd
-        ? { ...session, directory: cwd }
-        : session,
-    ));
-  }), []);
+  useEffect(
+    () =>
+      TerminalService.onCwdChange(({ sessionId, cwd }) => {
+        setTerminalSessions((previous) =>
+          previous.map((session) =>
+            session.id === sessionId && session.directory !== cwd
+              ? { ...session, directory: cwd }
+              : session,
+          ),
+        );
+      }),
+    [],
+  );
 
   useEffect(() => {
     const loadTerminalSessions = async () => {
@@ -239,7 +249,10 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
               })),
             ),
         );
-        console.info('[TerminalProvider] Expected terminalContext:', terminalContext);
+        console.info(
+          '[TerminalProvider] Expected terminalContext:',
+          terminalContext,
+        );
         setTerminalSessions(sessions);
       } catch (error) {
         console.error(
@@ -251,15 +264,16 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
 
     loadTerminalSessions();
 
-
     // Main broadcasts the authoritative session list whenever a session is
     // created, destroyed, or restored from the PTY daemon. Following it keeps
     // this window's tabs correct across windows and across app restarts —
     // without this, a session that survived a restart (or one opened in another
     // window) only shows up after an incidental refresh.
-    const unsubscribeSessions = TerminalService.onSessionsChanged((sessions) => {
-      setTerminalSessions(sessions);
-    });
+    const unsubscribeSessions = TerminalService.onSessionsChanged(
+      (sessions) => {
+        setTerminalSessions(sessions);
+      },
+    );
 
     // The daemon reports its surviving sessions once it reconnects, which can
     // land after this effect's initial list. Re-list when that happens so
@@ -271,7 +285,10 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     // Listen for external session creation events
     const handleSessionCreated = (event: Event) => {
       const customEvent = event as CustomEvent;
-      console.info('[TerminalProvider] Detected new terminal session:', customEvent.detail);
+      console.info(
+        '[TerminalProvider] Detected new terminal session:',
+        customEvent.detail,
+      );
       console.info('[TerminalProvider] Refreshing list...');
       loadTerminalSessions();
     };
@@ -281,7 +298,10 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     return () => {
       unsubscribeSessions();
       unsubscribeRestored();
-      window.removeEventListener('terminal-session-created', handleSessionCreated);
+      window.removeEventListener(
+        'terminal-session-created',
+        handleSessionCreated,
+      );
     };
   }, [terminalContext]);
 
@@ -434,7 +454,10 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
           `[TerminalActions] claimTerminalOwnership called: sessionId=${sessionId}, force=${force}`,
         );
         const result = await TerminalService.claimOwnership(sessionId, force);
-        console.info(`[TerminalActions] claimTerminalOwnership result:`, result);
+        console.info(
+          `[TerminalActions] claimTerminalOwnership result:`,
+          result,
+        );
         return result;
       },
 
@@ -539,14 +562,8 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
             });
 
             const grid = terminalSizeRef.current.get(sessionId);
-            reconnectSpan.setAttribute(
-              'terminal.cols',
-              grid?.cols ?? -1,
-            );
-            reconnectSpan.setAttribute(
-              'terminal.rows',
-              grid?.rows ?? -1,
-            );
+            reconnectSpan.setAttribute('terminal.cols', grid?.cols ?? -1);
+            reconnectSpan.setAttribute('terminal.rows', grid?.rows ?? -1);
             reconnectSpan.addEvent('terminal.reconnect.grid_size', {
               'session.id': sessionId,
               'terminal.cols': grid?.cols ?? -1,
@@ -569,7 +586,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
                   'session.id': sessionId,
                   'terminal.cols': size.cols,
                   'terminal.rows': size.rows,
-                  'attempt': attempt,
+                  attempt: attempt,
                 });
                 return;
               }
@@ -595,7 +612,10 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
               'session.id': sessionId,
               'error.message': err instanceof Error ? err.message : String(err),
             });
-            reconnectSpan.setStatus({ code: SpanStatusCode.ERROR, message: 'Reconnection failed' });
+            reconnectSpan.setStatus({
+              code: SpanStatusCode.ERROR,
+              message: 'Reconnection failed',
+            });
             reconnectSpan.end();
           });
 
@@ -640,7 +660,9 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
 
   const isSessionWorking = useCallback(
     (sessionId: string) => {
-      const activity = terminalActivities.find((a) => a.sessionId === sessionId);
+      const activity = terminalActivities.find(
+        (a) => a.sessionId === sessionId,
+      );
       return activity?.isWorking ?? false;
     },
     [terminalActivities],
@@ -664,7 +686,13 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       terminalActivities,
       programStatus,
     }),
-    [terminalSessions, terminalContext, repositoryPath, terminalActivities, programStatus],
+    [
+      terminalSessions,
+      terminalContext,
+      repositoryPath,
+      terminalActivities,
+      programStatus,
+    ],
   );
 
   // Provider value

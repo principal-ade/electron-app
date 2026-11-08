@@ -5,7 +5,10 @@ import { LocalProjectCard } from '@industry-theme/repository-composition-panels'
 import { FileCityLogo } from '@principal-ai/logo-component';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowCard } from './WindowCard';
-import { WindowService, type WindowListPayload } from '../main-process-api/WindowService';
+import {
+  WindowService,
+  type WindowListPayload,
+} from '../main-process-api/WindowService';
 
 // NOTE: Cmd+' was reclaimed by the principal window's IntegratedShell to toggle
 // the Sky View overlay. The Window Switcher toggle shortcut is removed — only the
@@ -172,9 +175,7 @@ const DraggableCard: React.FC<DraggableCardProps> = ({
       whileHover={!isDragging ? { scale: 1.02 } : undefined}
       onMouseDown={handleMouseDown}
     >
-      <div onDoubleClick={onDoubleClick}>
-        {children}
-      </div>
+      <div onDoubleClick={onDoubleClick}>{children}</div>
     </motion.div>
   );
 };
@@ -194,7 +195,9 @@ export const WindowSwitcherApp: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [draggedCard, setDraggedCard] = useState<number | null>(null);
   const [zIndexOrder, setZIndexOrder] = useState<number[]>([]);
-  const [gridPositions, setGridPositions] = useState<Record<number, GridPosition>>(() => loadSavedGridPositions());
+  const [gridPositions, setGridPositions] = useState<
+    Record<number, GridPosition>
+  >(() => loadSavedGridPositions());
 
   const windowsRef = useRef<SwitcherWindow[]>(windows);
   const windowSwitcherAvailable = WindowService.isWindowSwitcherAvailable();
@@ -348,7 +351,7 @@ export const WindowSwitcherApp: React.FC = () => {
   const mainWindow = windows.find((w) => w.primaryType === 'main');
   const secondaryWindows = useMemo(
     () => windows.filter((w) => w.primaryType !== 'main'),
-    [windows]
+    [windows],
   );
 
   // Get all currently occupied grid positions
@@ -380,7 +383,10 @@ export const WindowSwitcherApp: React.FC = () => {
   };
 
   // Get grid position for a window (saved, or assign new)
-  const getWindowGridPosition = (win: SwitcherWindow, _index: number): GridPosition => {
+  const getWindowGridPosition = (
+    win: SwitcherWindow,
+    _index: number,
+  ): GridPosition => {
     // Check for saved position
     if (gridPositions[win.id] !== undefined) {
       return gridPositions[win.id];
@@ -391,7 +397,10 @@ export const WindowSwitcherApp: React.FC = () => {
   };
 
   // Handle drag end - snap to nearest grid position
-  const handleDragEnd = (windowId: number, info: { offset: { x: number; y: number } }) => {
+  const handleDragEnd = (
+    windowId: number,
+    info: { offset: { x: number; y: number } },
+  ) => {
     setDraggedCard(null);
 
     // Get current grid position and convert to pixels
@@ -407,12 +416,14 @@ export const WindowSwitcherApp: React.FC = () => {
 
     // Check if target is occupied by another window
     const occupiedByOther = secondaryWindows.some(
-      (w) => w.id !== windowId && gridPositions[w.id] === targetGridPos
+      (w) => w.id !== windowId && gridPositions[w.id] === targetGridPos,
     );
 
     if (occupiedByOther) {
       // Swap positions with the other window
-      const otherWindow = secondaryWindows.find((w) => gridPositions[w.id] === targetGridPos);
+      const otherWindow = secondaryWindows.find(
+        (w) => gridPositions[w.id] === targetGridPos,
+      );
       if (otherWindow) {
         setGridPositions((prev) => {
           const updated = {
@@ -497,194 +508,210 @@ export const WindowSwitcherApp: React.FC = () => {
           overflow: 'hidden',
         }}
       >
-      {/* Main window header - wooden plaque style */}
-      {mainWindow && (
+        {/* Main window header - wooden plaque style */}
+        {mainWindow && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              display: 'flex',
+              justifyContent: 'center',
+              zIndex: 100,
+            }}
+          >
+            <motion.div
+              initial={{ y: -10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              onClick={handleMainWindowClick}
+              style={{
+                position: 'relative',
+                cursor: 'pointer',
+                filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))',
+              }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {/* SVG trapezoid background with border */}
+              <svg
+                width="250"
+                height="110"
+                viewBox="0 0 250 110"
+                style={{ position: 'absolute', top: 0, left: 0 }}
+              >
+                <defs>
+                  <linearGradient
+                    id="woodGradient"
+                    x1="0%"
+                    y1="0%"
+                    x2="0%"
+                    y2="100%"
+                  >
+                    <stop offset="0%" stopColor="#5c3d2e" />
+                    <stop offset="50%" stopColor="#4a3122" />
+                    <stop offset="100%" stopColor="#3d2518" />
+                  </linearGradient>
+                </defs>
+                {/* Trapezoid path: wider at top (250), narrower at bottom (150), rounded bottom corners */}
+                <path
+                  d="M 0,0 L 250,0 L 200,95 Q 200,105 190,105 L 60,105 Q 50,105 50,95 L 0,0 Z"
+                  fill="url(#woodGradient)"
+                  stroke="#6b4423"
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                />
+                {/* Hide top border by drawing over it */}
+                <line
+                  x1="0"
+                  y1="1"
+                  x2="250"
+                  y2="1"
+                  stroke="url(#woodGradient)"
+                  strokeWidth="4"
+                />
+              </svg>
+
+              {/* Content */}
+              <div
+                style={{
+                  position: 'relative',
+                  width: 250,
+                  height: 110,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  gap: '4px',
+                  paddingTop: '10px',
+                }}
+              >
+                {/* Title */}
+                <span
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    fontFamily: theme.fonts.heading,
+                    letterSpacing: '1px',
+                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
+                    Principal{' '}
+                  </span>
+                  <span style={{ color: theme.colors.primary }}>AI</span>
+                </span>
+
+                {/* ANIMATED-LOGO-TODO: was the animated sphere Logo; static for now. */}
+                <div style={{ marginTop: '4px' }}>
+                  <FileCityLogo
+                    mark="P"
+                    width={48}
+                    height={48}
+                    primary={theme.colors.primary}
+                    color={theme.colors.text}
+                    background="transparent"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Secondary window cards */}
         <div
           style={{
             position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
+            inset: 0,
             display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 100,
+            overflow: 'hidden',
+            paddingTop: mainWindow ? '60px' : '0',
           }}
         >
-          <motion.div
-            initial={{ y: -10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            onClick={handleMainWindowClick}
-            style={{
-              position: 'relative',
-              cursor: 'pointer',
-              filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))',
-            }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            {/* SVG trapezoid background with border */}
-            <svg
-              width="250"
-              height="110"
-              viewBox="0 0 250 110"
-              style={{ position: 'absolute', top: 0, left: 0 }}
-            >
-              <defs>
-                <linearGradient id="woodGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#5c3d2e" />
-                  <stop offset="50%" stopColor="#4a3122" />
-                  <stop offset="100%" stopColor="#3d2518" />
-                </linearGradient>
-              </defs>
-              {/* Trapezoid path: wider at top (250), narrower at bottom (150), rounded bottom corners */}
-              <path
-                d="M 0,0 L 250,0 L 200,95 Q 200,105 190,105 L 60,105 Q 50,105 50,95 L 0,0 Z"
-                fill="url(#woodGradient)"
-                stroke="#6b4423"
-                strokeWidth="3"
-                strokeLinejoin="round"
-              />
-              {/* Hide top border by drawing over it */}
-              <line x1="0" y1="1" x2="250" y2="1" stroke="url(#woodGradient)" strokeWidth="4" />
-            </svg>
-
-            {/* Content */}
+          {secondaryWindows.length === 0 ? (
             <div
+              className="empty-state"
+              role="status"
               style={{
-                position: 'relative',
-                width: 250,
-                height: 110,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                gap: '4px',
-                paddingTop: '10px',
+                color: 'rgba(255, 255, 255, 0.6)',
+                fontFamily: theme.fonts.body,
               }}
             >
-              {/* Title */}
-              <span
-                style={{
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  fontFamily: theme.fonts.heading,
-                  letterSpacing: '1px',
-                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
-                  textTransform: 'uppercase',
-                }}
-              >
-                <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Principal </span>
-                <span style={{ color: theme.colors.primary }}>AI</span>
-              </span>
-
-              {/* ANIMATED-LOGO-TODO: was the animated sphere Logo; static for now. */}
-              <div style={{ marginTop: '4px' }}>
-                <FileCityLogo
-                  mark="P"
-                  width={48}
-                  height={48}
-                  primary={theme.colors.primary}
-                  color={theme.colors.text}
-                  background="transparent"
-                />
-              </div>
+              No other windows open
             </div>
-          </motion.div>
+          ) : (
+            secondaryWindows.map((win, index) => {
+              const gridPos = getWindowGridPosition(win, index);
+
+              // Initialize grid position if not set
+              if (gridPositions[win.id] === undefined) {
+                // Use setTimeout to avoid state update during render
+                setTimeout(() => {
+                  setGridPositions((prev) => {
+                    if (prev[win.id] === undefined) {
+                      const updated = { ...prev, [win.id]: gridPos };
+                      saveGridPositions(updated);
+                      return updated;
+                    }
+                    return prev;
+                  });
+                }, 0);
+              }
+
+              // Find the original index in windows array for selection
+              const originalIndex = windows.findIndex((w) => w.id === win.id);
+
+              return (
+                <DraggableCard
+                  key={win.id}
+                  gridPos={gridPositions[win.id] ?? gridPos}
+                  zIndex={draggedCard === win.id ? 1000 : getZIndex(index)}
+                  onDragStart={() => {
+                    setDraggedCard(win.id);
+                    bringToFront(index);
+                  }}
+                  onDragEnd={(offset) => handleDragEnd(win.id, { offset })}
+                  onDoubleClick={() => handleTileClick(originalIndex)}
+                >
+                  {win.alexandriaEntry ? (
+                    <LocalProjectCard
+                      entry={win.alexandriaEntry}
+                      customImageUrl={win.fileCityImageUrl}
+                      width={CARD_WIDTH}
+                      height={CARD_HEIGHT}
+                      isSelected={originalIndex === selectedIndex}
+                    />
+                  ) : (
+                    <WindowCard
+                      id={win.id}
+                      title={win.title}
+                      isSelected={originalIndex === selectedIndex}
+                      onClick={() => {}} // No-op, double-click handled by wrapper
+                    />
+                  )}
+                </DraggableCard>
+              );
+            })
+          )}
         </div>
-      )}
-
-      {/* Secondary window cards */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          paddingTop: mainWindow ? '60px' : '0',
-        }}
-      >
-        {secondaryWindows.length === 0 ? (
-          <div
-            className="empty-state"
-            role="status"
-            style={{
-              color: 'rgba(255, 255, 255, 0.6)',
-              fontFamily: theme.fonts.body,
-            }}
-          >
-            No other windows open
-          </div>
-        ) : (
-          secondaryWindows.map((win, index) => {
-            const gridPos = getWindowGridPosition(win, index);
-
-            // Initialize grid position if not set
-            if (gridPositions[win.id] === undefined) {
-              // Use setTimeout to avoid state update during render
-              setTimeout(() => {
-                setGridPositions((prev) => {
-                  if (prev[win.id] === undefined) {
-                    const updated = { ...prev, [win.id]: gridPos };
-                    saveGridPositions(updated);
-                    return updated;
-                  }
-                  return prev;
-                });
-              }, 0);
-            }
-
-            // Find the original index in windows array for selection
-            const originalIndex = windows.findIndex((w) => w.id === win.id);
-
-            return (
-              <DraggableCard
-                key={win.id}
-                gridPos={gridPositions[win.id] ?? gridPos}
-                zIndex={draggedCard === win.id ? 1000 : getZIndex(index)}
-                onDragStart={() => {
-                  setDraggedCard(win.id);
-                  bringToFront(index);
-                }}
-                onDragEnd={(offset) => handleDragEnd(win.id, { offset })}
-                onDoubleClick={() => handleTileClick(originalIndex)}
-              >
-                {win.alexandriaEntry ? (
-                  <LocalProjectCard
-                    entry={win.alexandriaEntry}
-                    customImageUrl={win.fileCityImageUrl}
-                    width={CARD_WIDTH}
-                    height={CARD_HEIGHT}
-                    isSelected={originalIndex === selectedIndex}
-                  />
-                ) : (
-                  <WindowCard
-                    id={win.id}
-                    title={win.title}
-                    isSelected={originalIndex === selectedIndex}
-                    onClick={() => {}} // No-op, double-click handled by wrapper
-                  />
-                )}
-              </DraggableCard>
-            );
-          })
-        )}
-      </div>
-      <p
-        className="hint"
-        style={{
-          color: 'rgba(255, 255, 255, 0.7)',
-          fontFamily: theme.fonts.body,
-          background: 'rgba(0, 0, 0, 0.4)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-        }}
-      >
-        <strong>⌘'</strong> toggle • <strong>⌘;</strong> cycle (release to
-        activate) • <strong>↑↓</strong> navigate • <strong>Enter</strong>{' '}
-        activate • <strong>Double-click</strong> open • <strong>Esc</strong> close
-      </p>
+        <p
+          className="hint"
+          style={{
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontFamily: theme.fonts.body,
+            background: 'rgba(0, 0, 0, 0.4)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          <strong>⌘'</strong> toggle • <strong>⌘;</strong> cycle (release to
+          activate) • <strong>↑↓</strong> navigate • <strong>Enter</strong>{' '}
+          activate • <strong>Double-click</strong> open • <strong>Esc</strong>{' '}
+          close
+        </p>
       </div>
     </div>
   );

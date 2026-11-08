@@ -31,7 +31,9 @@ export const SkillInstallationModal: React.FC<SkillInstallationModalProps> = ({
   onUninstall,
 }) => {
   const { theme } = useTheme();
-  const [selectedDirectories, setSelectedDirectories] = useState<Set<string>>(new Set(installedDirectories));
+  const [selectedDirectories, setSelectedDirectories] = useState<Set<string>>(
+    new Set(installedDirectories),
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -213,13 +215,18 @@ export const SkillInstallationModal: React.FC<SkillInstallationModalProps> = ({
                 fontSize: theme.fontSizes[1],
               }}
             >
-              No agent directories detected. Please set up agent directories first.
+              No agent directories detected. Please set up agent directories
+              first.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+            >
               {detectedDirectories.map((directory) => {
                 const isSelected = selectedDirectories.has(directory.id);
-                const wasInstalled = installedDirectories.includes(directory.id);
+                const wasInstalled = installedDirectories.includes(
+                  directory.id,
+                );
 
                 // Determine the action
                 const willInstall = isSelected && !wasInstalled;
@@ -296,12 +303,14 @@ export const SkillInstallationModal: React.FC<SkillInstallationModalProps> = ({
                     }}
                     onMouseEnter={(e) => {
                       if (noChange && !isSelected) {
-                        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.backgroundSecondary;
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (noChange && !isSelected) {
-                        e.currentTarget.style.backgroundColor = theme.colors.background;
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.background;
                       }
                     }}
                   >
@@ -312,14 +321,18 @@ export const SkillInstallationModal: React.FC<SkillInstallationModalProps> = ({
                         height: '20px',
                         borderRadius: '4px',
                         border: `2px solid ${borderColor}`,
-                        backgroundColor: isSelected ? borderColor : 'transparent',
+                        backgroundColor: isSelected
+                          ? borderColor
+                          : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
                       }}
                     >
-                      {isSelected && <Check size={14} color={theme.colors.background} />}
+                      {isSelected && (
+                        <Check size={14} color={theme.colors.background} />
+                      )}
                     </div>
 
                     {/* Directory info */}
@@ -392,14 +405,23 @@ export const SkillInstallationModal: React.FC<SkillInstallationModalProps> = ({
               color: theme.colors.background,
               fontSize: theme.fontSizes[1],
               fontWeight: theme.fontWeights.medium,
-              cursor: isProcessing || detectedDirectories.length === 0 ? 'not-allowed' : 'pointer',
-              opacity: isProcessing || detectedDirectories.length === 0 ? 0.5 : 1,
+              cursor:
+                isProcessing || detectedDirectories.length === 0
+                  ? 'not-allowed'
+                  : 'pointer',
+              opacity:
+                isProcessing || detectedDirectories.length === 0 ? 0.5 : 1,
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
             }}
           >
-            {isProcessing && <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />}
+            {isProcessing && (
+              <Loader2
+                size={14}
+                style={{ animation: 'spin 1s linear infinite' }}
+              />
+            )}
             {isProcessing ? 'Applying...' : 'Apply'}
           </button>
         </div>

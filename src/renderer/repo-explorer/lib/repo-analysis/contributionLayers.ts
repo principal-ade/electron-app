@@ -168,7 +168,10 @@ function buildOwnershipLayers(
       const total = totalLines[path] ?? lines;
       frac = total > 0 ? lines / total : 0;
     }
-    const tier = Math.min(buckets - 1, Math.max(0, Math.ceil(frac * buckets) - 1));
+    const tier = Math.min(
+      buckets - 1,
+      Math.max(0, Math.ceil(frac * buckets) - 1),
+    );
     tiers[tier]!.push(path);
   }
 
@@ -274,7 +277,9 @@ export function analysisContributors(
   const byEmail = analysis.byEmail ?? {};
   const totals = repoBlameTotals(analysis);
   const shortlog = new Map(
-    (analysis.contributors ?? []).map((c) => [c.email.toLowerCase(), c] as const),
+    (analysis.contributors ?? []).map(
+      (c) => [c.email.toLowerCase(), c] as const,
+    ),
   );
   return Object.keys(byEmail)
     .map((email) => {
@@ -340,16 +345,23 @@ export interface ContributionStats {
 export function contributionStats(
   analysis: ContributionAnalysis,
   email: string,
-  totals: { totalLines: number; totalFiles: number } = repoBlameTotals(analysis),
+  totals: { totalLines: number; totalFiles: number } = repoBlameTotals(
+    analysis,
+  ),
 ): ContributionStats {
-  return statsFromOwnership(getOwnershipForEmail(analysis, email) ?? {}, totals);
+  return statsFromOwnership(
+    getOwnershipForEmail(analysis, email) ?? {},
+    totals,
+  );
 }
 
 /** Coverage stats for a *merged* person across all their blame emails. */
 export function mergedContributionStats(
   analysis: ContributionAnalysis,
   emails: string[],
-  totals: { totalLines: number; totalFiles: number } = repoBlameTotals(analysis),
+  totals: { totalLines: number; totalFiles: number } = repoBlameTotals(
+    analysis,
+  ),
 ): ContributionStats {
   return statsFromOwnership(mergeOwnership(analysis, emails), totals);
 }
@@ -455,7 +467,9 @@ export function mergeContributors(
   analysis: ContributionAnalysis,
   people: AnalysisContributor[],
   identityOf: (email: string) => EmailIdentity | undefined,
-  totals: { totalLines: number; totalFiles: number } = repoBlameTotals(analysis),
+  totals: { totalLines: number; totalFiles: number } = repoBlameTotals(
+    analysis,
+  ),
 ): MergedContributor[] {
   type Group = {
     key: string;
@@ -550,7 +564,8 @@ export function mergeContributors(
     const emails = g.members.map((m) => m.email.toLowerCase());
     const commits = g.members.reduce((s, m) => s + m.commits, 0);
     // Prefer GitHub display name > git author name > resolved login > email > key.
-    const name = g.displayName ?? g.members[0]?.name ?? g.login ?? emails[0] ?? g.key;
+    const name =
+      g.displayName ?? g.members[0]?.name ?? g.login ?? emails[0] ?? g.key;
     const avatarUrl =
       g.avatarUrl ??
       (g.githubId != null
@@ -585,7 +600,8 @@ export function mergeContributors(
       login: g.login,
       githubId: g.githubId,
       avatarUrl,
-      htmlUrl: g.htmlUrl ?? (g.login ? `https://github.com/${g.login}` : undefined),
+      htmlUrl:
+        g.htmlUrl ?? (g.login ? `https://github.com/${g.login}` : undefined),
       commits,
       stats,
     };

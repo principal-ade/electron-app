@@ -95,7 +95,9 @@ export const ActivityCitiesHeader: React.FC<ActivityCitiesHeaderProps> = ({
     width: 6,
     height: 6,
     borderRadius: '50%',
-    backgroundColor: isVisible ? theme.colors.success : theme.colors.textSecondary,
+    backgroundColor: isVisible
+      ? theme.colors.success
+      : theme.colors.textSecondary,
     transition: 'background-color 0.2s ease',
   };
 
@@ -135,7 +137,8 @@ export const ActivityCitiesHeader: React.FC<ActivityCitiesHeaderProps> = ({
             onClick={onBack}
             style={backButtonStyle}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
               e.currentTarget.style.color = theme.colors.text;
               e.currentTarget.style.borderColor = theme.colors.primary;
             }}
@@ -160,13 +163,20 @@ export const ActivityCitiesHeader: React.FC<ActivityCitiesHeaderProps> = ({
             e.currentTarget.style.borderColor = theme.colors.primary;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
             e.currentTarget.style.borderColor = theme.colors.border;
           }}
-          title={isVisible ? 'Click to go invisible (hide from others)' : 'Click to appear online (visible to others)'}
+          title={
+            isVisible
+              ? 'Click to go invisible (hide from others)'
+              : 'Click to appear online (visible to others)'
+          }
         >
           <div style={statusDotStyle} />
-          <span style={statusTextStyle}>{isVisible ? "You're Online" : "You're Invisible"}</span>
+          <span style={statusTextStyle}>
+            {isVisible ? "You're Online" : "You're Invisible"}
+          </span>
         </div>
         <div style={onlineContainerStyle}>
           <span style={countStyle}>{onlineCount}</span>

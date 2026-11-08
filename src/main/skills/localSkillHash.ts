@@ -20,7 +20,9 @@ const IGNORED_LOCAL_FILES = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini']);
  */
 export function gitBlobSha(content: Buffer): string {
   const header = Buffer.from(`blob ${content.length}\0`, 'utf-8');
-  return createHash('sha1').update(Buffer.concat([header, content])).digest('hex');
+  return createHash('sha1')
+    .update(Buffer.concat([header, content]))
+    .digest('hex');
 }
 
 /**
@@ -30,7 +32,9 @@ export function gitBlobSha(content: Buffer): string {
  * Returns null when the folder does not exist (or is not a directory), which
  * callers treat as "needs reinstall". Ignores OS cruft and any nested `.git`.
  */
-export async function readLocalSkillBlobs(dir: string): Promise<Map<string, string> | null> {
+export async function readLocalSkillBlobs(
+  dir: string,
+): Promise<Map<string, string> | null> {
   let rootStat;
   try {
     rootStat = await fs.stat(dir);
@@ -66,7 +70,10 @@ export async function readLocalSkillBlobs(dir: string): Promise<Map<string, stri
 }
 
 /** True when two blob maps have identical paths and SHAs. */
-export function blobMapsEqual(a: Map<string, string>, b: Map<string, string>): boolean {
+export function blobMapsEqual(
+  a: Map<string, string>,
+  b: Map<string, string>,
+): boolean {
   if (a.size !== b.size) return false;
   for (const [key, value] of a) {
     if (b.get(key) !== value) return false;

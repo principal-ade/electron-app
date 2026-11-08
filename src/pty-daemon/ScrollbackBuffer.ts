@@ -6,7 +6,10 @@
  * fast append and retrieval operations.
  */
 
-import { SCROLLBACK_LINES, SCROLLBACK_MAX_BYTES } from '../shared/pty-daemon/constants';
+import {
+  SCROLLBACK_LINES,
+  SCROLLBACK_MAX_BYTES,
+} from '../shared/pty-daemon/constants';
 
 export class ScrollbackBuffer {
   private lines: string[] = [];
@@ -14,7 +17,10 @@ export class ScrollbackBuffer {
   private maxBytes: number;
   private currentBytes: number = 0;
 
-  constructor(maxLines: number = SCROLLBACK_LINES, maxBytes: number = SCROLLBACK_MAX_BYTES) {
+  constructor(
+    maxLines: number = SCROLLBACK_LINES,
+    maxBytes: number = SCROLLBACK_MAX_BYTES,
+  ) {
     this.maxLines = maxLines;
     this.maxBytes = maxBytes;
   }

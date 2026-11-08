@@ -30,21 +30,27 @@ export class SkillLockService {
   /**
    * Add a skill to the lock file
    */
-  static async addSkill(options: AddSkillToLockOptions): Promise<{ success: boolean; error?: string }> {
+  static async addSkill(
+    options: AddSkillToLockOptions,
+  ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.skillLock.addSkillToLock(options);
   }
 
   /**
    * Remove a skill from the lock file
    */
-  static async removeSkill(name: string): Promise<{ success: boolean; error?: string }> {
+  static async removeSkill(
+    name: string,
+  ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.skillLock.removeSkillFromLock(name);
   }
 
   /**
    * Update a skill entry in the lock file
    */
-  static async updateSkill(options: UpdateSkillInLockOptions): Promise<{ success: boolean; error?: string }> {
+  static async updateSkill(
+    options: UpdateSkillInLockOptions,
+  ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.skillLock.updateSkillInLock(options);
   }
 
@@ -67,7 +73,9 @@ export class SkillLockService {
    */
   static async isSkillInstalled(name: string): Promise<boolean> {
     const skills = await this.getInstalledSkills();
-    return skills.some((skill) => skill.name === name && skill.available === true);
+    return skills.some(
+      (skill) => skill.name === name && skill.available === true,
+    );
   }
 
   /**
@@ -82,7 +90,9 @@ export class SkillLockService {
   /**
    * Get skills from a specific source (e.g., "anthropics/skills")
    */
-  static async getSkillsBySource(source: string): Promise<InstalledSkillInfo[]> {
+  static async getSkillsBySource(
+    source: string,
+  ): Promise<InstalledSkillInfo[]> {
     const skills = await this.getInstalledSkills();
     return skills.filter((skill) => skill.source === source);
   }
@@ -90,7 +100,9 @@ export class SkillLockService {
   /**
    * Check if a specific skill has an update available
    */
-  static async checkSkillUpdate(name: string): Promise<SkillUpdateCheckResult | null> {
+  static async checkSkillUpdate(
+    name: string,
+  ): Promise<SkillUpdateCheckResult | null> {
     const updates = await this.checkUpdates();
     return updates.find((u) => u.name === name) || null;
   }
@@ -107,7 +119,9 @@ export class SkillLockService {
    * Listen for skill installed events (broadcast from main process to all windows)
    * @returns Unsubscribe function
    */
-  static onSkillInstalled(callback: (payload: SkillInstalledPayload) => void): () => void {
+  static onSkillInstalled(
+    callback: (payload: SkillInstalledPayload) => void,
+  ): () => void {
     return window.mainProcess.skillLock.onSkillInstalled(callback);
   }
 
@@ -115,7 +129,9 @@ export class SkillLockService {
    * Listen for skill uninstalled events (broadcast from main process to all windows)
    * @returns Unsubscribe function
    */
-  static onSkillUninstalled(callback: (payload: SkillUninstalledPayload) => void): () => void {
+  static onSkillUninstalled(
+    callback: (payload: SkillUninstalledPayload) => void,
+  ): () => void {
     return window.mainProcess.skillLock.onSkillUninstalled(callback);
   }
 
@@ -123,7 +139,9 @@ export class SkillLockService {
    * Listen for skill updated events (broadcast from main process to all windows)
    * @returns Unsubscribe function
    */
-  static onSkillUpdated(callback: (payload: SkillUpdatedPayload) => void): () => void {
+  static onSkillUpdated(
+    callback: (payload: SkillUpdatedPayload) => void,
+  ): () => void {
     return window.mainProcess.skillLock.onSkillUpdated(callback);
   }
 
@@ -134,7 +152,9 @@ export class SkillLockService {
   /**
    * Check if user can edit a skill (has push permission)
    */
-  static async checkEditPermission(skillName: string): Promise<SkillEditPermissionResult> {
+  static async checkEditPermission(
+    skillName: string,
+  ): Promise<SkillEditPermissionResult> {
     return window.mainProcess.skillLock.checkEditPermission(skillName);
   }
 
@@ -150,15 +170,20 @@ export class SkillLockService {
    */
   static async getSkillFileContent(
     skillName: string,
-    filePath: string
+    filePath: string,
   ): Promise<{ content: string; isLocal: boolean }> {
-    return window.mainProcess.skillLock.getSkillFileContent(skillName, filePath);
+    return window.mainProcess.skillLock.getSkillFileContent(
+      skillName,
+      filePath,
+    );
   }
 
   /**
    * Commit a skill file to GitHub
    */
-  static async commitSkillFile(options: SkillCommitOptions): Promise<SkillCommitResult> {
+  static async commitSkillFile(
+    options: SkillCommitOptions,
+  ): Promise<SkillCommitResult> {
     return window.mainProcess.skillLock.commitSkillFile(options);
   }
 }

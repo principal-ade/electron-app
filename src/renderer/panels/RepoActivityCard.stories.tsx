@@ -5,7 +5,10 @@ import type {
   PanelEventEmitter,
   PanelEvent,
 } from '@principal-ade/panel-framework-core';
-import type { AlexandriaEntry, ValidatedRepositoryPath } from '@principal-ai/alexandria-core-library/types';
+import type {
+  AlexandriaEntry,
+  ValidatedRepositoryPath,
+} from '@principal-ai/alexandria-core-library/types';
 import {
   RepoActivityCard,
   type RepoActivitySummary,
@@ -125,10 +128,15 @@ class MockEventEmitter implements PanelEventEmitter {
   emit<T>(event: PanelEvent<T>): void {
     console.info('[Mock Event]:', event);
     const eventListeners = this.listeners.get(event.type) || [];
-    eventListeners.forEach((listener) => listener(event as PanelEvent<unknown>));
+    eventListeners.forEach((listener) =>
+      listener(event as PanelEvent<unknown>),
+    );
   }
 
-  on<T>(eventType: string, handler: (event: PanelEvent<T>) => void): () => void {
+  on<T>(
+    eventType: string,
+    handler: (event: PanelEvent<T>) => void,
+  ): () => void {
     const listeners = this.listeners.get(eventType) || [];
     const wrappedHandler = handler as EventHandler;
     listeners.push(wrappedHandler);
@@ -153,7 +161,11 @@ class MockEventEmitter implements PanelEventEmitter {
 }
 
 // Generate mock commits
-const generateMockCommits = (count: number, repoPath: string, repoName: string): ActivityCommit[] => {
+const generateMockCommits = (
+  count: number,
+  repoPath: string,
+  repoName: string,
+): ActivityCommit[] => {
   const commits: ActivityCommit[] = [];
   const now = new Date();
 
@@ -176,14 +188,30 @@ const generateMockCommits = (count: number, repoPath: string, repoName: string):
   ];
 
   const authors = [
-    { name: 'Alice Johnson', email: 'alice@example.com', avatar: 'https://i.pravatar.cc/80?img=1' },
-    { name: 'Bob Smith', email: 'bob@example.com', avatar: 'https://i.pravatar.cc/80?img=2' },
-    { name: 'Charlie Davis', email: 'charlie@example.com', avatar: 'https://i.pravatar.cc/80?img=3' },
-    { name: 'Diana Wilson', email: 'diana@example.com', avatar: 'https://i.pravatar.cc/80?img=4' },
+    {
+      name: 'Alice Johnson',
+      email: 'alice@example.com',
+      avatar: 'https://i.pravatar.cc/80?img=1',
+    },
+    {
+      name: 'Bob Smith',
+      email: 'bob@example.com',
+      avatar: 'https://i.pravatar.cc/80?img=2',
+    },
+    {
+      name: 'Charlie Davis',
+      email: 'charlie@example.com',
+      avatar: 'https://i.pravatar.cc/80?img=3',
+    },
+    {
+      name: 'Diana Wilson',
+      email: 'diana@example.com',
+      avatar: 'https://i.pravatar.cc/80?img=4',
+    },
   ];
 
   for (let i = 0; i < count; i++) {
-    const hoursAgo = Math.floor(Math.random() * 6) + (i * 0.5); // Spread across last 6 hours
+    const hoursAgo = Math.floor(Math.random() * 6) + i * 0.5; // Spread across last 6 hours
     const commitDate = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
     const author = authors[Math.floor(Math.random() * authors.length)];
 
@@ -199,7 +227,9 @@ const generateMockCommits = (count: number, repoPath: string, repoName: string):
     });
   }
 
-  return commits.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  return commits.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
 };
 
 // Create mock repository entry
@@ -222,12 +252,14 @@ const createMockEntry = (repoName: string): AlexandriaEntry => ({
 
 // Create mock activity summary
 const createMockSummary = (
-  overrides: Partial<RepoActivitySummary> = {}
+  overrides: Partial<RepoActivitySummary> = {},
 ): RepoActivitySummary => {
   const repoName = overrides.repoName || 'my-awesome-project';
-  const repoPath = overrides.repoPath || `/Users/developer/projects/${repoName}`;
+  const repoPath =
+    overrides.repoPath || `/Users/developer/projects/${repoName}`;
   const commitCount = overrides.commitCount || 5;
-  const commits = overrides.commits || generateMockCommits(commitCount, repoPath, repoName);
+  const commits =
+    overrides.commits || generateMockCommits(commitCount, repoPath, repoName);
 
   return {
     repoPath,
@@ -255,7 +287,13 @@ const RepoActivityCardStory: React.FC<{
 
   return (
     <ThemeProvider>
-      <div style={{ padding: '24px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+      <div
+        style={{
+          padding: '24px',
+          backgroundColor: '#1a1a1a',
+          minHeight: '100vh',
+        }}
+      >
         <RepoActivityCard
           summary={summary}
           isExpanded={isExpanded}
@@ -359,14 +397,33 @@ export const OrganizationRepo: Story = {
 export const HiddenRepoHeader: Story = {
   render: () => {
     const repos = [
-      createMockSummary({ repoName: 'single-commit-no-header', commitCount: 1 }),
-      createMockSummary({ repoName: 'nested-in-watched-panel', commitCount: 5 }),
+      createMockSummary({
+        repoName: 'single-commit-no-header',
+        commitCount: 1,
+      }),
+      createMockSummary({
+        repoName: 'nested-in-watched-panel',
+        commitCount: 5,
+      }),
     ];
 
     return (
       <ThemeProvider>
-        <div style={{ padding: '24px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '1200px' }}>
+        <div
+          style={{
+            padding: '24px',
+            backgroundColor: '#1a1a1a',
+            minHeight: '100vh',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              maxWidth: '1200px',
+            }}
+          >
             {repos.map((summary) => {
               const [isExpanded, setIsExpanded] = React.useState(false);
               const mockEvents = new MockEventEmitter();
@@ -378,7 +435,9 @@ export const HiddenRepoHeader: Story = {
                   summary={summary}
                   isExpanded={isExpanded}
                   onToggleExpand={() => setIsExpanded(!isExpanded)}
-                  onOpen={() => console.info('Open repository:', summary.repoName)}
+                  onOpen={() =>
+                    console.info('Open repository:', summary.repoName)
+                  }
                   hideRepoHeader
                   events={mockEvents}
                   entry={mockEntry}
@@ -469,15 +528,22 @@ export const RecentActivity: Story = {
 // Long commit messages
 export const LongCommitMessages: Story = {
   render: () => {
-    const longMessageCommits = generateMockCommits(3, '/Users/dev/verbose-repo', 'verbose-repo');
+    const longMessageCommits = generateMockCommits(
+      3,
+      '/Users/dev/verbose-repo',
+      'verbose-repo',
+    );
     if (longMessageCommits[0]) {
-      longMessageCommits[0].message = 'Refactor authentication system to use JWT tokens instead of session cookies, update middleware, add token refresh logic, and improve error handling for expired tokens';
+      longMessageCommits[0].message =
+        'Refactor authentication system to use JWT tokens instead of session cookies, update middleware, add token refresh logic, and improve error handling for expired tokens';
     }
     if (longMessageCommits[1]) {
-      longMessageCommits[1].message = 'Add comprehensive unit tests for the new authentication flow including edge cases and error scenarios';
+      longMessageCommits[1].message =
+        'Add comprehensive unit tests for the new authentication flow including edge cases and error scenarios';
     }
     if (longMessageCommits[2]) {
-      longMessageCommits[2].message = 'Update documentation with new authentication setup instructions and API examples';
+      longMessageCommits[2].message =
+        'Update documentation with new authentication setup instructions and API examples';
     }
 
     return (
@@ -525,8 +591,21 @@ export const FeedLayout: Story = {
 
     return (
       <ThemeProvider>
-        <div style={{ padding: '24px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1200px' }}>
+        <div
+          style={{
+            padding: '24px',
+            backgroundColor: '#1a1a1a',
+            minHeight: '100vh',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '24px',
+              maxWidth: '1200px',
+            }}
+          >
             {repos.map((summary) => {
               const [isExpanded, setIsExpanded] = React.useState(false);
               const mockEvents = new MockEventEmitter();
@@ -538,7 +617,9 @@ export const FeedLayout: Story = {
                   summary={summary}
                   isExpanded={isExpanded}
                   onToggleExpand={() => setIsExpanded(!isExpanded)}
-                  onOpen={() => console.info('Open repository:', summary.repoName)}
+                  onOpen={() =>
+                    console.info('Open repository:', summary.repoName)
+                  }
                   events={mockEvents}
                   entry={mockEntry}
                   actions={mockActionsWithStats}

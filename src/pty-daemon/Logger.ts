@@ -17,7 +17,10 @@ export class Logger {
   private level: LogLevel;
   private prefix: string;
 
-  constructor(level: LogLevel = DEFAULT_LOG_LEVEL, prefix: string = '[pty-daemon]') {
+  constructor(
+    level: LogLevel = DEFAULT_LOG_LEVEL,
+    prefix: string = '[pty-daemon]',
+  ) {
     this.level = level;
     this.prefix = prefix;
   }

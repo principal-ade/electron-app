@@ -1,7 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme, type Theme } from '@principal-ade/industry-theme';
-import { X, AlertCircle, CheckCircle, Info, Copy, Check, Edit2, Save, XCircle } from 'lucide-react';
+import {
+  X,
+  AlertCircle,
+  CheckCircle,
+  Info,
+  Copy,
+  Check,
+  Edit2,
+  Save,
+  XCircle,
+} from 'lucide-react';
 import { GitService } from '../main-process-api/GitService';
 
 export interface GitGlobalConfig {
@@ -45,9 +55,7 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
 
       try {
         // Fetch git version (use empty string for global commands)
-        const versionResult = await GitService.execCommand('', [
-          '--version',
-        ]);
+        const versionResult = await GitService.execCommand('', ['--version']);
         const gitVersion = versionResult.stdout.trim();
 
         // Fetch global config
@@ -90,9 +98,14 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
         setEditedName(parsedConfig['user.name'] || '');
         setEditedEmail(parsedConfig['user.email'] || '');
       } catch (err) {
-        console.error('[GitGlobalConfigModal] Failed to fetch git config:', err);
+        console.error(
+          '[GitGlobalConfigModal] Failed to fetch git config:',
+          err,
+        );
         setError(
-          err instanceof Error ? err.message : 'Failed to fetch git configuration',
+          err instanceof Error
+            ? err.message
+            : 'Failed to fetch git configuration',
         );
       } finally {
         setIsLoading(false);
@@ -305,8 +318,11 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
                 lineHeight: 1.5,
               }}
             >
-              Git&apos;s <strong style={{ color: theme.colors.text }}>global
-              configuration</strong> lives in{' '}
+              Git&apos;s{' '}
+              <strong style={{ color: theme.colors.text }}>
+                global configuration
+              </strong>{' '}
+              lives in{' '}
               <code
                 style={{
                   fontFamily: theme.fonts.monospace,
@@ -320,8 +336,8 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
               <strong style={{ color: theme.colors.text }}>name</strong> and{' '}
               <strong style={{ color: theme.colors.text }}>email</strong> are
               what git stamps on every commit you author — anyone reviewing the
-              history will see them. You can change them here at any time;
-              edits run{' '}
+              history will see them. You can change them here at any time; edits
+              run{' '}
               <code
                 style={{
                   fontFamily: theme.fonts.monospace,
@@ -381,9 +397,17 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
                 color: theme.colors.error,
               }}
             >
-              <AlertCircle size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <AlertCircle
+                size={20}
+                style={{ flexShrink: 0, marginTop: '2px' }}
+              />
               <div>
-                <div style={{ fontWeight: theme.fontWeights.semibold, marginBottom: '4px' }}>
+                <div
+                  style={{
+                    fontWeight: theme.fontWeights.semibold,
+                    marginBottom: '4px',
+                  }}
+                >
                   Failed to load configuration
                 </div>
                 <div style={{ fontSize: theme.fontSizes[1], opacity: 0.9 }}>
@@ -394,7 +418,9 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
           )}
 
           {!isLoading && !error && config && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
+            >
               {/* Git Version */}
               {config.gitVersion && (
                 <ConfigSection
@@ -416,7 +442,13 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
               {/* User Identity */}
               <ConfigSection
                 title="User Identity"
-                icon={config['user.name'] && config['user.email'] ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+                icon={
+                  config['user.name'] && config['user.email'] ? (
+                    <CheckCircle size={18} />
+                  ) : (
+                    <AlertCircle size={18} />
+                  )
+                }
                 theme={theme}
                 alert={!config['user.name'] || !config['user.email']}
               >
@@ -466,7 +498,9 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
                     <>
                       <button
                         onClick={handleSave}
-                        disabled={isSaving || (!editedName.trim() || !editedEmail.trim())}
+                        disabled={
+                          isSaving || !editedName.trim() || !editedEmail.trim()
+                        }
                         style={{
                           flex: 1,
                           padding: '8px 12px',
@@ -476,8 +510,18 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
                           borderRadius: '6px',
                           fontSize: theme.fontSizes[2],
                           fontWeight: theme.fontWeights.medium,
-                          cursor: isSaving || (!editedName.trim() || !editedEmail.trim()) ? 'not-allowed' : 'pointer',
-                          opacity: isSaving || (!editedName.trim() || !editedEmail.trim()) ? 0.6 : 1,
+                          cursor:
+                            isSaving ||
+                            !editedName.trim() ||
+                            !editedEmail.trim()
+                              ? 'not-allowed'
+                              : 'pointer',
+                          opacity:
+                            isSaving ||
+                            !editedName.trim() ||
+                            !editedEmail.trim()
+                              ? 0.6
+                              : 1,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -561,31 +605,41 @@ export const GitGlobalConfigModal: React.FC<GitGlobalConfigModalProps> = ({
                   </div>
                 )}
 
-                {!isEditing && (!config['user.name'] || !config['user.email']) && (
-                  <div
-                    style={{
-                      marginTop: '12px',
-                      padding: '12px',
-                      backgroundColor: `${theme.colors.warning}10`,
-                      border: `1px solid ${theme.colors.warning}30`,
-                      borderRadius: '6px',
-                      fontSize: theme.fontSizes[1],
-                      color: theme.colors.textSecondary,
-                    }}
-                  >
-                    <div style={{ fontWeight: theme.fontWeights.medium, marginBottom: '4px', color: theme.colors.warning }}>
-                      Configuration required
+                {!isEditing &&
+                  (!config['user.name'] || !config['user.email']) && (
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        padding: '12px',
+                        backgroundColor: `${theme.colors.warning}10`,
+                        border: `1px solid ${theme.colors.warning}30`,
+                        borderRadius: '6px',
+                        fontSize: theme.fontSizes[1],
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: theme.fontWeights.medium,
+                          marginBottom: '4px',
+                          color: theme.colors.warning,
+                        }}
+                      >
+                        Configuration required
+                      </div>
+                      Click "Edit User Identity" above to configure your name
+                      and email.
                     </div>
-                    Click "Edit User Identity" above to configure your name and email.
-                  </div>
-                )}
+                  )}
               </ConfigSection>
 
               {/* Other Settings */}
               <ConfigSection title="Repository Settings" theme={theme}>
                 <ConfigItem
                   label="Default Branch"
-                  value={config['init.defaultBranch'] || 'Not set (uses git default)'}
+                  value={
+                    config['init.defaultBranch'] || 'Not set (uses git default)'
+                  }
                   theme={theme}
                   onCopy={handleCopy}
                   copyKey="init.defaultBranch"

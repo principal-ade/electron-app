@@ -52,7 +52,8 @@ export async function registerLinksHandlers(): Promise<void> {
         );
       } catch (error: unknown) {
         console.error('[LinksHandlers] Error storing links:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },
@@ -80,7 +81,8 @@ export async function registerLinksHandlers(): Promise<void> {
         return { success: true };
       } catch (error: unknown) {
         console.error('[LinksHandlers] Error deleting links:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },
@@ -173,7 +175,8 @@ export async function registerLinksHandlers(): Promise<void> {
         return await linksDomain.addLink(repoId, link);
       } catch (error: unknown) {
         console.error('[LinksHandlers] Error adding link:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },
@@ -210,7 +213,8 @@ export async function registerLinksHandlers(): Promise<void> {
         return await linksDomain.updateLink(repoId, linkId, updates);
       } catch (error: unknown) {
         console.error('[LinksHandlers] Error updating link:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },
@@ -246,7 +250,8 @@ export async function registerLinksHandlers(): Promise<void> {
         return await linksDomain.removeLink(repoId, linkId);
       } catch (error: unknown) {
         console.error('[LinksHandlers] Error removing link:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },
@@ -280,7 +285,8 @@ export async function registerLinksHandlers(): Promise<void> {
         return { success: true };
       } catch (error: unknown) {
         console.error('[LinksHandlers] Error opening link:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },
@@ -307,7 +313,8 @@ export async function registerLinksHandlers(): Promise<void> {
         return { success: true };
       } catch (error: unknown) {
         console.error('[LinksHandlers] Error copying link:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     },

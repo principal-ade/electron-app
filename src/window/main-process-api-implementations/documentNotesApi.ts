@@ -18,9 +18,7 @@ export const documentNotesAPI: DocumentNotesAPI = {
       relativeFilePath,
     ),
 
-  listLibrary: (
-    repositoryPath?: string,
-  ): Promise<DocumentNotesFileSummary[]> =>
+  listLibrary: (repositoryPath?: string): Promise<DocumentNotesFileSummary[]> =>
     ipcRenderer.invoke(DocumentNotesAPIEvent.LIST_LIBRARY, repositoryPath),
 
   create: (

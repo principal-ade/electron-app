@@ -111,12 +111,7 @@ export interface DockerAnalysisSession {
 
   // Session state
   status:
-    | 'preparing'
-    | 'mounting'
-    | 'running'
-    | 'completed'
-    | 'failed'
-    | 'cancelled';
+    'preparing' | 'mounting' | 'running' | 'completed' | 'failed' | 'cancelled';
   startTime: number;
   endTime?: number;
 
@@ -365,12 +360,15 @@ export class TypedStorageProvider {
     }
 
     const namespacedKey = this.getNamespacedKey(namespace, key);
-    return this.provider.watch(namespacedKey, (newValue: unknown, oldValue: unknown) => {
-      callback(
-        newValue as NamespaceDataTypes[K] | undefined,
-        oldValue as NamespaceDataTypes[K] | undefined
-      );
-    });
+    return this.provider.watch(
+      namespacedKey,
+      (newValue: unknown, oldValue: unknown) => {
+        callback(
+          newValue as NamespaceDataTypes[K] | undefined,
+          oldValue as NamespaceDataTypes[K] | undefined,
+        );
+      },
+    );
   }
 
   private getNamespacedKey(namespace: StorageNamespaces, key: string): string {

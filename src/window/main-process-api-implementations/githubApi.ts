@@ -60,7 +60,11 @@ export const githubAPI: GitHubAPI = {
   getIssues: async (
     owner: string,
     repo: string,
-    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+    options?: {
+      state?: 'open' | 'closed' | 'all';
+      perPage?: number;
+      page?: number;
+    },
   ) => {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_ISSUES, owner, repo, options);
   },
@@ -72,7 +76,11 @@ export const githubAPI: GitHubAPI = {
   getPullRequests: async (
     owner: string,
     repo: string,
-    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+    options?: {
+      state?: 'open' | 'closed' | 'all';
+      perPage?: number;
+      page?: number;
+    },
   ) => {
     return ipcRenderer.invoke(
       GitHubAPIEvent.GET_PULL_REQUESTS,
@@ -83,7 +91,12 @@ export const githubAPI: GitHubAPI = {
   },
 
   getPullRequest: async (owner: string, repo: string, number: number) => {
-    return ipcRenderer.invoke(GitHubAPIEvent.GET_PULL_REQUEST, owner, repo, number);
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_PULL_REQUEST,
+      owner,
+      repo,
+      number,
+    );
   },
 
   getPullRequestFiles: async (owner: string, repo: string, number: number) => {
@@ -283,7 +296,11 @@ export const githubAPI: GitHubAPI = {
     );
   },
 
-  getChangedFilesForCommit: async (owner: string, repo: string, sha: string) => {
+  getChangedFilesForCommit: async (
+    owner: string,
+    repo: string,
+    sha: string,
+  ) => {
     return ipcRenderer.invoke(
       GitHubAPIEvent.GET_CHANGED_FILES_FOR_COMMIT,
       owner,
@@ -293,12 +310,7 @@ export const githubAPI: GitHubAPI = {
   },
 
   getCommitDiff: async (owner: string, repo: string, sha: string) => {
-    return ipcRenderer.invoke(
-      GitHubAPIEvent.GET_COMMIT_DIFF,
-      owner,
-      repo,
-      sha,
-    );
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_COMMIT_DIFF, owner, repo, sha);
   },
 
   resolveAuthorProfiles: async (

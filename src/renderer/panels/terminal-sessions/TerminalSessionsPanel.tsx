@@ -10,7 +10,10 @@ import type {
 import type { Tracer, Span } from '@opentelemetry/api';
 import type { TerminalSessionInfo } from '../../../shared/tipc/terminalRouterTypes';
 import { WindowService } from '../../main-process-api/WindowService';
-import { TerminalService, type TerminalActivityState } from '../../main-process-api/TerminalService';
+import {
+  TerminalService,
+  type TerminalActivityState,
+} from '../../main-process-api/TerminalService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 
 /**
@@ -35,8 +38,7 @@ const noopTracer: Tracer = {
   startActiveSpan: ((...args: unknown[]) => {
     // Handle all overloads by finding the function argument
     const fn = args.find((arg) => typeof arg === 'function') as
-      | ((span: Span) => unknown)
-      | undefined;
+      ((span: Span) => unknown) | undefined;
     return fn ? fn(noopSpan) : undefined;
   }) as Tracer['startActiveSpan'],
 };
@@ -133,7 +135,9 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const [currentWindowId, setCurrentWindowId] = useState<number | null>(null);
-  const [terminalActivities, setTerminalActivities] = useState<TerminalActivityState[]>([]);
+  const [terminalActivities, setTerminalActivities] = useState<
+    TerminalActivityState[]
+  >([]);
 
   // Get the current window ID on mount
   useEffect(() => {
@@ -211,7 +215,9 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
         'target.window_id': session.ownedByWindowId,
         'session.id': session.id,
       });
-      const windowFocused = await WindowService.focusWindowById(session.ownedByWindowId);
+      const windowFocused = await WindowService.focusWindowById(
+        session.ownedByWindowId,
+      );
 
       if (windowFocused) {
         span.addEvent('terminal.panel.window_focused', {
@@ -361,8 +367,11 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
               const displayName = getSessionDisplayName(session);
               const contextBadge = getContextBadge(session);
               const isActive = session.status === 'active';
-              const isLocalSession = session.ownedByWindowId === currentWindowId;
-              const activity = terminalActivities.find(a => a.sessionId === session.id);
+              const isLocalSession =
+                session.ownedByWindowId === currentWindowId;
+              const activity = terminalActivities.find(
+                (a) => a.sessionId === session.id,
+              );
               const isWorking = activity?.isWorking ?? false;
 
               return (
@@ -396,7 +405,9 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                     e.currentTarget.style.borderColor = isLocalSession
                       ? theme.colors.border
                       : theme.colors.backgroundSecondary;
-                    e.currentTarget.style.opacity = isLocalSession ? '1' : '0.7';
+                    e.currentTarget.style.opacity = isLocalSession
+                      ? '1'
+                      : '0.7';
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -422,7 +433,13 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                           flexShrink: 0,
                           animation: isWorking ? 'pulse 2s infinite' : 'none',
                         }}
-                        title={isWorking ? 'Working' : isActive ? 'Active' : 'Disconnected'}
+                        title={
+                          isWorking
+                            ? 'Working'
+                            : isActive
+                              ? 'Active'
+                              : 'Disconnected'
+                        }
                       />
                       <span
                         style={{

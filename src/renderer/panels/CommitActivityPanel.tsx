@@ -15,7 +15,11 @@ import {
   type RepoActivitySummary,
   type RepoActivityCardActions,
 } from './RepoActivityCard';
-import { RepoExplainOverlay, RepoReviewOverlay, type ExplainAudience } from './RepoExplainOverlay';
+import {
+  RepoExplainOverlay,
+  RepoReviewOverlay,
+  type ExplainAudience,
+} from './RepoExplainOverlay';
 import type { CommitActivityCard } from '../../shared/tipc/webAdeRouterTypes';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { ExplainCommitsInput } from '../../shared/tipc/webAdeRouterTypes';
@@ -61,7 +65,11 @@ function formatHourLabel(iso: string): string {
   const diffMs = now.getTime() - date.getTime();
   const diffH = Math.floor(diffMs / 3600000);
 
-  const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const timeStr = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 
   if (diffH < 1) return 'Last hour';
   if (diffH < 6) return diffH === 1 ? '1 hour ago' : `${diffH} hours ago`;
@@ -71,9 +79,16 @@ function formatHourLabel(iso: string): string {
 
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) return `Yesterday at ${timeStr}`;
+  if (date.toDateString() === yesterday.toDateString())
+    return `Yesterday at ${timeStr}`;
 
-  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ` at ${timeStr}`;
+  return (
+    date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    }) + ` at ${timeStr}`
+  );
 }
 
 interface HourlyGroup {
@@ -122,7 +137,7 @@ function cardsToHourlyGroups(
         authorAvatarUrl: c.author.avatarUrl,
         date: c.committedAt,
       };
-      if (!summary.commits.some(e => e.hash === c.sha)) {
+      if (!summary.commits.some((e) => e.hash === c.sha)) {
         summary.commits.push(commit);
         summary.commitCount++;
       }
@@ -141,7 +156,7 @@ function cardsToHourlyGroups(
       hourBucket,
       hourLabel: formatHourLabel(hourBucket),
       repos: Array.from(repoMap.values()).sort(
-        (a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime()
+        (a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime(),
       ),
     }));
 }
@@ -155,7 +170,12 @@ interface ExplainState {
   pendingCommits: ExplainCommitsInput['commits'] | null;
 }
 
-export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source, events, hideHeader = false, actions }) => {
+export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({
+  source,
+  events,
+  hideHeader = false,
+  actions,
+}) => {
   const { theme } = useTheme();
   const [cards, setCards] = useState<CommitActivityCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,20 +202,24 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
     commit: null,
   });
 
-  const label = source.kind === 'owner' ? source.login : `${source.owner}/${source.repo}`;
+  const label =
+    source.kind === 'owner' ? source.login : `${source.owner}/${source.repo}`;
 
   // Destructure to primitives so the effect doesn't re-fire on every render
   // (renderTabContent creates a new source object each call)
   const sourceKind = source.kind;
   const sourceLogin = source.kind === 'owner' ? source.login : undefined;
-  const sourceAccountType = source.kind === 'owner' ? source.accountType : undefined;
+  const sourceAccountType =
+    source.kind === 'owner' ? source.accountType : undefined;
   const sourceOwner = source.kind === 'repo' ? source.owner : undefined;
   const sourceRepo = source.kind === 'repo' ? source.repo : undefined;
 
   // Owner → is-org, so the owner avatar opens the right profile. Owner feeds
   // know it from `accountType`; repo feeds need a lookup. Mirrors
   // InProgressActivityPanel mirrors this panel's owner-type resolution.
-  const [repoOwnerIsOrg, setRepoOwnerIsOrg] = useState<boolean | undefined>(undefined);
+  const [repoOwnerIsOrg, setRepoOwnerIsOrg] = useState<boolean | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     if (sourceKind !== 'repo' || sourceOwner === undefined) return;
@@ -220,7 +244,9 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
   }, [sourceKind, sourceOwner, actions]);
 
   const ownerIsOrg =
-    sourceKind === 'owner' ? sourceAccountType === 'Organization' : repoOwnerIsOrg;
+    sourceKind === 'owner'
+      ? sourceAccountType === 'Organization'
+      : repoOwnerIsOrg;
 
   useEffect(() => {
     let cancelled = false;
@@ -239,18 +265,29 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
           ? actions.getRepoActivity(sourceOwner, sourceRepo)
           : Promise.resolve<CommitActivityCard[]>([]);
 
-    fetch.then(result => {
-      if (!cancelled) {
-        setCards(result);
-        setLoading(false);
-      }
-    }).catch(err => {
-      console.error('[CommitActivityPanel] Failed to load activity:', err);
-      if (!cancelled) setLoading(false);
-    });
+    fetch
+      .then((result) => {
+        if (!cancelled) {
+          setCards(result);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error('[CommitActivityPanel] Failed to load activity:', err);
+        if (!cancelled) setLoading(false);
+      });
 
-    return () => { cancelled = true; };
-  }, [sourceKind, sourceLogin, sourceAccountType, sourceOwner, sourceRepo, actions]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    sourceKind,
+    sourceLogin,
+    sourceAccountType,
+    sourceOwner,
+    sourceRepo,
+    actions,
+  ]);
 
   const hourlyGroups = useMemo(
     () => cardsToHourlyGroups(cards, ownerIsOrg),
@@ -259,9 +296,12 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
 
   // Listen for repo explain requests from cards
   useEffect(() => {
-    const handler = (event: { type: string; payload: { repoName: string; commits: ExplainCommitsInput['commits'] } }) => {
+    const handler = (event: {
+      type: string;
+      payload: { repoName: string; commits: ExplainCommitsInput['commits'] };
+    }) => {
       if (event.type !== 'repo:explain-requested') return;
-      setExplain(prev => ({
+      setExplain((prev) => ({
         isOpen: true,
         loading: true,
         repoName: event.payload.repoName,
@@ -283,28 +323,42 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
     const commits = explain.pendingCommits;
     const repoName = explain.repoName;
     const audience = explain.audience;
-    setExplain(prev => ({ ...prev, loading: true, markdown: null }));
-    actions.explainCommits({ commits, audienceLevel: audience, repoName })
-      .then(result => {
+    setExplain((prev) => ({ ...prev, loading: true, markdown: null }));
+    actions
+      .explainCommits({ commits, audienceLevel: audience, repoName })
+      .then((result) => {
         if (cancelled) return;
-        setExplain(prev => ({ ...prev, loading: false, markdown: result.text }));
+        setExplain((prev) => ({
+          ...prev,
+          loading: false,
+          markdown: result.text,
+        }));
       })
-      .catch(err => {
+      .catch((err) => {
         console.error('[CommitActivityPanel] explain failed:', err);
         if (cancelled) return;
-        setExplain(prev => ({ ...prev, loading: false, markdown: 'Failed to generate explanation. Please try again.' }));
+        setExplain((prev) => ({
+          ...prev,
+          loading: false,
+          markdown: 'Failed to generate explanation. Please try again.',
+        }));
       });
     return () => {
       cancelled = true;
     };
   }, [explain.pendingCommits, explain.audience, explain.repoName, actions]);
 
-  const handleExplainAudienceChange = useCallback((audience: ExplainAudience) => {
-    setExplain(prev => (prev.audience === audience ? prev : { ...prev, audience }));
-  }, []);
+  const handleExplainAudienceChange = useCallback(
+    (audience: ExplainAudience) => {
+      setExplain((prev) =>
+        prev.audience === audience ? prev : { ...prev, audience },
+      );
+    },
+    [],
+  );
 
   const handleExplainClose = useCallback(() => {
-    setExplain(prev => ({ ...prev, isOpen: false }));
+    setExplain((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
   // Listen for commit review requests from cards
@@ -336,11 +390,11 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
   }, [events]);
 
   const handleReviewClose = useCallback(() => {
-    setReview(prev => ({ ...prev, isOpen: false }));
+    setReview((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
   const toggleExpand = useCallback((key: string) => {
-    setExpandedCards(prev => {
+    setExpandedCards((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -351,7 +405,16 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
   const spacing = { xs: 4, sm: 8, md: 16 };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: theme.colors.background, overflow: 'hidden', position: 'relative' }}>
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: theme.colors.background,
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
       {/* Header */}
       {!hideHeader && (
         <div
@@ -365,9 +428,22 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
               payload: { owner, isOrg },
             });
           }}
-          style={{ padding: `${spacing.md}px ${spacing.md}px`, borderBottom: `1px solid ${theme.colors.border}`, display: 'flex', alignItems: 'center', gap: spacing.md, flexShrink: 0, cursor: 'pointer' }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+          style={{
+            padding: `${spacing.md}px ${spacing.md}px`,
+            borderBottom: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.md,
+            flexShrink: 0,
+            cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
         >
           <img
             src={`https://github.com/${source.kind === 'owner' ? source.login : source.owner}.png?size=80`}
@@ -375,27 +451,62 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
             style={{
               width: 40,
               height: 40,
-              borderRadius: ownerIsOrg === true
-                ? theme.radii?.[3] || 6
-                : '50%',
+              borderRadius: ownerIsOrg === true ? theme.radii?.[3] || 6 : '50%',
               border: `1px solid ${theme.colors.border}`,
             }}
           />
           {source.kind === 'repo' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-              <span style={{ fontFamily: theme.fonts?.heading ?? theme.fonts?.body, fontSize: theme.fontSizes[2], fontWeight: 600, color: theme.colors.text, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}
+            >
+              <span
+                style={{
+                  fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {source.repo}
               </span>
-              <span style={{ fontFamily: theme.fonts?.body, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span
+                style={{
+                  fontFamily: theme.fonts?.body,
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textSecondary,
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {source.owner}
               </span>
             </div>
           ) : (
-            <span style={{ fontFamily: theme.fonts?.heading ?? theme.fonts?.body, fontSize: theme.fontSizes[2], fontWeight: 600, color: theme.colors.text }}>
+            <span
+              style={{
+                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                fontSize: theme.fontSizes[2],
+                fontWeight: 600,
+                color: theme.colors.text,
+              }}
+            >
               {label}
             </span>
           )}
-          <span style={{ fontFamily: theme.fonts?.body, fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, marginLeft: 'auto' }}>
+          <span
+            style={{
+              fontFamily: theme.fonts?.body,
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textSecondary,
+              marginLeft: 'auto',
+            }}
+          >
             Last 7 days
           </span>
         </div>
@@ -404,23 +515,72 @@ export const CommitActivityPanel: React.FC<CommitActivityPanelProps> = ({ source
       {/* Content */}
       <div style={{ flex: 1, overflow: 'auto', padding: spacing.sm }}>
         {loading ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: theme.colors.textSecondary }}>
-            <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              color: theme.colors.textSecondary,
+            }}
+          >
+            <Loader2
+              size={20}
+              style={{ animation: 'spin 1s linear infinite' }}
+            />
           </div>
         ) : hourlyGroups.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: theme.colors.textSecondary, gap: spacing.sm }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              color: theme.colors.textSecondary,
+              gap: spacing.sm,
+            }}
+          >
             <GitCommit size={28} style={{ opacity: 0.3 }} />
-            <span style={{ fontFamily: theme.fonts?.body, fontSize: theme.fontSizes[1] }}>No activity in the last 7 days</span>
+            <span
+              style={{
+                fontFamily: theme.fonts?.body,
+                fontSize: theme.fontSizes[1],
+              }}
+            >
+              No activity in the last 7 days
+            </span>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-            {hourlyGroups.map(group => (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: spacing.md,
+            }}
+          >
+            {hourlyGroups.map((group) => (
               <div key={group.hourBucket}>
-                <div style={{ fontFamily: theme.fonts?.heading ?? theme.fonts?.body, fontSize: theme.fontSizes[0], fontWeight: 600, color: theme.colors.textSecondary, marginBottom: spacing.sm, paddingLeft: spacing.xs }}>
+                <div
+                  style={{
+                    fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                    fontSize: theme.fontSizes[0],
+                    fontWeight: 600,
+                    color: theme.colors.textSecondary,
+                    marginBottom: spacing.sm,
+                    paddingLeft: spacing.xs,
+                  }}
+                >
                   {group.hourLabel}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-                  {group.repos.map(summary => {
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: spacing.sm,
+                  }}
+                >
+                  {group.repos.map((summary) => {
                     const key = `${group.hourBucket}:${summary.githubOwner}/${summary.repoName}`;
                     return (
                       <RepoActivityCard

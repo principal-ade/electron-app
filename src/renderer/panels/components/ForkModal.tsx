@@ -30,7 +30,13 @@ interface ForkModalProps {
 type Step = 'select' | 'progress' | 'complete';
 type ProgressStep = 'forking' | 'cloning' | 'registering';
 
-export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner, repoName, registerRepository }) => {
+export const ForkModal: React.FC<ForkModalProps> = ({
+  isOpen,
+  onClose,
+  repoOwner,
+  repoName,
+  registerRepository,
+}) => {
   const { theme } = useTheme();
   const { profile } = useAuthUser();
 
@@ -45,7 +51,9 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authMethods, setAuthMethods] = useState<AuthMethods | null>(null);
-  const [selectedAuthMethod, setSelectedAuthMethod] = useState<'ssh' | 'https'>('https');
+  const [selectedAuthMethod, setSelectedAuthMethod] = useState<'ssh' | 'https'>(
+    'https',
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -82,8 +90,12 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
       .finally(() => setIsLoading(false));
   }, [isOpen, profile, repoName, repoOwner]);
 
-  const targetLogin = forkTarget === 'personal' ? (currentUser?.login ?? '') : forkTarget;
-  const clonePath = baseDir && targetLogin ? joinClonePath(baseDir, targetLogin, repoName) : null;
+  const targetLogin =
+    forkTarget === 'personal' ? (currentUser?.login ?? '') : forkTarget;
+  const clonePath =
+    baseDir && targetLogin
+      ? joinClonePath(baseDir, targetLogin, repoName)
+      : null;
 
   const handleFork = async () => {
     if (!clonePath) {
@@ -96,14 +108,23 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
 
     try {
       setProgressStep('forking');
-      const forkOptions = forkTarget !== 'personal' ? { organization: forkTarget } : undefined;
-      const forkedRepo = await GithubService.forkRepository(repoOwner, repoName, forkOptions);
+      const forkOptions =
+        forkTarget !== 'personal' ? { organization: forkTarget } : undefined;
+      const forkedRepo = await GithubService.forkRepository(
+        repoOwner,
+        repoName,
+        forkOptions,
+      );
       if (!forkedRepo) throw new Error('Fork failed — please try again.');
 
       setProgressStep('cloning');
-      const cloneUrl = selectedAuthMethod === 'ssh' && forkedRepo.ssh_url ? forkedRepo.ssh_url : forkedRepo.clone_url;
+      const cloneUrl =
+        selectedAuthMethod === 'ssh' && forkedRepo.ssh_url
+          ? forkedRepo.ssh_url
+          : forkedRepo.clone_url;
       const cloneOk = await GitService.cloneRepository(cloneUrl, clonePath);
-      if (!cloneOk) throw new Error('Clone failed — check your connection and try again.');
+      if (!cloneOk)
+        throw new Error('Clone failed — check your connection and try again.');
 
       setProgressStep('registering');
       await registerRepository(clonePath, cloneUrl);
@@ -112,7 +133,11 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
       setTimeout(onClose, 2000);
     } catch (err) {
       console.error('[ForkModal]', err);
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Something went wrong. Please try again.',
+      );
       setStep('select');
     }
   };
@@ -125,7 +150,11 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
     registering: 'Registering…',
   };
 
-  const allProgressSteps: ProgressStep[] = ['forking', 'cloning', 'registering'];
+  const allProgressSteps: ProgressStep[] = [
+    'forking',
+    'cloning',
+    'registering',
+  ];
 
   const modalContent = (
     <div
@@ -186,7 +215,9 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
                   color: theme.colors.text,
                 }}
               >
-                {step === 'complete' ? 'Forked!' : `Fork ${repoOwner}/${repoName}`}
+                {step === 'complete'
+                  ? 'Forked!'
+                  : `Fork ${repoOwner}/${repoName}`}
               </h2>
               <p
                 style={{
@@ -196,14 +227,25 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
                   color: theme.colors.textSecondary,
                 }}
               >
-                {step === 'select' ? 'Choose where to fork' : step === 'complete' ? `${targetLogin}/${repoName}` : progressLabels[progressStep]}
+                {step === 'select'
+                  ? 'Choose where to fork'
+                  : step === 'complete'
+                    ? `${targetLogin}/${repoName}`
+                    : progressLabels[progressStep]}
               </p>
             </div>
           </div>
           {step !== 'progress' && (
             <button
               onClick={onClose}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: theme.colors.textSecondary, display: 'flex' }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                color: theme.colors.textSecondary,
+                display: 'flex',
+              }}
             >
               <X size={20} />
             </button>
@@ -213,11 +255,32 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
         {/* Body */}
         {step === 'select' && (
           <>
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div
+              style={{
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+              }}
+            >
               {isLoading ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: theme.colors.textSecondary }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: theme.colors.textSecondary,
+                  }}
+                >
                   <Loader2 size={16} className="animate-spin" />
-                  <span style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>Loading accounts…</span>
+                  <span
+                    style={{
+                      fontSize: `${theme.fontSizes[1]}px`,
+                      fontFamily: theme.fonts.body,
+                    }}
+                  >
+                    Loading accounts…
+                  </span>
                 </div>
               ) : (
                 <>
@@ -250,9 +313,13 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
                         cursor: 'pointer',
                       }}
                     >
-                      <option value="personal">{currentUser?.login ?? 'My account'} (personal)</option>
+                      <option value="personal">
+                        {currentUser?.login ?? 'My account'} (personal)
+                      </option>
                       {organizations.map((org) => (
-                        <option key={org.id} value={org.login}>{org.login}</option>
+                        <option key={org.id} value={org.login}>
+                          {org.login}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -276,87 +343,98 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
                         borderRadius: '6px',
                         border: `1px solid ${theme.colors.border}`,
                         backgroundColor: theme.colors.backgroundSecondary,
-                        color: clonePath ? theme.colors.textSecondary : theme.colors.error ?? '#ef4444',
+                        color: clonePath
+                          ? theme.colors.textSecondary
+                          : (theme.colors.error ?? '#ef4444'),
                         fontSize: `${theme.fontSizes[1]}px`,
                         fontFamily: theme.fonts.monospace,
                       }}
                     >
-                      {clonePath ?? 'No home folder configured — set one in Settings'}
+                      {clonePath ??
+                        'No home folder configured — set one in Settings'}
                     </div>
                   </div>
 
-                  {authMethods && (authMethods.ssh.available || authMethods.https.available) && (
-                    <div>
-                      <label
-                        style={{
-                          display: 'block',
-                          marginBottom: '8px',
-                          fontSize: `${theme.fontSizes[1]}px`,
-                          fontWeight: theme.fontWeights.semibold,
-                          fontFamily: theme.fonts.body,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Clone via
-                      </label>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {authMethods.https.available && (
-                          <label
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              padding: '8px 14px',
-                              borderRadius: '6px',
-                              border: `1px solid ${selectedAuthMethod === 'https' ? theme.colors.primary : theme.colors.border}`,
-                              backgroundColor: selectedAuthMethod === 'https' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
-                              cursor: 'pointer',
-                              fontSize: `${theme.fontSizes[1]}px`,
-                              fontFamily: theme.fonts.body,
-                              color: theme.colors.text,
-                            }}
-                          >
-                            <input
-                              type="radio"
-                              name="authMethod"
-                              value="https"
-                              checked={selectedAuthMethod === 'https'}
-                              onChange={() => setSelectedAuthMethod('https')}
-                              style={{ accentColor: theme.colors.primary }}
-                            />
-                            HTTPS
-                          </label>
-                        )}
-                        {authMethods.ssh.available && (
-                          <label
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              padding: '8px 14px',
-                              borderRadius: '6px',
-                              border: `1px solid ${selectedAuthMethod === 'ssh' ? theme.colors.primary : theme.colors.border}`,
-                              backgroundColor: selectedAuthMethod === 'ssh' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
-                              cursor: 'pointer',
-                              fontSize: `${theme.fontSizes[1]}px`,
-                              fontFamily: theme.fonts.body,
-                              color: theme.colors.text,
-                            }}
-                          >
-                            <input
-                              type="radio"
-                              name="authMethod"
-                              value="ssh"
-                              checked={selectedAuthMethod === 'ssh'}
-                              onChange={() => setSelectedAuthMethod('ssh')}
-                              style={{ accentColor: theme.colors.primary }}
-                            />
-                            SSH
-                          </label>
-                        )}
+                  {authMethods &&
+                    (authMethods.ssh.available ||
+                      authMethods.https.available) && (
+                      <div>
+                        <label
+                          style={{
+                            display: 'block',
+                            marginBottom: '8px',
+                            fontSize: `${theme.fontSizes[1]}px`,
+                            fontWeight: theme.fontWeights.semibold,
+                            fontFamily: theme.fonts.body,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          Clone via
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {authMethods.https.available && (
+                            <label
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '8px 14px',
+                                borderRadius: '6px',
+                                border: `1px solid ${selectedAuthMethod === 'https' ? theme.colors.primary : theme.colors.border}`,
+                                backgroundColor:
+                                  selectedAuthMethod === 'https'
+                                    ? `${theme.colors.primary}15`
+                                    : theme.colors.backgroundSecondary,
+                                cursor: 'pointer',
+                                fontSize: `${theme.fontSizes[1]}px`,
+                                fontFamily: theme.fonts.body,
+                                color: theme.colors.text,
+                              }}
+                            >
+                              <input
+                                type="radio"
+                                name="authMethod"
+                                value="https"
+                                checked={selectedAuthMethod === 'https'}
+                                onChange={() => setSelectedAuthMethod('https')}
+                                style={{ accentColor: theme.colors.primary }}
+                              />
+                              HTTPS
+                            </label>
+                          )}
+                          {authMethods.ssh.available && (
+                            <label
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '8px 14px',
+                                borderRadius: '6px',
+                                border: `1px solid ${selectedAuthMethod === 'ssh' ? theme.colors.primary : theme.colors.border}`,
+                                backgroundColor:
+                                  selectedAuthMethod === 'ssh'
+                                    ? `${theme.colors.primary}15`
+                                    : theme.colors.backgroundSecondary,
+                                cursor: 'pointer',
+                                fontSize: `${theme.fontSizes[1]}px`,
+                                fontFamily: theme.fonts.body,
+                                color: theme.colors.text,
+                              }}
+                            >
+                              <input
+                                type="radio"
+                                name="authMethod"
+                                value="ssh"
+                                checked={selectedAuthMethod === 'ssh'}
+                                onChange={() => setSelectedAuthMethod('ssh')}
+                                style={{ accentColor: theme.colors.primary }}
+                              />
+                              SSH
+                            </label>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </>
               )}
 
@@ -454,10 +532,17 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
                   justifyContent: 'center',
                 }}
               >
-                <Check size={32} style={{ color: theme.colors.success ?? '#22c55e' }} />
+                <Check
+                  size={32}
+                  style={{ color: theme.colors.success ?? '#22c55e' }}
+                />
               </div>
             ) : (
-              <Loader2 size={48} style={{ color: theme.colors.primary }} className="animate-spin" />
+              <Loader2
+                size={48}
+                style={{ color: theme.colors.primary }}
+                className="animate-spin"
+              />
             )}
 
             <div style={{ textAlign: 'center' }}>
@@ -470,7 +555,9 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
                   color: theme.colors.text,
                 }}
               >
-                {step === 'complete' ? 'Fork cloned successfully' : progressLabels[progressStep]}
+                {step === 'complete'
+                  ? 'Fork cloned successfully'
+                  : progressLabels[progressStep]}
               </h3>
               <p
                 style={{
@@ -500,8 +587,12 @@ export const ForkModal: React.FC<ForkModalProps> = ({ isOpen, onClose, repoOwner
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        backgroundColor: idx <= currentIdx ? theme.colors.primary : theme.colors.border,
-                        opacity: idx === currentIdx ? 1 : idx < currentIdx ? 0.6 : 0.3,
+                        backgroundColor:
+                          idx <= currentIdx
+                            ? theme.colors.primary
+                            : theme.colors.border,
+                        opacity:
+                          idx === currentIdx ? 1 : idx < currentIdx ? 0.6 : 0.3,
                         transition: 'all 0.3s',
                       }}
                     />

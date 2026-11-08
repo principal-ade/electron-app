@@ -242,10 +242,13 @@ export async function getRepository(
 
   if (apiResult.success && apiResult.data) {
     const repoData = apiResult.data as GitHubRepositoryWithPermissions;
-    console.log(`[GitHub] Successfully fetched repository ${owner}/${repoData.name}`, {
-      permissions: repoData.permissions,
-      fork: repoData.fork,
-    });
+    console.log(
+      `[GitHub] Successfully fetched repository ${owner}/${repoData.name}`,
+      {
+        permissions: repoData.permissions,
+        fork: repoData.fork,
+      },
+    );
     return repoData;
   }
 
@@ -253,8 +256,12 @@ export async function getRepository(
   try {
     const result = await core.executeCommand(['gh', 'api', endpoint]);
     if (result.success && result.stdout) {
-      const repoData = JSON.parse(result.stdout) as GitHubRepositoryWithPermissions;
-      console.log(`[GitHub] Successfully fetched repository ${owner}/${repo} via CLI`);
+      const repoData = JSON.parse(
+        result.stdout,
+      ) as GitHubRepositoryWithPermissions;
+      console.log(
+        `[GitHub] Successfully fetched repository ${owner}/${repo} via CLI`,
+      );
       return repoData;
     }
   } catch (error) {
@@ -287,7 +294,9 @@ export async function createRepository(
 
   if (apiResult.success && apiResult.data) {
     const repoData = apiResult.data as GitHubRepositoryCreated;
-    console.log(`[GitHub] Successfully created repository: ${repoData.full_name}`);
+    console.log(
+      `[GitHub] Successfully created repository: ${repoData.full_name}`,
+    );
     return repoData;
   }
 
@@ -344,7 +353,9 @@ export async function createRepository(
     console.error('[GitHub] Error creating repository:', error);
     throw new Error(
       apiResult.error ||
-        (error instanceof Error ? error.message : 'Failed to create repository'),
+        (error instanceof Error
+          ? error.message
+          : 'Failed to create repository'),
     );
   }
 }
@@ -385,7 +396,9 @@ export async function forkRepository(
 
   if (apiResult.success && apiResult.data) {
     const forkedRepo = apiResult.data as GitHubRepositoryCreated;
-    console.log(`[GitHub] Successfully forked repository to ${forkedRepo.full_name}`);
+    console.log(
+      `[GitHub] Successfully forked repository to ${forkedRepo.full_name}`,
+    );
     return forkedRepo;
   }
 
@@ -403,14 +416,21 @@ export async function forkRepository(
         const forkOwner = options?.organization || currentUser.login;
         const forkName = options?.name || repo;
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        return getRepository(core, forkOwner, forkName) as Promise<GitHubRepositoryCreated | null>;
+        return getRepository(
+          core,
+          forkOwner,
+          forkName,
+        ) as Promise<GitHubRepositoryCreated | null>;
       }
     }
   } catch (error) {
     console.error('[GitHub] Error forking repository:', error);
   }
 
-  console.error(`[GitHub] Failed to fork repository ${owner}/${repo}`, apiResult.error);
+  console.error(
+    `[GitHub] Failed to fork repository ${owner}/${repo}`,
+    apiResult.error,
+  );
   return null;
 }
 
@@ -421,14 +441,18 @@ export async function forkRepository(
 /**
  * Get available .gitignore templates
  */
-export async function getGitignoreTemplates(core: GitHubAPICore): Promise<string[]> {
+export async function getGitignoreTemplates(
+  core: GitHubAPICore,
+): Promise<string[]> {
   console.log('[GitHub] Fetching .gitignore templates');
 
   const endpoint = '/gitignore/templates';
   const apiResult = await core.makeGitHubAPICall(endpoint);
 
   if (apiResult.success && Array.isArray(apiResult.data)) {
-    console.log(`[GitHub] Successfully fetched ${apiResult.data.length} .gitignore templates`);
+    console.log(
+      `[GitHub] Successfully fetched ${apiResult.data.length} .gitignore templates`,
+    );
     return apiResult.data;
   }
 
@@ -438,7 +462,9 @@ export async function getGitignoreTemplates(core: GitHubAPICore): Promise<string
     if (result.success && result.stdout) {
       const templates = JSON.parse(result.stdout);
       if (Array.isArray(templates)) {
-        console.log(`[GitHub] Successfully fetched ${templates.length} .gitignore templates via CLI`);
+        console.log(
+          `[GitHub] Successfully fetched ${templates.length} .gitignore templates via CLI`,
+        );
         return templates;
       }
     }
@@ -446,27 +472,35 @@ export async function getGitignoreTemplates(core: GitHubAPICore): Promise<string
     console.error('[GitHub] Error getting .gitignore templates:', error);
   }
 
-  console.warn('[GitHub] Failed to fetch .gitignore templates, returning empty array');
+  console.warn(
+    '[GitHub] Failed to fetch .gitignore templates, returning empty array',
+  );
   return [];
 }
 
 /**
  * Get available license templates
  */
-export async function getLicenseTemplates(core: GitHubAPICore): Promise<GitHubLicenseTemplate[]> {
+export async function getLicenseTemplates(
+  core: GitHubAPICore,
+): Promise<GitHubLicenseTemplate[]> {
   console.log('[GitHub] Fetching license templates');
 
   const endpoint = '/licenses';
   const apiResult = await core.makeGitHubAPICall(endpoint);
 
   if (apiResult.success && Array.isArray(apiResult.data)) {
-    const licenses = (apiResult.data as RawGitHubLicenseTemplateResponse[]).map((license) => ({
-      key: license.key as string,
-      name: license.name as string,
-      spdx_id: license.spdx_id as string,
-      url: license.url as string,
-    }));
-    console.log(`[GitHub] Successfully fetched ${licenses.length} license templates`);
+    const licenses = (apiResult.data as RawGitHubLicenseTemplateResponse[]).map(
+      (license) => ({
+        key: license.key as string,
+        name: license.name as string,
+        spdx_id: license.spdx_id as string,
+        url: license.url as string,
+      }),
+    );
+    console.log(
+      `[GitHub] Successfully fetched ${licenses.length} license templates`,
+    );
     return licenses;
   }
 
@@ -474,7 +508,9 @@ export async function getLicenseTemplates(core: GitHubAPICore): Promise<GitHubLi
   try {
     const result = await core.executeCommand(['gh', 'api', endpoint]);
     if (result.success && result.stdout) {
-      const templates = JSON.parse(result.stdout) as RawGitHubLicenseTemplateResponse[];
+      const templates = JSON.parse(
+        result.stdout,
+      ) as RawGitHubLicenseTemplateResponse[];
       if (Array.isArray(templates)) {
         const licenses = templates.map((license) => ({
           key: license.key as string,
@@ -482,7 +518,9 @@ export async function getLicenseTemplates(core: GitHubAPICore): Promise<GitHubLi
           spdx_id: license.spdx_id as string,
           url: license.url as string,
         }));
-        console.log(`[GitHub] Successfully fetched ${licenses.length} license templates via CLI`);
+        console.log(
+          `[GitHub] Successfully fetched ${licenses.length} license templates via CLI`,
+        );
         return licenses;
       }
     }
@@ -490,7 +528,9 @@ export async function getLicenseTemplates(core: GitHubAPICore): Promise<GitHubLi
     console.error('[GitHub] Error getting license templates:', error);
   }
 
-  console.warn('[GitHub] Failed to fetch license templates, returning empty array');
+  console.warn(
+    '[GitHub] Failed to fetch license templates, returning empty array',
+  );
   return [];
 }
 
@@ -509,7 +549,9 @@ export async function getFileContentWithSha(
   filePath: string,
   branch: string,
 ): Promise<{ content: string; sha: string } | null> {
-  console.log(`[GitHub] Getting file content with SHA: ${owner}/${repo}/${filePath} @ ${branch}`);
+  console.log(
+    `[GitHub] Getting file content with SHA: ${owner}/${repo}/${filePath} @ ${branch}`,
+  );
 
   const endpoint = `/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`;
   const apiResult = await core.makeGitHubAPICall(endpoint);
@@ -523,11 +565,14 @@ export async function getFileContentWithSha(
 
     if (data.content && data.sha) {
       // GitHub returns base64-encoded content
-      const content = data.encoding === 'base64'
-        ? Buffer.from(data.content, 'base64').toString('utf-8')
-        : data.content;
+      const content =
+        data.encoding === 'base64'
+          ? Buffer.from(data.content, 'base64').toString('utf-8')
+          : data.content;
 
-      console.log(`[GitHub] Successfully fetched file content (SHA: ${data.sha.substring(0, 7)})`);
+      console.log(
+        `[GitHub] Successfully fetched file content (SHA: ${data.sha.substring(0, 7)})`,
+      );
       return { content, sha: data.sha };
     }
   }
@@ -543,11 +588,14 @@ export async function getFileContentWithSha(
       };
 
       if (data.content && data.sha) {
-        const content = data.encoding === 'base64'
-          ? Buffer.from(data.content, 'base64').toString('utf-8')
-          : data.content;
+        const content =
+          data.encoding === 'base64'
+            ? Buffer.from(data.content, 'base64').toString('utf-8')
+            : data.content;
 
-        console.log(`[GitHub] Successfully fetched file content via CLI (SHA: ${data.sha.substring(0, 7)})`);
+        console.log(
+          `[GitHub] Successfully fetched file content via CLI (SHA: ${data.sha.substring(0, 7)})`,
+        );
         return { content, sha: data.sha };
       }
     }
@@ -573,7 +621,9 @@ export async function commitFile(
   branch: string,
   sha?: string,
 ): Promise<{ success: boolean; commit?: { sha: string }; error?: string }> {
-  console.log(`[GitHub] Committing file: ${owner}/${repo}/${filePath} @ ${branch}`);
+  console.log(
+    `[GitHub] Committing file: ${owner}/${repo}/${filePath} @ ${branch}`,
+  );
 
   // Encode content as base64
   const base64Content = Buffer.from(content, 'utf-8').toString('base64');
@@ -605,7 +655,9 @@ export async function commitFile(
       commit?: { sha: string };
     };
 
-    console.log(`[GitHub] Successfully committed file (commit SHA: ${data.commit?.sha?.substring(0, 7)})`);
+    console.log(
+      `[GitHub] Successfully committed file (commit SHA: ${data.commit?.sha?.substring(0, 7)})`,
+    );
     return {
       success: true,
       commit: data.commit,
@@ -623,7 +675,8 @@ export async function commitFile(
   if (apiResult.status === 403) {
     return {
       success: false,
-      error: 'Permission denied. You do not have push access to this repository.',
+      error:
+        'Permission denied. You do not have push access to this repository.',
     };
   }
 
@@ -649,7 +702,11 @@ export async function commitFile(
 /**
  * Refresh data for a repository (clears cache)
  */
-export function refreshData(core: GitHubAPICore, owner: string, repo: string): void {
+export function refreshData(
+  core: GitHubAPICore,
+  owner: string,
+  repo: string,
+): void {
   console.log(`[GitHub] Refreshing data for ${owner}/${repo}`);
   core.clearCache(`${owner}:${repo}`);
 }

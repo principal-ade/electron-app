@@ -18,7 +18,9 @@ const baseCommit: RecentCommit = {
   ],
 };
 
-const CityBackdrop: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+const CityBackdrop: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => (
   <div
     style={{
       width: '100vw',
@@ -90,9 +92,7 @@ export const SmallChange: Story = {
       additions: 2,
       deletions: 14,
       authoredAt: new Date(Date.now() - 1000 * 60 * 60 * 4),
-      files: [
-        { path: 'src/main/cli-bridge/worker.ts', status: 'M' },
-      ],
+      files: [{ path: 'src/main/cli-bridge/worker.ts', status: 'M' }],
     },
   },
 };

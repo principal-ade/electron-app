@@ -54,7 +54,6 @@ interface RepoCardProps {
   fileTree?: FileTree | null;
 }
 
-
 /**
  * Format number with k suffix
  */
@@ -142,22 +141,22 @@ export const RepoCard: React.FC<RepoCardProps> = ({
 
     const colorMapping = getFileColorMapping();
     const languageToExtension: Record<string, string> = {
-      'TypeScript': '.ts',
-      'JavaScript': '.js',
-      'Python': '.py',
-      'Rust': '.rs',
-      'Go': '.go',
-      'Java': '.java',
+      TypeScript: '.ts',
+      JavaScript: '.js',
+      Python: '.py',
+      Rust: '.rs',
+      Go: '.go',
+      Java: '.java',
       'C++': '.cpp',
-      'C': '.c',
-      'Ruby': '.rb',
-      'PHP': '.php',
-      'Swift': '.swift',
-      'Kotlin': '.kt',
-      'Dart': '.dart',
-      'CSS': '.css',
-      'HTML': '.html',
-      'Markdown': '.md',
+      C: '.c',
+      Ruby: '.rb',
+      PHP: '.php',
+      Swift: '.swift',
+      Kotlin: '.kt',
+      Dart: '.dart',
+      CSS: '.css',
+      HTML: '.html',
+      Markdown: '.md',
     };
 
     const extension = languageToExtension[repo.language];
@@ -182,7 +181,10 @@ export const RepoCard: React.FC<RepoCardProps> = ({
       setCityData(unionCity);
       setCityLoading(false);
     } catch (err) {
-      console.warn(`[RepoCard] Failed to build city for ${repo.repoName}:`, err);
+      console.warn(
+        `[RepoCard] Failed to build city for ${repo.repoName}:`,
+        err,
+      );
       setCityData(null);
       setCityLoading(false);
     }
@@ -257,7 +259,11 @@ export const RepoCard: React.FC<RepoCardProps> = ({
               maxCanvasSize={1024}
             />
           ) : (
-            <FolderGit2 size={48} color={theme.colors.textMuted} style={{ opacity: 0.3 }} />
+            <FolderGit2
+              size={48}
+              color={theme.colors.textMuted}
+              style={{ opacity: 0.3 }}
+            />
           )}
         </div>
 
@@ -272,7 +278,14 @@ export const RepoCard: React.FC<RepoCardProps> = ({
           }}
         >
           {/* Repository name */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, minWidth: 0 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              minWidth: 0,
+            }}
+          >
             <h4
               style={{
                 margin: 0,
@@ -293,7 +306,9 @@ export const RepoCard: React.FC<RepoCardProps> = ({
                   flexShrink: 0,
                   fontSize: theme.fontSizes[0],
                   fontFamily: theme.fonts?.body,
-                  color: repo.isPrivate ? theme.colors.textSecondary : theme.colors.textMuted,
+                  color: repo.isPrivate
+                    ? theme.colors.textSecondary
+                    : theme.colors.textMuted,
                   border: `1px solid ${theme.colors.border}`,
                   borderRadius: 4,
                   padding: '1px 6px',
@@ -411,7 +426,13 @@ export const RepoCard: React.FC<RepoCardProps> = ({
           >
             {/* Language */}
             {repo.language && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                }}
+              >
                 <div
                   style={{
                     width: 10,
@@ -426,7 +447,13 @@ export const RepoCard: React.FC<RepoCardProps> = ({
 
             {/* Stars */}
             {repo.stars !== undefined && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                }}
+              >
                 <span>⭐</span>
                 <span>{formatNumber(repo.stars)}</span>
               </div>

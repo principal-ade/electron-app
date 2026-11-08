@@ -129,9 +129,7 @@ interface TourGenProgress {
 
 const FileCityGuidePanel = dynamic(
   () =>
-    import('@industry-theme/file-city-panel').then(
-      (m) => m.FileCityGuidePanel,
-    ),
+    import('@industry-theme/file-city-panel').then((m) => m.FileCityGuidePanel),
   { ssr: false },
 );
 
@@ -163,16 +161,92 @@ type LeftViewMode =
 // loading screen — same fixture the trail page uses.
 const WARMING_CITY_DATA: import('@principal-ai/file-city-react').CityData = {
   buildings: [
-    { path: 'src/index.ts', position: { x: 5, y: 0, z: 5 }, dimensions: [8, 12, 8], type: 'file', fileExtension: 'ts', size: 4096, lineCount: 240 },
-    { path: 'src/app.tsx', position: { x: 18, y: 0, z: 5 }, dimensions: [8, 18, 8], type: 'file', fileExtension: 'tsx', size: 8192, lineCount: 480 },
-    { path: 'src/api/client.js', position: { x: 31, y: 0, z: 5 }, dimensions: [6, 9, 6], type: 'file', fileExtension: 'js', size: 3000, lineCount: 180 },
-    { path: 'src/components/Button.tsx', position: { x: 5, y: 0, z: 22 }, dimensions: [6, 6, 6], type: 'file', fileExtension: 'tsx', size: 1024, lineCount: 80 },
-    { path: 'src/components/Modal.tsx', position: { x: 14, y: 0, z: 22 }, dimensions: [6, 14, 6], type: 'file', fileExtension: 'tsx', size: 6000, lineCount: 320 },
-    { path: 'src/utils/helpers.ts', position: { x: 23, y: 0, z: 22 }, dimensions: [6, 9, 6], type: 'file', fileExtension: 'ts', size: 2400, lineCount: 160 },
-    { path: 'src/styles/main.css', position: { x: 31, y: 0, z: 22 }, dimensions: [6, 5, 6], type: 'file', fileExtension: 'css', size: 1500 },
-    { path: 'package.json', position: { x: 5, y: 0, z: 38 }, dimensions: [5, 4, 5], type: 'file', fileExtension: 'json', size: 800 },
-    { path: 'README.md', position: { x: 14, y: 0, z: 38 }, dimensions: [5, 5, 5], type: 'file', fileExtension: 'md', size: 1500 },
-    { path: 'tsconfig.json', position: { x: 23, y: 0, z: 38 }, dimensions: [5, 4, 5], type: 'file', fileExtension: 'json', size: 600 },
+    {
+      path: 'src/index.ts',
+      position: { x: 5, y: 0, z: 5 },
+      dimensions: [8, 12, 8],
+      type: 'file',
+      fileExtension: 'ts',
+      size: 4096,
+      lineCount: 240,
+    },
+    {
+      path: 'src/app.tsx',
+      position: { x: 18, y: 0, z: 5 },
+      dimensions: [8, 18, 8],
+      type: 'file',
+      fileExtension: 'tsx',
+      size: 8192,
+      lineCount: 480,
+    },
+    {
+      path: 'src/api/client.js',
+      position: { x: 31, y: 0, z: 5 },
+      dimensions: [6, 9, 6],
+      type: 'file',
+      fileExtension: 'js',
+      size: 3000,
+      lineCount: 180,
+    },
+    {
+      path: 'src/components/Button.tsx',
+      position: { x: 5, y: 0, z: 22 },
+      dimensions: [6, 6, 6],
+      type: 'file',
+      fileExtension: 'tsx',
+      size: 1024,
+      lineCount: 80,
+    },
+    {
+      path: 'src/components/Modal.tsx',
+      position: { x: 14, y: 0, z: 22 },
+      dimensions: [6, 14, 6],
+      type: 'file',
+      fileExtension: 'tsx',
+      size: 6000,
+      lineCount: 320,
+    },
+    {
+      path: 'src/utils/helpers.ts',
+      position: { x: 23, y: 0, z: 22 },
+      dimensions: [6, 9, 6],
+      type: 'file',
+      fileExtension: 'ts',
+      size: 2400,
+      lineCount: 160,
+    },
+    {
+      path: 'src/styles/main.css',
+      position: { x: 31, y: 0, z: 22 },
+      dimensions: [6, 5, 6],
+      type: 'file',
+      fileExtension: 'css',
+      size: 1500,
+    },
+    {
+      path: 'package.json',
+      position: { x: 5, y: 0, z: 38 },
+      dimensions: [5, 4, 5],
+      type: 'file',
+      fileExtension: 'json',
+      size: 800,
+    },
+    {
+      path: 'README.md',
+      position: { x: 14, y: 0, z: 38 },
+      dimensions: [5, 5, 5],
+      type: 'file',
+      fileExtension: 'md',
+      size: 1500,
+    },
+    {
+      path: 'tsconfig.json',
+      position: { x: 23, y: 0, z: 38 },
+      dimensions: [5, 4, 5],
+      type: 'file',
+      fileExtension: 'json',
+      size: 600,
+    },
   ],
   districts: [
     {
@@ -180,11 +254,20 @@ const WARMING_CITY_DATA: import('@principal-ai/file-city-react').CityData = {
       worldBounds: { minX: 0, maxX: 38, minZ: 0, maxZ: 30 },
       fileCount: 7,
       type: 'directory',
-      label: { text: 'src', bounds: { minX: 0, maxX: 38, minZ: 30, maxZ: 33 }, position: 'bottom' },
+      label: {
+        text: 'src',
+        bounds: { minX: 0, maxX: 38, minZ: 30, maxZ: 33 },
+        position: 'bottom',
+      },
     },
   ],
   bounds: { minX: -2, maxX: 40, minZ: -2, maxZ: 42 },
-  metadata: { totalFiles: 10, totalDirectories: 1, rootPath: '/warming', analyzedAt: new Date() },
+  metadata: {
+    totalFiles: 10,
+    totalDirectories: 1,
+    rootPath: '/warming',
+    analyzedAt: new Date(),
+  },
 };
 
 // Building heights come from the repo analysis, which already returns per-file
@@ -220,9 +303,7 @@ function lineCountsSlice(
   return {
     scope: 'repository',
     name: 'lineCounts',
-    data: hasCounts
-      ? { lineCounts: counts, status: 'available' }
-      : null,
+    data: hasCounts ? { lineCounts: counts, status: 'available' } : null,
     loading: false,
     error: null,
     refresh: async () => {},
@@ -236,7 +317,11 @@ interface RepoExplorerPageProps {
   headerActions?: React.ReactNode;
 }
 
-export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPageProps) {
+export function RepoExplorerPage({
+  owner,
+  repo,
+  headerActions,
+}: RepoExplorerPageProps) {
   const { theme } = useTheme();
 
   const { user } = useAuth();
@@ -357,14 +442,18 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
   // Which edge the file source drawer docks to. Files open on the right. (The
   // README no longer uses this drawer — it opens in the File City panel's
   // native readme mode; see `activeReadmePath`.)
-  const [fileSide, setFileSide] = useState<'left' | 'right' | 'bottom'>('right');
+  const [fileSide, setFileSide] = useState<'left' | 'right' | 'bottom'>(
+    'right',
+  );
   // Tour selection. Mutually exclusive with trail/file selection — the right
   // pane swaps to the tour panel while a tour is active.
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
   // Guide mode — single enum driving the right pane between the file city
   // (idle), this-week commits, and readme views. Mutually exclusive by
   // construction: switching modes immediately nulls the other mode's data.
-  const [guideMode, setGuideMode] = useState<'city' | 'week' | 'readme'>('city');
+  const [guideMode, setGuideMode] = useState<'city' | 'week' | 'readme'>(
+    'city',
+  );
   // README path shown in the panel's native readme mode. Separate from
   // guideMode because package selection can pair a package README with the
   // focused city (not a guide-mode switch). Gated on guideMode below.
@@ -424,7 +513,6 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
     const dir = pkg.packageData.path.replace(/^\/+|\/+$/g, '');
     return dir.length > 0 ? dir : null;
   }, []);
-
 
   // Toggle the left rail between the commit-activity view and the default tours
   // view. Either direction clears the other surfaces' selections so a single
@@ -654,12 +742,15 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
       } catch (err) {
         const message = err instanceof Error ? err.message : '';
         const cooldown =
-          /TOO_MANY_REQUESTS/i.test(message) || /generated recently/i.test(message);
+          /TOO_MANY_REQUESTS/i.test(message) ||
+          /generated recently/i.test(message);
         setProgress(tourId, {
           phase: 'error',
           done: 0,
           total: 0,
-          error: cooldown ? 'Recently generated — try again later' : 'Generation failed',
+          error: cooldown
+            ? 'Recently generated — try again later'
+            : 'Generation failed',
         });
         return;
       }
@@ -747,9 +838,7 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
     if (excludedDirs.length === 0 || !fileTree) return out;
     // Normalize: every prefix ends with '/' so startsWith won't match
     // "src/foo" against an excluded dir named "src/f".
-    const prefixes = excludedDirs.map((d) =>
-      d.endsWith('/') ? d : `${d}/`,
-    );
+    const prefixes = excludedDirs.map((d) => (d.endsWith('/') ? d : `${d}/`));
     for (const f of fileTree.allFiles) {
       if (prefixes.some((p) => f.path.startsWith(p))) out.add(f.path);
     }
@@ -798,7 +887,9 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
       id: 'vibe-coding-isrecord',
       name: isScanning ? 'Scanned files' : 'isRecord files',
       enabled: true,
-      color: isScanning ? (theme.colors.primary ?? '#3b82f6') : (theme.colors.warning ?? '#f59e0b'),
+      color: isScanning
+        ? (theme.colors.primary ?? '#3b82f6')
+        : (theme.colors.warning ?? '#f59e0b'),
       opacity: isScanning ? 0.2 : 0.45,
       priority: 110,
       items: vibeCodingPaths.map((path) => ({
@@ -808,13 +899,22 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
       })),
       dynamic: true,
     };
-  }, [vibeCodingPaths, vibeCodingData.scanActive, theme.colors.primary, theme.colors.warning]);
+  }, [
+    vibeCodingPaths,
+    vibeCodingData.scanActive,
+    theme.colors.primary,
+    theme.colors.warning,
+  ]);
 
   // The trailing edge of the scan — the current batch being inspected.
   // Drawn at higher priority (brighter) on top of the accumulated set so
   // the user can see exactly where the scan beam is right now.
   const vibeCodingScanWindowLayer = useMemo<HighlightLayer | null>(() => {
-    if (!vibeCodingData.scanActive || vibeCodingData.scanWindowPaths.length === 0) return null;
+    if (
+      !vibeCodingData.scanActive ||
+      vibeCodingData.scanWindowPaths.length === 0
+    )
+      return null;
     return {
       id: 'vibe-coding-scan-window',
       name: 'Scanning...',
@@ -829,7 +929,11 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
       })),
       dynamic: true,
     };
-  }, [vibeCodingData.scanActive, vibeCodingData.scanWindowPaths, theme.colors.warning]);
+  }, [
+    vibeCodingData.scanActive,
+    vibeCodingData.scanWindowPaths,
+    theme.colors.warning,
+  ]);
 
   // Stack base + hover. Higher priority renders on top. In debt mode
   // we swap the base layer to the undocumented set and skip the hover
@@ -927,7 +1031,15 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
       if (hoverLayer) layers.push(hoverLayer);
     }
     return layers.length > 0 ? layers : null;
-  }, [isActivityView, commitFiles, activityFocusShas, hoveredCommitSha, activityHoverShas, theme.colors.primary, theme.colors.accent]);
+  }, [
+    isActivityView,
+    commitFiles,
+    activityFocusShas,
+    hoveredCommitSha,
+    activityHoverShas,
+    theme.colors.primary,
+    theme.colors.accent,
+  ]);
   // Selected commit rendered natively by FileCityGuidePanel's commit mode
   // (header + message + changed-file list + city highlights). Only while the
   // Activity view is active.
@@ -948,7 +1060,9 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
   const isPullRequestsView = leftViewMode === 'pull-requests';
   const [visiblePrNumbers, setVisiblePrNumbers] = useState<number[]>([]);
   const [hoveredPrNumber, setHoveredPrNumber] = useState<number | null>(null);
-  const [selectedFilePrFilter, setSelectedFilePrFilter] = useState<string | null>(null);
+  const [selectedFilePrFilter, setSelectedFilePrFilter] = useState<
+    string | null
+  >(null);
   const prFiles = usePullRequestFiles(owner, repo, visiblePrNumbers, {
     enabled: isPullRequestsView,
   });
@@ -1021,9 +1135,11 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
     if (!selectedFilePrFilter || prFiles.size === 0) return null;
     const want = normalizeRepoRelativePath(selectedFilePrFilter, owner, repo);
     return visiblePrNumbers.filter((pr) =>
-      prFiles.get(pr)?.some(
-        (f) => normalizeRepoRelativePath(f.filename, owner, repo) === want,
-      ),
+      prFiles
+        .get(pr)
+        ?.some(
+          (f) => normalizeRepoRelativePath(f.filename, owner, repo) === want,
+        ),
     );
   }, [selectedFilePrFilter, prFiles, visiblePrNumbers, owner, repo]);
 
@@ -1049,12 +1165,8 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
   );
 
   // Week-commits mode — loads this calendar week so far (with header progress).
-  const { week: rawWeekCommitsView, loading: weekCommitsLoading } = useWeekCommits(
-    owner,
-    repo,
-    weekActive,
-    fileTree,
-  );
+  const { week: rawWeekCommitsView, loading: weekCommitsLoading } =
+    useWeekCommits(owner, repo, weekActive, fileTree);
   // Null out immediately when week is off — the hook clears async (after paint)
   // so the panel can briefly see stale week data and show the week view for a
   // frame when switching to City / README.
@@ -1074,12 +1186,7 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
     // On mobile the README shouldn't open by default (it would take the whole
     // screen), but still honor an explicit prior "open" preference.
     if (isMobile && readmePref !== true) return;
-    if (
-      selectedTourId ||
-      selectedCommitSha ||
-      selectedFilePath ||
-      weekActive
-    ) {
+    if (selectedTourId || selectedCommitSha || selectedFilePath || weekActive) {
       return; // something else is already showing
     }
     setActiveReadmePath(readmePath);
@@ -1102,7 +1209,9 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
       console.log('[RepoTrailExplorer] idleHighlightLayers: null');
       return;
     }
-    const samplePaths = (fileTree?.allFiles ?? []).slice(0, 5).map((f) => f.path);
+    const samplePaths = (fileTree?.allFiles ?? [])
+      .slice(0, 5)
+      .map((f) => f.path);
     console.log('[RepoTrailExplorer] idleHighlightLayers:', {
       sampleBuildingPaths: samplePaths,
       layers: idleHighlightLayers.map((l) => ({
@@ -1161,332 +1270,341 @@ export function RepoExplorerPage({ owner, repo, headerActions }: RepoExplorerPag
   }
 
   const singleTour = tours.length === 1 ? (tours[0] ?? null) : null;
-  const singleTourActive = singleTour != null && singleTour.tour.id === selectedTourId;
+  const singleTourActive =
+    singleTour != null && singleTour.tour.id === selectedTourId;
   const isCityMode = !weekActive && activeReadmePath == null;
 
   return (
     <RepoAnalysisProvider owner={owner} repo={repo}>
-    <div
-      className="w-full flex flex-col overflow-hidden"
-      style={{ background: theme.colors.background, height: '100%' }}
-    >
-      <Header
-        rootRef={headerRef}
-        owner={owner}
-        repo={repo}
-        headerActions={headerActions}
-        selectedTour={selectedTour}
-        tourProgress={
-          selectedTour ? tourGenProgress.get(selectedTour.tour.id) : undefined
-        }
-        onGenerateTourAudio={handleGenerateTourAudio}
-        onToggleBookmarks={() => setBookmarksOpen((v) => !v)}
-        bookmarksOpen={bookmarksOpen}
-        repoActive={leftViewMode !== 'tours'}
-        onShowOverview={() => setLeftViewMode('tours')}
-        singleTour={singleTour}
-        singleTourActive={singleTourActive}
-        onToggleSingleTour={() => {
-          const nextId = singleTourActive ? null : singleTour!.tour.id;
-          setSelectedTourId(nextId);
-          if (nextId) {
-            setSelectedFilePath(null);
-            setGuideMode('city');
+      <div
+        className="w-full flex flex-col overflow-hidden"
+        style={{ background: theme.colors.background, height: '100%' }}
+      >
+        <Header
+          rootRef={headerRef}
+          owner={owner}
+          repo={repo}
+          headerActions={headerActions}
+          selectedTour={selectedTour}
+          tourProgress={
+            selectedTour ? tourGenProgress.get(selectedTour.tour.id) : undefined
           }
-        }}
-        isCityMode={isCityMode}
-      />
-      <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
-        {/* The delete control is driven by the app's own validated session:
+          onGenerateTourAudio={handleGenerateTourAudio}
+          onToggleBookmarks={() => setBookmarksOpen((v) => !v)}
+          bookmarksOpen={bookmarksOpen}
+          repoActive={leftViewMode !== 'tours'}
+          onShowOverview={() => setLeftViewMode('tours')}
+          singleTour={singleTour}
+          singleTourActive={singleTourActive}
+          onToggleSingleTour={() => {
+            const nextId = singleTourActive ? null : singleTour!.tour.id;
+            setSelectedTourId(nextId);
+            if (nextId) {
+              setSelectedFilePath(null);
+              setGuideMode('city');
+            }
+          }}
+          isCityMode={isCityMode}
+        />
+        <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
+          {/* The delete control is driven by the app's own validated session:
             the author-match compares against `useAuth().user.id`, and
             viewerIsRepoAdmin (server-resolved, needs a real token) only matters
             once someone is logged in. `viewerUserId` is null when logged out, so
             no trash can renders even if a stale `github_user_id` cookie lingers.
             The DELETE route re-checks auth server-side regardless. */}
-        <TrailListPane
-          owner={owner}
-          repo={repo}
-          viewerUserId={user?.id ?? null}
-          viewerIsRepoAdmin={false}
-          packages={packages}
-          packagesLoading={packagesLoading}
-          onReadFile={handleReadFile}
-          onPackageHover={(pkg) =>
-            setHoveredPackagePath(packageDirFromLayer(pkg))
-          }
-          onPackageSelect={(pkg) => {
-            const dir = packageDirFromLayer(pkg);
-            setSelectedPackagePath(dir);
-            // Pair the package focus with its own README: when the selected
-            // package has one, show it beside the city — `idleFocusDirectory`
-            // (below) collapses the city onto the same subtree, so the reader
-            // gets "focus the package + read its README" in one gesture. No
-            // package README → clear, leaving just the focused city.
-            setActiveReadmePath(dir ? findReadmePath(filePaths, dir) : null);
-          }}
-          configMode={configMode}
-          onToggleConfigMode={() => {
-            setConfigMode((m) => !m);
-          }}
-          leftViewMode={leftViewMode}
-          onSetViewMode={(mode) => {
-            setLeftViewMode(mode);
-            // Picking any other view dismisses the readme and week mode (it's
-            // the tours-view default overlay). Doesn't touch the persisted
-            // preference, so the README button can reopen it. Must clear
-            // `activeReadmePath` too — guideMode alone doesn't gate the
-            // readme slice, so leaving the path set keeps readme mode mounted
-            // and blocks host heatmaps (PR aggregate / activity churn).
-            setGuideMode('city');
-            setActiveReadmePath(null);
-            // Clear the file city guide graph selection when leaving structure.
-            if (mode !== 'structure') setGraphSelectedPackage(null);
-            // Switching views clears the other views' selections so the map
-            // returns to the idle coverage layer between them. Leaving the
-            // activity view also clears any open commit.
-            if (mode !== 'activity') setSelectedCommitSha(null);
-            if (mode !== 'issues') setSelectedIssueNumber(null);
-            if (mode !== 'pull-requests') {
-              setSelectedPrNumber(null);
-              setSelectedFilePrFilter(null);
+          <TrailListPane
+            owner={owner}
+            repo={repo}
+            viewerUserId={user?.id ?? null}
+            viewerIsRepoAdmin={false}
+            packages={packages}
+            packagesLoading={packagesLoading}
+            onReadFile={handleReadFile}
+            onPackageHover={(pkg) =>
+              setHoveredPackagePath(packageDirFromLayer(pkg))
             }
-            // The package focus (idleFocusDirectory) only belongs to the
-            // Structure view; leaving it must release the city back to idle so
-            // About doesn't stay zoomed on the last-clicked package.
-            if (mode !== 'structure') {
-              setSelectedPackagePath(null);
-              setHoveredPackagePath(null);
-            }
-            if (mode === 'tours') {
-              setSelectedFilePath(null);
-            } else if (mode === 'activity') {
-              setSelectedTourId(null);
-              setSelectedFilePath(null);
-              // Opening Activity from a nav card lands on the contributor
-              // list, not a stale drill-down.
-              setActivityFocusContributor(null);
-            } else if (mode === 'issues') {
-              setSelectedTourId(null);
-              setSelectedFilePath(null);
-            } else if (mode === 'pull-requests') {
-              setSelectedTourId(null);
-              setSelectedFilePath(null);
-            } else {
-              // Structure / Contributors: a clean idle right pane.
-              setSelectedFilePath(null);
-              setSelectedTourId(null);
-              // Opening Contributors from a nav card lands on the list, not a
-              // stale contributor drill-down.
-              setContributorsFocus(null);
-            }
-          }}
-          onToggleActivity={handleToggleActivity}
-          onSelectContributor={handleSelectContributor}
-          activityFocusContributor={activityFocusContributor}
-          contributorsFocus={contributorsFocus}
-          selectedCommitSha={selectedCommitSha}
-          onSelectCommit={(sha) => {
-            setSelectedCommitSha(sha);
-            if (sha) {
+            onPackageSelect={(pkg) => {
+              const dir = packageDirFromLayer(pkg);
+              setSelectedPackagePath(dir);
+              // Pair the package focus with its own README: when the selected
+              // package has one, show it beside the city — `idleFocusDirectory`
+              // (below) collapses the city onto the same subtree, so the reader
+              // gets "focus the package + read its README" in one gesture. No
+              // package README → clear, leaving just the focused city.
+              setActiveReadmePath(dir ? findReadmePath(filePaths, dir) : null);
+            }}
+            configMode={configMode}
+            onToggleConfigMode={() => {
+              setConfigMode((m) => !m);
+            }}
+            leftViewMode={leftViewMode}
+            onSetViewMode={(mode) => {
+              setLeftViewMode(mode);
+              // Picking any other view dismisses the readme and week mode (it's
+              // the tours-view default overlay). Doesn't touch the persisted
+              // preference, so the README button can reopen it. Must clear
+              // `activeReadmePath` too — guideMode alone doesn't gate the
+              // readme slice, so leaving the path set keeps readme mode mounted
+              // and blocks host heatmaps (PR aggregate / activity churn).
               setGuideMode('city');
-            }
-          }}
-          selectedIssueNumber={selectedIssueNumber}
-          onSelectIssue={(issueNumber) => {
-            setSelectedIssueNumber(issueNumber);
-            if (issueNumber != null) {
-              setGuideMode('city');
-            }
-          }}
-          selectedPrNumber={selectedPrNumber}
-          onSelectPr={(prNumber) => {
-            setSelectedPrNumber(prNumber);
-            if (prNumber != null) {
-              setGuideMode('city');
-            }
-          }}
-          commitFiles={commitFiles}
-          onCommitShasChange={setActivityShas}
-          onFocusShasChange={setActivityFocusShas}
-          onHoverCommit={setHoveredCommitSha}
-          onActivityHoverShasChange={setActivityHoverShas}
-          // Guide mode switch: City | README | This week. Opening a mode
-          // collapses trails and clears competing selections so one thing
-          // drives the right pane. README pref is still persisted per-repo.
-          onOpenReadmeFile={(path) => {
-            setGuideMode('readme');
-            setActiveReadmePath(path);
-            writeReadmeOpenPref(owner, repo, true);
-            setSelectedFilePath(null);
-            setSelectedTourId(null);
-            setSelectedCommitSha(null);
-            setSelectedIssueNumber(null);
-            setSelectedPrNumber(null);
-          }}
-          onSetWeekActive={(next) => {
-            setGuideMode(next ? 'week' : 'city');
-            if (next) {
               setActiveReadmePath(null);
-              writeReadmeOpenPref(owner, repo, false);
+              // Clear the file city guide graph selection when leaving structure.
+              if (mode !== 'structure') setGraphSelectedPackage(null);
+              // Switching views clears the other views' selections so the map
+              // returns to the idle coverage layer between them. Leaving the
+              // activity view also clears any open commit.
+              if (mode !== 'activity') setSelectedCommitSha(null);
+              if (mode !== 'issues') setSelectedIssueNumber(null);
+              if (mode !== 'pull-requests') {
+                setSelectedPrNumber(null);
+                setSelectedFilePrFilter(null);
+              }
+              // The package focus (idleFocusDirectory) only belongs to the
+              // Structure view; leaving it must release the city back to idle so
+              // About doesn't stay zoomed on the last-clicked package.
+              if (mode !== 'structure') {
+                setSelectedPackagePath(null);
+                setHoveredPackagePath(null);
+              }
+              if (mode === 'tours') {
+                setSelectedFilePath(null);
+              } else if (mode === 'activity') {
+                setSelectedTourId(null);
+                setSelectedFilePath(null);
+                // Opening Activity from a nav card lands on the contributor
+                // list, not a stale drill-down.
+                setActivityFocusContributor(null);
+              } else if (mode === 'issues') {
+                setSelectedTourId(null);
+                setSelectedFilePath(null);
+              } else if (mode === 'pull-requests') {
+                setSelectedTourId(null);
+                setSelectedFilePath(null);
+              } else {
+                // Structure / Contributors: a clean idle right pane.
+                setSelectedFilePath(null);
+                setSelectedTourId(null);
+                // Opening Contributors from a nav card lands on the list, not a
+                // stale contributor drill-down.
+                setContributorsFocus(null);
+              }
+            }}
+            onToggleActivity={handleToggleActivity}
+            onSelectContributor={handleSelectContributor}
+            activityFocusContributor={activityFocusContributor}
+            contributorsFocus={contributorsFocus}
+            selectedCommitSha={selectedCommitSha}
+            onSelectCommit={(sha) => {
+              setSelectedCommitSha(sha);
+              if (sha) {
+                setGuideMode('city');
+              }
+            }}
+            selectedIssueNumber={selectedIssueNumber}
+            onSelectIssue={(issueNumber) => {
+              setSelectedIssueNumber(issueNumber);
+              if (issueNumber != null) {
+                setGuideMode('city');
+              }
+            }}
+            selectedPrNumber={selectedPrNumber}
+            onSelectPr={(prNumber) => {
+              setSelectedPrNumber(prNumber);
+              if (prNumber != null) {
+                setGuideMode('city');
+              }
+            }}
+            commitFiles={commitFiles}
+            onCommitShasChange={setActivityShas}
+            onFocusShasChange={setActivityFocusShas}
+            onHoverCommit={setHoveredCommitSha}
+            onActivityHoverShasChange={setActivityHoverShas}
+            // Guide mode switch: City | README | This week. Opening a mode
+            // collapses trails and clears competing selections so one thing
+            // drives the right pane. README pref is still persisted per-repo.
+            onOpenReadmeFile={(path) => {
+              setGuideMode('readme');
+              setActiveReadmePath(path);
+              writeReadmeOpenPref(owner, repo, true);
               setSelectedFilePath(null);
               setSelectedTourId(null);
               setSelectedCommitSha(null);
               setSelectedIssueNumber(null);
               setSelectedPrNumber(null);
-            }
-          }}
-          onSetCityMode={() => {
-            setGuideMode('city');
-            setActiveReadmePath(null);
-            writeReadmeOpenPref(owner, repo, false);
-          }}
-          readmeActive={readmeActive}
-          weekActive={weekActive}
-          tours={tours}
-          toursLoading={toursLoading}
-          selectedTourId={selectedTourId}
-          onSelectTour={(id) => {
-            setSelectedTourId(id);
-            if (id) {
-              setSelectedFilePath(null);
+            }}
+            onSetWeekActive={(next) => {
+              setGuideMode(next ? 'week' : 'city');
+              if (next) {
+                setActiveReadmePath(null);
+                writeReadmeOpenPref(owner, repo, false);
+                setSelectedFilePath(null);
+                setSelectedTourId(null);
+                setSelectedCommitSha(null);
+                setSelectedIssueNumber(null);
+                setSelectedPrNumber(null);
+              }
+            }}
+            onSetCityMode={() => {
               setGuideMode('city');
-            }
-          }}
-          onRequestDeleteTour={(item) => {
-            if (!item.store) return;
-            setTourToDelete({
-              storeId: item.store.id,
-              tourId: item.tour.id,
-              title: item.tour.title,
-            });
-          }}
-          dirPaths={dirPaths}
-          filePaths={filePaths}
-          excludedDirs={excludedDirs}
-          onExcludedDirsChange={setExcludedDirs}
-          isMobile={isMobile}
-          vibeCodingData={vibeCodingData}
-          onVibeCodingClear={() => {
-            setVibeCodingPaths(null);
-            setVibeCodingData({
-              fileCount: null, occurrenceCount: null, files: [], terms: [],
-              loading: false, error: null, scanActive: false, scanProgress: 0, scanWindowPaths: [], scanDirectory: null,
-            });
-            setLeftViewMode('tours');
-          }}
-          onVibeCodingClose={() => setLeftViewMode('tours')}
-          onVisiblePrsChange={setVisiblePrNumbers}
-          onHoverPr={setHoveredPrNumber}
-          filteredPrNumbers={filteredPrNumbers}
-          onClearFileFilter={() => setSelectedFilePrFilter(null)}
-          graphSelectedPackage={graphSelectedPackage}
-          onClearGraphSelection={() => setGraphSelectedPackage(null)}
-        />
-        <RightPane
+              setActiveReadmePath(null);
+              writeReadmeOpenPref(owner, repo, false);
+            }}
+            readmeActive={readmeActive}
+            weekActive={weekActive}
+            tours={tours}
+            toursLoading={toursLoading}
+            selectedTourId={selectedTourId}
+            onSelectTour={(id) => {
+              setSelectedTourId(id);
+              if (id) {
+                setSelectedFilePath(null);
+                setGuideMode('city');
+              }
+            }}
+            onRequestDeleteTour={(item) => {
+              if (!item.store) return;
+              setTourToDelete({
+                storeId: item.store.id,
+                tourId: item.tour.id,
+                title: item.tour.title,
+              });
+            }}
+            dirPaths={dirPaths}
+            filePaths={filePaths}
+            excludedDirs={excludedDirs}
+            onExcludedDirsChange={setExcludedDirs}
+            isMobile={isMobile}
+            vibeCodingData={vibeCodingData}
+            onVibeCodingClear={() => {
+              setVibeCodingPaths(null);
+              setVibeCodingData({
+                fileCount: null,
+                occurrenceCount: null,
+                files: [],
+                terms: [],
+                loading: false,
+                error: null,
+                scanActive: false,
+                scanProgress: 0,
+                scanWindowPaths: [],
+                scanDirectory: null,
+              });
+              setLeftViewMode('tours');
+            }}
+            onVibeCodingClose={() => setLeftViewMode('tours')}
+            onVisiblePrsChange={setVisiblePrNumbers}
+            onHoverPr={setHoveredPrNumber}
+            filteredPrNumbers={filteredPrNumbers}
+            onClearFileFilter={() => setSelectedFilePrFilter(null)}
+            graphSelectedPackage={graphSelectedPackage}
+            onClearGraphSelection={() => setGraphSelectedPackage(null)}
+          />
+          <RightPane
+            owner={owner}
+            repo={repo}
+            fileTree={configMode ? fileTree : filteredFileTree}
+            filteredFileTree={filteredFileTree}
+            treeError={treeError}
+            selectedTour={selectedTour}
+            idleHighlightLayers={idleHighlightLayers}
+            packageHighlightLayers={packageHighlightLayers}
+            idleFocusDirectory={selectedPackagePath}
+            highlightLayersLoading={highlightLayersLoading}
+            excludedFolders={excludedDirs.map((d) =>
+              d.endsWith('/') ? d.slice(0, -1) : d,
+            )}
+            showSpatialContext={configMode}
+            showColorLegend
+            showColorLegendToggle
+            // Mobile starts with the legend collapsed (reopenable via the toggle).
+            defaultLegendOpen={!isMobile}
+            onCloseCommit={() => setSelectedCommitSha(null)}
+            onCloseIssue={() => setSelectedIssueNumber(null)}
+            onClosePullRequest={() => setSelectedPrNumber(null)}
+            onCloseWeekCommits={() => setGuideMode('city')}
+            activityHeatmapLayers={activityHeatmapLayers}
+            prHeatmapLayers={prHeatmapLayers}
+            commitView={selectedCommitView}
+            commitViewLoading={commitViewLoading}
+            issueView={selectedIssueView}
+            issueViewLoading={issueViewLoading}
+            pullRequestView={selectedPrView}
+            pullRequestViewLoading={prViewLoading}
+            readmeView={selectedReadmeView}
+            readmeViewLoading={readmeViewLoading}
+            weekCommitsView={weekCommitsView}
+            weekCommitsLoading={weekCommitsLoading}
+            currentAuthor={user?.login}
+            onOpenFile={handleMapOpenFile}
+            vibeCodingHighlightLayer={vibeCodingHighlightLayer}
+            vibeCodingScanWindowLayer={vibeCodingScanWindowLayer}
+            guideMode={guideMode}
+            activeReadmePath={activeReadmePath}
+            packages={packages}
+            packagesLoading={packagesLoading}
+            leftViewMode={leftViewMode}
+            onSetViewMode={setLeftViewMode}
+            onPackageGraphSelect={onPackageGraphSelect}
+          />
+        </div>
+        {/* Right-docked source viewer for the picked file. Independent of the
+          trail overlay — it just renders whatever file is selected. */}
+        <FileSourcePanel
+          key={fileSide}
           owner={owner}
           repo={repo}
-          fileTree={configMode ? fileTree : filteredFileTree}
-          filteredFileTree={filteredFileTree}
-          treeError={treeError}
-          selectedTour={selectedTour}
-          idleHighlightLayers={idleHighlightLayers}
-          packageHighlightLayers={packageHighlightLayers}
-          idleFocusDirectory={selectedPackagePath}
-          highlightLayersLoading={highlightLayersLoading}
-          excludedFolders={excludedDirs.map((d) =>
-            d.endsWith('/') ? d.slice(0, -1) : d,
-          )}
-          showSpatialContext={configMode}
-          showColorLegend
-          showColorLegendToggle
-          // Mobile starts with the legend collapsed (reopenable via the toggle).
-          defaultLegendOpen={!isMobile}
-          onCloseCommit={() => setSelectedCommitSha(null)}
-          onCloseIssue={() => setSelectedIssueNumber(null)}
-          onClosePullRequest={() => setSelectedPrNumber(null)}
-          onCloseWeekCommits={() => setGuideMode('city')}
-          activityHeatmapLayers={activityHeatmapLayers}
-          prHeatmapLayers={prHeatmapLayers}
-          commitView={selectedCommitView}
-          commitViewLoading={commitViewLoading}
-          issueView={selectedIssueView}
-          issueViewLoading={issueViewLoading}
-          pullRequestView={selectedPrView}
-          pullRequestViewLoading={prViewLoading}
-          readmeView={selectedReadmeView}
-          readmeViewLoading={readmeViewLoading}
-          weekCommitsView={weekCommitsView}
-          weekCommitsLoading={weekCommitsLoading}
-          currentAuthor={user?.login}
-          onOpenFile={handleMapOpenFile}
-          vibeCodingHighlightLayer={vibeCodingHighlightLayer}
-          vibeCodingScanWindowLayer={vibeCodingScanWindowLayer}
-          guideMode={guideMode}
-          activeReadmePath={activeReadmePath}
-          packages={packages}
-          packagesLoading={packagesLoading}
-          leftViewMode={leftViewMode}
-          onSetViewMode={setLeftViewMode}
-          onPackageGraphSelect={onPackageGraphSelect}
+          filePath={selectedFilePath}
+          gitRef={undefined}
+          topOffset={headerHeight}
+          side={fileSide}
+          onClose={() => setSelectedFilePath(null)}
         />
+        <BookmarksDrawer
+          open={bookmarksOpen}
+          onClose={() => setBookmarksOpen(false)}
+          currentRepo={currentBookmarkRepo}
+          onNavigate={handleNavigateBookmark}
+        />
+        {tourToDelete && (
+          <ConfirmDialog
+            title="Delete tour"
+            message={
+              <>
+                Delete{' '}
+                <strong style={{ color: 'inherit' }}>
+                  “{tourToDelete.title}”
+                </strong>
+                ? This permanently removes the published tour for everyone. This
+                cannot be undone.
+                {deleteError && (
+                  <span className="block mt-3" style={{ color: '#dc2626' }}>
+                    {deleteError}
+                  </span>
+                )}
+              </>
+            }
+            confirmLabel="Delete tour"
+            destructive
+            busy={deleting}
+            onConfirm={confirmDeleteTour}
+            onCancel={() => {
+              if (deleting) return;
+              setTourToDelete(null);
+              setDeleteError(null);
+            }}
+          />
+        )}
       </div>
-      {/* Right-docked source viewer for the picked file. Independent of the
-          trail overlay — it just renders whatever file is selected. */}
-      <FileSourcePanel
-        key={fileSide}
-        owner={owner}
-        repo={repo}
-        filePath={selectedFilePath}
-        gitRef={undefined}
-        topOffset={headerHeight}
-        side={fileSide}
-        onClose={() => setSelectedFilePath(null)}
-      />
-      <BookmarksDrawer
-        open={bookmarksOpen}
-        onClose={() => setBookmarksOpen(false)}
-        currentRepo={currentBookmarkRepo}
-        onNavigate={handleNavigateBookmark}
-      />
-      {tourToDelete && (
-        <ConfirmDialog
-          title="Delete tour"
-          message={
-            <>
-              Delete{' '}
-              <strong style={{ color: 'inherit' }}>
-                “{tourToDelete.title}”
-              </strong>
-              ? This permanently removes the published tour for everyone. This
-              cannot be undone.
-              {deleteError && (
-                <span className="block mt-3" style={{ color: '#dc2626' }}>
-                  {deleteError}
-                </span>
-              )}
-            </>
-          }
-          confirmLabel="Delete tour"
-          destructive
-          busy={deleting}
-          onConfirm={confirmDeleteTour}
-          onCancel={() => {
-            if (deleting) return;
-            setTourToDelete(null);
-            setDeleteError(null);
-          }}
-        />
-      )}
-    </div>
-    {/* The loading screen stays layered over the real tree until the minimum
+      {/* The loading screen stays layered over the real tree until the minimum
         beat and the post-mount warm-up grace have both elapsed, so the real
         FileCity3D's cold start (blank canvas until cameraReady) happens out
         of sight instead of as a visible second load. */}
-    {showLoadingOverlay && (
-      <div style={{ position: 'absolute', inset: 0, zIndex: 50 }}>
-        <BlockDropLoadingScreen message={`Loading ${repo}`} />
-      </div>
-    )}
+      {showLoadingOverlay && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 50 }}>
+          <BlockDropLoadingScreen message={`Loading ${repo}`} />
+        </div>
+      )}
     </RepoAnalysisProvider>
   );
 }
@@ -1736,7 +1854,6 @@ const Header: React.FC<{
 
         {headerActions}
       </div>
-
     </header>
   );
 };
@@ -1993,86 +2110,86 @@ const TrailListPane: React.FC<{
         resolveDirection={slideDirection}
       >
         {configMode ? (
-        <FolderConfigPane
-          dirPaths={dirPaths}
-          filePaths={filePaths}
-          excludedDirs={excludedDirs}
-          onExcludedDirsChange={onExcludedDirsChange}
-        />
-      ) : leftViewMode === 'activity' ? (
-        <RepoActivityPane
-          owner={owner}
-          repo={repo}
-          selectedCommitSha={selectedCommitSha}
-          onSelectCommit={onSelectCommit}
-          commitFiles={commitFiles}
-          onCommitShasChange={onCommitShasChange}
-          onFocusShasChange={onFocusShasChange}
-          onHoverCommit={onHoverCommit}
-          onHoverShasChange={onActivityHoverShasChange}
-          onClose={onToggleActivity}
-          focusContributor={activityFocusContributor}
-        />
-      ) : leftViewMode === 'issues' ? (
-        <RepoIssuesPane
-          owner={owner}
-          repo={repo}
-          selectedIssueNumber={selectedIssueNumber}
-          onSelectIssue={onSelectIssue}
-          onClose={() => onSetViewMode('tours')}
-        />
-      ) : leftViewMode === 'pull-requests' ? (
-        <RepoPullRequestsPane
-          owner={owner}
-          repo={repo}
-          selectedPrNumber={selectedPrNumber}
-          onSelectPr={onSelectPr}
-          onClose={() => onSetViewMode('tours')}
-          onVisiblePrsChange={onVisiblePrsChange}
-          onHoverPr={onHoverPr}
-          filteredPrNumbers={filteredPrNumbers}
-          onClearFileFilter={onClearFileFilter}
-        />
-      ) : leftViewMode === 'structure' ? (
-        <StructurePane
-          packages={packages}
-          packagesLoading={packagesLoading}
-          filePaths={filePaths}
-          owner={owner}
-          repo={repo}
-          graphSelectedPackage={graphSelectedPackage}
-          onClearGraphSelection={onClearGraphSelection}
-          onReadFile={onReadFile}
-          onPackageHover={onPackageHover}
-          onPackageSelect={onPackageSelect}
-          onClose={() => onSetViewMode('tours')}
-        />
-      ) : leftViewMode === 'contributors' ? (
-        <ContributorsPane
-          owner={owner}
-          repo={repo}
-          focusContributor={contributorsFocus}
-          onClose={() => onSetViewMode('tours')}
-        />
-      ) : leftViewMode === 'vibe-coding' ? (
-        <VibeCodingPane
-          fileCount={vibeCodingData.fileCount}
-          occurrenceCount={vibeCodingData.occurrenceCount}
-          files={vibeCodingData.files}
-          terms={vibeCodingData.terms}
-          loading={vibeCodingData.loading}
-          error={vibeCodingData.error}
-          scanActive={vibeCodingData.scanActive}
-          scanProgress={vibeCodingData.scanProgress}
-          scanDirectory={vibeCodingData.scanDirectory}
-          totalRepoFiles={filePaths.length}
-          onClear={onVibeCodingClear}
-          onRefresh={() => {}}
-          onClose={onVibeCodingClose}
-        />
-      ) : (
-        toursPane
-      )}
+          <FolderConfigPane
+            dirPaths={dirPaths}
+            filePaths={filePaths}
+            excludedDirs={excludedDirs}
+            onExcludedDirsChange={onExcludedDirsChange}
+          />
+        ) : leftViewMode === 'activity' ? (
+          <RepoActivityPane
+            owner={owner}
+            repo={repo}
+            selectedCommitSha={selectedCommitSha}
+            onSelectCommit={onSelectCommit}
+            commitFiles={commitFiles}
+            onCommitShasChange={onCommitShasChange}
+            onFocusShasChange={onFocusShasChange}
+            onHoverCommit={onHoverCommit}
+            onHoverShasChange={onActivityHoverShasChange}
+            onClose={onToggleActivity}
+            focusContributor={activityFocusContributor}
+          />
+        ) : leftViewMode === 'issues' ? (
+          <RepoIssuesPane
+            owner={owner}
+            repo={repo}
+            selectedIssueNumber={selectedIssueNumber}
+            onSelectIssue={onSelectIssue}
+            onClose={() => onSetViewMode('tours')}
+          />
+        ) : leftViewMode === 'pull-requests' ? (
+          <RepoPullRequestsPane
+            owner={owner}
+            repo={repo}
+            selectedPrNumber={selectedPrNumber}
+            onSelectPr={onSelectPr}
+            onClose={() => onSetViewMode('tours')}
+            onVisiblePrsChange={onVisiblePrsChange}
+            onHoverPr={onHoverPr}
+            filteredPrNumbers={filteredPrNumbers}
+            onClearFileFilter={onClearFileFilter}
+          />
+        ) : leftViewMode === 'structure' ? (
+          <StructurePane
+            packages={packages}
+            packagesLoading={packagesLoading}
+            filePaths={filePaths}
+            owner={owner}
+            repo={repo}
+            graphSelectedPackage={graphSelectedPackage}
+            onClearGraphSelection={onClearGraphSelection}
+            onReadFile={onReadFile}
+            onPackageHover={onPackageHover}
+            onPackageSelect={onPackageSelect}
+            onClose={() => onSetViewMode('tours')}
+          />
+        ) : leftViewMode === 'contributors' ? (
+          <ContributorsPane
+            owner={owner}
+            repo={repo}
+            focusContributor={contributorsFocus}
+            onClose={() => onSetViewMode('tours')}
+          />
+        ) : leftViewMode === 'vibe-coding' ? (
+          <VibeCodingPane
+            fileCount={vibeCodingData.fileCount}
+            occurrenceCount={vibeCodingData.occurrenceCount}
+            files={vibeCodingData.files}
+            terms={vibeCodingData.terms}
+            loading={vibeCodingData.loading}
+            error={vibeCodingData.error}
+            scanActive={vibeCodingData.scanActive}
+            scanProgress={vibeCodingData.scanProgress}
+            scanDirectory={vibeCodingData.scanDirectory}
+            totalRepoFiles={filePaths.length}
+            onClear={onVibeCodingClear}
+            onRefresh={() => {}}
+            onClose={onVibeCodingClose}
+          />
+        ) : (
+          toursPane
+        )}
       </SlidePane>
     </aside>
   );
@@ -2110,9 +2227,7 @@ const FolderConfigPane: React.FC<{
     [dirPaths, filePaths],
   );
   const gitStatusEntries = useMemo(() => {
-    const prefixes = excludedDirs.map((d) =>
-      d.endsWith('/') ? d : `${d}/`,
-    );
+    const prefixes = excludedDirs.map((d) => (d.endsWith('/') ? d : `${d}/`));
     const excludedFilesInTree = filePaths.filter((p) =>
       prefixes.some((prefix) => p.startsWith(prefix)),
     );
@@ -2211,9 +2326,7 @@ const FolderConfigPane: React.FC<{
             const isExcluded = excludedDirs.includes(path);
             const toggle = () => {
               if (isExcluded) {
-                onExcludedDirsChange(
-                  excludedDirs.filter((d) => d !== path),
-                );
+                onExcludedDirsChange(excludedDirs.filter((d) => d !== path));
               } else {
                 onExcludedDirsChange([...excludedDirs, path]);
               }
@@ -2255,7 +2368,7 @@ const FolderConfigPane: React.FC<{
                     background: 'transparent',
                     color: isExcluded
                       ? theme.colors.primary
-                      : theme.colors.warning ?? theme.colors.accent,
+                      : (theme.colors.warning ?? theme.colors.accent),
                     border: 'none',
                     cursor: 'pointer',
                     fontFamily: theme.fonts.body,
@@ -2334,7 +2447,7 @@ const GuideModeSwitch: React.FC<{
     {
       id: 'week' as const,
       label: 'This week',
-      title: "Show commits for this week so far",
+      title: 'Show commits for this week so far',
       icon: <GitCommitHorizontal size={14} />,
       enabled: true,
     },
@@ -2558,7 +2671,9 @@ function fetchRepoInfo(
       // Record the visit so the header opener (and the recent-repos panel) can
       // surface it later. Best-effort: never let a storage error break the page.
       try {
-        addRecentRepository(d as unknown as Parameters<typeof addRecentRepository>[0]);
+        addRecentRepository(
+          d as unknown as Parameters<typeof addRecentRepository>[0],
+        );
       } catch {
         // ignore
       }
@@ -2715,7 +2830,10 @@ function useCommitAuthorsByEmail(
           .getCommitAuthorsByEmail(owner, repo, chunk)
           .then((res) => {
             for (const [email, identity] of Object.entries(res)) {
-              emailAuthorCache.set(emailAuthorKey(owner, repo, email), identity);
+              emailAuthorCache.set(
+                emailAuthorKey(owner, repo, email),
+                identity,
+              );
             }
           })
           .catch(() => {
@@ -2757,7 +2875,9 @@ const userActivityInflight = new Map<
   Promise<UserActivityResponse | null>
 >();
 
-function fetchUserActivity(login: string): Promise<UserActivityResponse | null> {
+function fetchUserActivity(
+  login: string,
+): Promise<UserActivityResponse | null> {
   const cached = userActivityCache.get(login);
   if (cached) return Promise.resolve(cached);
   const inflight = userActivityInflight.get(login);
@@ -2783,7 +2903,7 @@ function useUserActivity(login: string | null): {
   loading: boolean;
 } {
   const [data, setData] = useState<UserActivityResponse | null>(() =>
-    login ? userActivityCache.get(login) ?? null : null,
+    login ? (userActivityCache.get(login) ?? null) : null,
   );
   const [loading, setLoading] = useState(false);
   useEffect(() => {
@@ -2820,7 +2940,9 @@ function useRepoOverviewData(
   // once the request resolves — success OR failure — so a failed fetch (which
   // leaves info null) falls through to the empty render instead of pulsing a
   // skeleton forever.
-  const [loading, setLoading] = useState<boolean>(() => !repoInfoCache.get(key));
+  const [loading, setLoading] = useState<boolean>(
+    () => !repoInfoCache.get(key),
+  );
   useEffect(() => {
     let cancelled = false;
     const cached = repoInfoCache.get(key) ?? null;
@@ -2961,7 +3083,11 @@ const RepoOverviewSkeleton: React.FC<{ showBorder?: boolean }> = ({
   showBorder = true,
 }) => {
   const { theme } = useTheme();
-  const bar = (w: string | number, h: number, radius = 4): React.CSSProperties => ({
+  const bar = (
+    w: string | number,
+    h: number,
+    radius = 4,
+  ): React.CSSProperties => ({
     width: w,
     height: h,
     borderRadius: radius,
@@ -3041,13 +3167,7 @@ const RepoOverview: React.FC<{
   // Action buttons (README + tour CTA) rendered inside the card, right after the
   // description.
   ctaSlot?: React.ReactNode;
-}> = ({
-  owner,
-  repo,
-  showBorder = true,
-  onSelectContributor,
-  ctaSlot,
-}) => {
+}> = ({ owner, repo, showBorder = true, onSelectContributor, ctaSlot }) => {
   const { theme } = useTheme();
   // Read from the shared cache, warmed at page mount (see warmRepoOverview), so
   // the metadata is typically ready the instant this card first renders.
@@ -3068,9 +3188,15 @@ const RepoOverview: React.FC<{
     let cancelled = false;
     repoExplorerService
       .isStarred(owner, repo)
-      .then((s) => { if (!cancelled) setStarred(s); })
-      .catch(() => { if (!cancelled) setStarred(false); });
-    return () => { cancelled = true; };
+      .then((s) => {
+        if (!cancelled) setStarred(s);
+      })
+      .catch(() => {
+        if (!cancelled) setStarred(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [owner, repo, isAuthenticated]);
 
   const handleToggleStar = useCallback(async () => {
@@ -3080,14 +3206,19 @@ const RepoOverview: React.FC<{
       if (starred) await repoExplorerService.unstar(owner, repo);
       else await repoExplorerService.star(owner, repo);
       setStarred(!starred);
-    } catch { /* ignore */ }
-    finally { setStarLoading(false); }
+    } catch {
+      /* ignore */
+    } finally {
+      setStarLoading(false);
+    }
   }, [owner, repo, starred, starLoading, isAuthenticated]);
 
   // Which metric the contributor cards show: GitHub commit count vs the share
   // of repo lines blamed to them. The % option (and its toggle) is only
   // surfaced when a cached blame analysis exists for this repo.
-  const [metricMode, setMetricMode] = useState<'commits' | 'percent'>('commits');
+  const [metricMode, setMetricMode] = useState<'commits' | 'percent'>(
+    'commits',
+  );
 
   const AVATAR_LIMIT = 4;
 
@@ -3141,10 +3272,20 @@ const RepoOverview: React.FC<{
       }
       const o = analysis.identityByEmail?.[key];
       return o
-        ? { login: o.login, id: o.id, avatarUrl: o.avatarUrl, htmlUrl: o.htmlUrl, name: o.name }
+        ? {
+            login: o.login,
+            id: o.id,
+            avatarUrl: o.avatarUrl,
+            htmlUrl: o.htmlUrl,
+            name: o.name,
+          }
         : undefined;
     };
-    return mergeContributors(analysis, analysisContributors(analysis), identityOf)
+    return mergeContributors(
+      analysis,
+      analysisContributors(analysis),
+      identityOf,
+    )
       .slice()
       .sort((a, b) => b.stats.lineShare - a.stats.lineShare)
       .slice(0, AVATAR_LIMIT)
@@ -3220,9 +3361,7 @@ const RepoOverview: React.FC<{
   // settles with no info (e.g. a failed request), fall through to null rather
   // than pulsing forever. The tours list renders regardless (below this).
   if (!info)
-    return loading ? (
-      <RepoOverviewSkeleton showBorder={showBorder} />
-    ) : null;
+    return loading ? <RepoOverviewSkeleton showBorder={showBorder} /> : null;
 
   const license =
     info.license?.spdx_id && info.license.spdx_id !== 'NOASSERTION'
@@ -3263,7 +3402,10 @@ const RepoOverview: React.FC<{
         </a>
         <div
           className="flex items-center gap-2 shrink-0"
-          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: theme.fontSizes[1],
+          }}
         >
           {license &&
             (() => {
@@ -3294,8 +3436,8 @@ const RepoOverview: React.FC<{
                 </span>
               );
             })()}
-          {info.stargazers_count > 0 && (
-            isAuthenticated ? (
+          {info.stargazers_count > 0 &&
+            (isAuthenticated ? (
               <button
                 type="button"
                 onClick={handleToggleStar}
@@ -3313,7 +3455,11 @@ const RepoOverview: React.FC<{
               >
                 <Star
                   size={16}
-                  style={{ color: starred ? theme.colors.warning : theme.colors.textMuted }}
+                  style={{
+                    color: starred
+                      ? theme.colors.warning
+                      : theme.colors.textMuted,
+                  }}
                   fill={starred ? theme.colors.warning : 'none'}
                 />
                 {info.stargazers_count.toLocaleString()}
@@ -3330,8 +3476,7 @@ const RepoOverview: React.FC<{
                 />
                 {info.stargazers_count.toLocaleString()}
               </span>
-            )
-          )}
+            ))}
         </div>
       </div>
       {info.description ? (
@@ -3363,7 +3508,10 @@ const RepoOverview: React.FC<{
             target="_blank"
             rel="noopener noreferrer"
             className="transition-opacity hover:opacity-80"
-            style={{ color: theme.colors.primary, fontSize: theme.fontSizes[1] }}
+            style={{
+              color: theme.colors.primary,
+              fontSize: theme.fontSizes[1],
+            }}
           >
             Update on GitHub
           </a>
@@ -3428,7 +3576,10 @@ const RepoOverview: React.FC<{
                         border: 'none',
                         cursor: 'pointer',
                         ...(active
-                          ? { background: theme.colors.primary, color: '#ffffff' }
+                          ? {
+                              background: theme.colors.primary,
+                              color: '#ffffff',
+                            }
                           : {
                               background: 'transparent',
                               color: theme.colors.textSecondary,
@@ -3443,122 +3594,122 @@ const RepoOverview: React.FC<{
             )}
           </div>
           <div className="flex items-stretch gap-2">
-              {cards.map((c) => {
-                // Each contributor is a little card: avatar on top, name, and a
-                // metric below — commits by default, line-share % in "Lines" mode.
-                const metricText =
-                  metricMode === 'percent'
-                    ? `${((c.lineShare ?? 0) * 100).toFixed(1)}%`
-                    : c.commits.toLocaleString();
-                const cardInner = (
-                  <>
-                    {c.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={`${c.avatarUrl}${c.avatarUrl.includes('?') ? '&' : '?'}s=80`}
-                        alt={c.login}
-                        width={40}
-                        height={40}
-                        className="rounded-full block"
-                        style={{ background: theme.colors.backgroundSecondary }}
-                      />
-                    ) : (
-                      // Unresolved blame author (no GitHub identity) → initial.
-                      <div
-                        className="rounded-full flex items-center justify-center"
-                        style={{
-                          width: 40,
-                          height: 40,
-                          background: theme.colors.backgroundSecondary,
-                          color: theme.colors.textSecondary,
-                          fontSize: theme.fontSizes[1],
-                          fontWeight: theme.fontWeights.semibold,
-                        }}
-                      >
-                        {c.login.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <span
-                      className="block truncate w-full text-center"
+            {cards.map((c) => {
+              // Each contributor is a little card: avatar on top, name, and a
+              // metric below — commits by default, line-share % in "Lines" mode.
+              const metricText =
+                metricMode === 'percent'
+                  ? `${((c.lineShare ?? 0) * 100).toFixed(1)}%`
+                  : c.commits.toLocaleString();
+              const cardInner = (
+                <>
+                  {c.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`${c.avatarUrl}${c.avatarUrl.includes('?') ? '&' : '?'}s=80`}
+                      alt={c.login}
+                      width={40}
+                      height={40}
+                      className="rounded-full block"
+                      style={{ background: theme.colors.backgroundSecondary }}
+                    />
+                  ) : (
+                    // Unresolved blame author (no GitHub identity) → initial.
+                    <div
+                      className="rounded-full flex items-center justify-center"
                       style={{
-                        fontSize: theme.fontSizes[0],
+                        width: 40,
+                        height: 40,
+                        background: theme.colors.backgroundSecondary,
                         color: theme.colors.textSecondary,
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: theme.fontWeights.semibold,
                       }}
                     >
-                      {c.login}
-                    </span>
-                    <span
-                      className="block truncate w-full text-center"
-                      style={{
-                        fontSize: theme.fontSizes[0],
-                        color: theme.colors.textMuted,
-                      }}
-                    >
-                      {metricText}
-                    </span>
-                  </>
-                );
-                const tip =
-                  c.lineShare != null
-                    ? `${c.login} · ${((c.lineShare ?? 0) * 100).toFixed(1)}% of repo (${(c.lines ?? 0).toLocaleString()} lines) · ${c.commits.toLocaleString()} commits`
-                    : `${c.login} · ${c.commits.toLocaleString()} commits`;
-                const cardBase =
-                  'flex flex-1 min-w-0 flex-col items-center gap-1.5 rounded-lg px-2 py-2';
-                const cardStyle: React.CSSProperties = {
-                  border: `1px solid ${theme.colors.border}`,
-                  background: theme.colors.backgroundSecondary,
-                };
-                // Track the card element so the FLIP effect can slide it to its
-                // new slot when the metric (and thus the order) changes.
-                const setRef = (el: HTMLElement | null) => {
-                  if (el) cardRefs.current.set(c.key, el);
-                  else cardRefs.current.delete(c.key);
-                };
-                // Resolved contributor with a handler → opens their Contributors
-                // profile; resolved without a handler → links to GitHub; an
-                // unresolved blame author has no link target, so render it static.
-                return onSelectContributor && c.hasLogin ? (
-                  <button
-                    key={c.key}
-                    ref={setRef}
-                    type="button"
-                    onClick={() =>
-                      onSelectContributor({
-                        login: c.login,
-                        avatar_url: c.avatarUrl ?? '',
-                      })
-                    }
-                    title={`${tip} — view recent activity`}
-                    className={`${cardBase} transition-transform hover:scale-105`}
-                    style={{ ...cardStyle, cursor: 'pointer' }}
+                      {c.login.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span
+                    className="block truncate w-full text-center"
+                    style={{
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textSecondary,
+                    }}
                   >
-                    {cardInner}
-                  </button>
-                ) : c.htmlUrl ? (
-                  <a
-                    key={c.key}
-                    ref={setRef}
-                    href={c.htmlUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={tip}
-                    className={`${cardBase} transition-transform hover:scale-105`}
-                    style={cardStyle}
+                    {c.login}
+                  </span>
+                  <span
+                    className="block truncate w-full text-center"
+                    style={{
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textMuted,
+                    }}
                   >
-                    {cardInner}
-                  </a>
-                ) : (
-                  <div
-                    key={c.key}
-                    ref={setRef}
-                    title={tip}
-                    className={cardBase}
-                    style={cardStyle}
-                  >
-                    {cardInner}
-                  </div>
-                );
-              })}
+                    {metricText}
+                  </span>
+                </>
+              );
+              const tip =
+                c.lineShare != null
+                  ? `${c.login} · ${((c.lineShare ?? 0) * 100).toFixed(1)}% of repo (${(c.lines ?? 0).toLocaleString()} lines) · ${c.commits.toLocaleString()} commits`
+                  : `${c.login} · ${c.commits.toLocaleString()} commits`;
+              const cardBase =
+                'flex flex-1 min-w-0 flex-col items-center gap-1.5 rounded-lg px-2 py-2';
+              const cardStyle: React.CSSProperties = {
+                border: `1px solid ${theme.colors.border}`,
+                background: theme.colors.backgroundSecondary,
+              };
+              // Track the card element so the FLIP effect can slide it to its
+              // new slot when the metric (and thus the order) changes.
+              const setRef = (el: HTMLElement | null) => {
+                if (el) cardRefs.current.set(c.key, el);
+                else cardRefs.current.delete(c.key);
+              };
+              // Resolved contributor with a handler → opens their Contributors
+              // profile; resolved without a handler → links to GitHub; an
+              // unresolved blame author has no link target, so render it static.
+              return onSelectContributor && c.hasLogin ? (
+                <button
+                  key={c.key}
+                  ref={setRef}
+                  type="button"
+                  onClick={() =>
+                    onSelectContributor({
+                      login: c.login,
+                      avatar_url: c.avatarUrl ?? '',
+                    })
+                  }
+                  title={`${tip} — view recent activity`}
+                  className={`${cardBase} transition-transform hover:scale-105`}
+                  style={{ ...cardStyle, cursor: 'pointer' }}
+                >
+                  {cardInner}
+                </button>
+              ) : c.htmlUrl ? (
+                <a
+                  key={c.key}
+                  ref={setRef}
+                  href={c.htmlUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={tip}
+                  className={`${cardBase} transition-transform hover:scale-105`}
+                  style={cardStyle}
+                >
+                  {cardInner}
+                </a>
+              ) : (
+                <div
+                  key={c.key}
+                  ref={setRef}
+                  title={tip}
+                  className={cardBase}
+                  style={cardStyle}
+                >
+                  {cardInner}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -3568,7 +3719,10 @@ const RepoOverview: React.FC<{
       {info.fork && info.parent && (
         <div
           className="inline-flex items-center gap-1 min-w-0"
-          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: theme.fontSizes[1],
+          }}
         >
           <GitFork size={14} className="shrink-0" />
           <span className="shrink-0">forked from</span>
@@ -3647,7 +3801,9 @@ const StructurePane: React.FC<{
       })
       .catch((err) => {
         if (!cancelled) {
-          setReadmeError(err instanceof Error ? err.message : 'Failed to load README');
+          setReadmeError(
+            err instanceof Error ? err.message : 'Failed to load README',
+          );
           setReadmeLoading(false);
         }
       });
@@ -3667,21 +3823,29 @@ const StructurePane: React.FC<{
       <div className="flex-1 min-h-0 flex flex-col">
         <RailPaneHeader
           icon={<FileText size={14} />}
-          label={graphSelectedPackage.packageName || graphSelectedPackage.packagePath}
+          label={
+            graphSelectedPackage.packageName || graphSelectedPackage.packagePath
+          }
           onClose={onClearGraphSelection}
           closeAsBack
         />
         {readmeLoading ? (
           <div
             className="flex-1 min-h-0 flex items-center justify-center px-6 text-center"
-            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+            }}
           >
             Loading README...
           </div>
         ) : readmeError ? (
           <div
             className="flex-1 min-h-0 flex items-center justify-center px-6 text-center"
-            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+            }}
           >
             {readmeError}
           </div>
@@ -3707,7 +3871,10 @@ const StructurePane: React.FC<{
         ) : (
           <div
             className="flex-1 min-h-0 flex items-center justify-center px-6 text-center"
-            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+            }}
           >
             No README found for this package.
           </div>
@@ -3729,7 +3896,10 @@ const StructurePane: React.FC<{
       {packages.length === 0 && !packagesLoading ? (
         <div
           className="flex-1 min-h-0 flex items-center justify-center px-6 text-center"
-          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: theme.fontSizes[1],
+          }}
         >
           No package structure detected for this repository.
         </div>
@@ -3864,7 +4034,15 @@ const ContributorsPane: React.FC<{
       // own id and are resolved inside mergeContributors.
       const identityOf = (email: string): EmailIdentity | undefined => {
         const o = emailAuthors[email.toLowerCase()];
-        return o ? { login: o.login, id: o.id, avatarUrl: o.avatarUrl, htmlUrl: o.htmlUrl, name: o.name } : undefined;
+        return o
+          ? {
+              login: o.login,
+              id: o.id,
+              avatarUrl: o.avatarUrl,
+              htmlUrl: o.htmlUrl,
+              name: o.name,
+            }
+          : undefined;
       };
       return mergeContributors(analysis, blamePeople, identityOf).map((p) => {
         const extra = p.emails.length - 1;
@@ -3903,7 +4081,7 @@ const ContributorsPane: React.FC<{
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const selected = selectedKey
-    ? rows.find((r) => r.key === selectedKey) ?? null
+    ? (rows.find((r) => r.key === selectedKey) ?? null)
     : null;
 
   const clearSelection = useCallback(() => {
@@ -3922,7 +4100,9 @@ const ContributorsPane: React.FC<{
       // of every blame email this person owns.
       const active = row.key === selectedKey;
       setSelectedKey(active ? null : row.key);
-      setSelectedEmails(active ? null : row.emails ?? (row.email ? [row.email] : null));
+      setSelectedEmails(
+        active ? null : (row.emails ?? (row.email ? [row.email] : null)),
+      );
     },
     [selectedKey, setSelectedEmails],
   );
@@ -3972,146 +4152,148 @@ const ContributorsPane: React.FC<{
         viewKey={selected ? selected.key : 'list'}
         resolveDirection={(_from, to) => (to === 'list' ? -1 : 1)}
       >
-      {selected ? (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <ContributorProfile
-            key={selected.key}
-            identity={{
-              login: selected.login,
-              name: selected.name,
-              avatarUrl: selected.avatarUrl,
-              htmlUrl: selected.htmlUrl,
-              emails: selected.emails,
-              commits: selected.commits,
-            }}
-            repo={repo}
-            coverage={selected.stats ?? null}
-          />
-        </div>
-      ) : (
-        <>
+        {selected ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
-            {rows.length === 0 ? (
-              <ListMessage>
-                {analysis ? 'No attributed contributors.' : 'Loading contributors…'}
-              </ListMessage>
-            ) : (
-              rows.map((row) => {
-                const active = row.key === selectedKey;
-                const share = row.stats?.lineShare ?? 0;
-                return (
-                  <button
-                    key={row.key}
-                    type="button"
-                    onClick={() => handleRowClick(row)}
-                    className="flex w-full flex-col gap-1.5 px-4 py-3 text-left border-b transition-colors"
-                    style={{
-                      borderColor: theme.colors.border,
-                      color: theme.colors.text,
-                      background: active
-                        ? theme.colors.backgroundSecondary
-                        : 'transparent',
-                      boxShadow: active
-                        ? `inset 3px 0 0 ${theme.colors.primary}`
-                        : undefined,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!active)
-                        e.currentTarget.style.background =
-                          theme.colors.backgroundSecondary;
-                      // Preview this contributor's highlight on hover — no
-                      // click needed. Rows in analysis mode carry `emails`;
-                      // fallback (GitHub-graph) rows have none and nothing to
-                      // highlight anyway. Hover only previews while nothing is
-                      // pinned; once a row is selected it owns the highlight and
-                      // stray enter/leave events during the slide-to-profile
-                      // handoff must not disturb it.
-                      if (!selected) setSelectedEmails(row.emails ?? null);
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active)
-                        e.currentTarget.style.background = 'transparent';
-                      // Clearing the preview only makes sense while nothing is
-                      // pinned. Clicking a row sets `selectedKey` and slides the
-                      // pane to the profile; the trailing mouseleave that fires
-                      // as this button slides out from under the cursor must NOT
-                      // null the highlight, or the just-pinned selection would
-                      // blink off. The selection now owns it (handleRowClick set
-                      // selectedEmails); leave it alone.
-                      if (!selected) setSelectedEmails(null);
-                    }}
-                  >
-                    <div className="flex w-full items-center gap-3">
-                      <ContributorAvatar
-                        avatarUrl={row.avatarUrl}
-                        name={row.name}
-                        size={36}
-                      />
-                      <div className="min-w-0 flex flex-col">
+            <ContributorProfile
+              key={selected.key}
+              identity={{
+                login: selected.login,
+                name: selected.name,
+                avatarUrl: selected.avatarUrl,
+                htmlUrl: selected.htmlUrl,
+                emails: selected.emails,
+                commits: selected.commits,
+              }}
+              repo={repo}
+              coverage={selected.stats ?? null}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {rows.length === 0 ? (
+                <ListMessage>
+                  {analysis
+                    ? 'No attributed contributors.'
+                    : 'Loading contributors…'}
+                </ListMessage>
+              ) : (
+                rows.map((row) => {
+                  const active = row.key === selectedKey;
+                  const share = row.stats?.lineShare ?? 0;
+                  return (
+                    <button
+                      key={row.key}
+                      type="button"
+                      onClick={() => handleRowClick(row)}
+                      className="flex w-full flex-col gap-1.5 px-4 py-3 text-left border-b transition-colors"
+                      style={{
+                        borderColor: theme.colors.border,
+                        color: theme.colors.text,
+                        background: active
+                          ? theme.colors.backgroundSecondary
+                          : 'transparent',
+                        boxShadow: active
+                          ? `inset 3px 0 0 ${theme.colors.primary}`
+                          : undefined,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!active)
+                          e.currentTarget.style.background =
+                            theme.colors.backgroundSecondary;
+                        // Preview this contributor's highlight on hover — no
+                        // click needed. Rows in analysis mode carry `emails`;
+                        // fallback (GitHub-graph) rows have none and nothing to
+                        // highlight anyway. Hover only previews while nothing is
+                        // pinned; once a row is selected it owns the highlight and
+                        // stray enter/leave events during the slide-to-profile
+                        // handoff must not disturb it.
+                        if (!selected) setSelectedEmails(row.emails ?? null);
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!active)
+                          e.currentTarget.style.background = 'transparent';
+                        // Clearing the preview only makes sense while nothing is
+                        // pinned. Clicking a row sets `selectedKey` and slides the
+                        // pane to the profile; the trailing mouseleave that fires
+                        // as this button slides out from under the cursor must NOT
+                        // null the highlight, or the just-pinned selection would
+                        // blink off. The selection now owns it (handleRowClick set
+                        // selectedEmails); leave it alone.
+                        if (!selected) setSelectedEmails(null);
+                      }}
+                    >
+                      <div className="flex w-full items-center gap-3">
+                        <ContributorAvatar
+                          avatarUrl={row.avatarUrl}
+                          name={row.name}
+                          size={36}
+                        />
+                        <div className="min-w-0 flex flex-col">
+                          <span
+                            className="truncate"
+                            style={{
+                              fontSize: theme.fontSizes[2],
+                              fontWeight: theme.fontWeights.semibold,
+                            }}
+                          >
+                            {row.displayName ?? row.login ?? row.name}
+                          </span>
+                        </div>
                         <span
-                          className="truncate"
+                          className="ml-auto shrink-0 text-right tabular-nums"
                           style={{
-                            fontSize: theme.fontSizes[2],
-                            fontWeight: theme.fontWeights.semibold,
+                            color: theme.colors.textMuted,
+                            fontSize: theme.fontSizes[1],
                           }}
+                          title={
+                            row.stats
+                              ? `${row.stats.lines.toLocaleString()} lines · ${row.stats.files.toLocaleString()} files`
+                              : undefined
+                          }
                         >
-                          {row.displayName ?? row.login ?? row.name}
+                          {row.stats
+                            ? `${(share * 100).toFixed(1)}%`
+                            : (row.commits ?? 0).toLocaleString()}
                         </span>
                       </div>
-                      <span
-                        className="ml-auto shrink-0 text-right tabular-nums"
-                        style={{
-                          color: theme.colors.textMuted,
-                          fontSize: theme.fontSizes[1],
-                        }}
-                        title={
-                          row.stats
-                            ? `${row.stats.lines.toLocaleString()} lines · ${row.stats.files.toLocaleString()} files`
-                            : undefined
-                        }
-                      >
-                        {row.stats
-                          ? `${(share * 100).toFixed(1)}%`
-                          : (row.commits ?? 0).toLocaleString()}
-                      </span>
-                    </div>
-                    {/* Line-share bar — present whenever the row has coverage. */}
-                    {row.stats && (
-                      <div
-                        className="h-1 w-full rounded-full overflow-hidden"
-                        style={{ background: theme.colors.border }}
-                      >
+                      {/* Line-share bar — present whenever the row has coverage. */}
+                      {row.stats && (
                         <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${Math.max(2, share * 100)}%`,
-                            background: theme.colors.primary,
-                          }}
-                        />
-                      </div>
-                    )}
-                  </button>
-                );
-              })
+                          className="h-1 w-full rounded-full overflow-hidden"
+                          style={{ background: theme.colors.border }}
+                        >
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${Math.max(2, share * 100)}%`,
+                              background: theme.colors.primary,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            {!analysis && (
+              <a
+                href={`https://github.com/${owner}/${repo}/graphs/contributors`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2.5 border-t text-center transition-colors hover:opacity-80 shrink-0"
+                style={{
+                  borderColor: theme.colors.border,
+                  color: theme.colors.primary,
+                  fontSize: theme.fontSizes[1],
+                }}
+              >
+                View all on GitHub
+              </a>
             )}
-          </div>
-          {!analysis && (
-            <a
-              href={`https://github.com/${owner}/${repo}/graphs/contributors`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2.5 border-t text-center transition-colors hover:opacity-80 shrink-0"
-              style={{
-                borderColor: theme.colors.border,
-                color: theme.colors.primary,
-                fontSize: theme.fontSizes[1],
-              }}
-            >
-              View all on GitHub
-            </a>
-          )}
-        </>
-      )}
+          </>
+        )}
       </SlidePane>
     </div>
   );
@@ -4245,7 +4427,10 @@ const ContributorProfile: React.FC<{
               target="_blank"
               rel="noopener noreferrer"
               className="truncate block transition-opacity hover:opacity-80"
-              style={{ color: theme.colors.primary, fontSize: theme.fontSizes[1] }}
+              style={{
+                color: theme.colors.primary,
+                fontSize: theme.fontSizes[1],
+              }}
             >
               @{identity.login}
             </a>
@@ -4314,10 +4499,8 @@ const ContributorProfile: React.FC<{
       {/* Contact / social. */}
       {profile && (
         <div className="flex flex-col gap-1.5">
-          {profile.company &&
-            metaRow(<Building2 size={14} />, profile.company)}
-          {profile.location &&
-            metaRow(<MapPin size={14} />, profile.location)}
+          {profile.company && metaRow(<Building2 size={14} />, profile.company)}
+          {profile.location && metaRow(<MapPin size={14} />, profile.location)}
           {profile.websiteUrl &&
             metaRow(
               <Globe size={14} />,
@@ -4342,30 +4525,30 @@ const ContributorProfile: React.FC<{
       {/* A year of contributions — GitHub-account-scoped, so only when the
           blame email resolved to a login. */}
       {identity.login && (
-      <div className="mt-1">
-        <div
-          className="mb-1.5"
-          style={{ color: muted, fontSize: theme.fontSizes[0] }}
-        >
-          Contributions in the last year
-        </div>
-        {loading && !data ? (
+        <div className="mt-1">
           <div
-            className="flex items-center justify-center"
-            style={{ height: 120, color: muted }}
+            className="mb-1.5"
+            style={{ color: muted, fontSize: theme.fontSizes[0] }}
           >
-            <InlineTrailLoader size={18} />
+            Contributions in the last year
           </div>
-        ) : data ? (
-          <div className="rounded-md overflow-hidden">
-            <ActivityHeatmap activityData={activityData} bannerHeight={132} />
-          </div>
-        ) : (
-          <div style={{ color: muted, fontSize: theme.fontSizes[1] }}>
-            Activity unavailable.
-          </div>
-        )}
-      </div>
+          {loading && !data ? (
+            <div
+              className="flex items-center justify-center"
+              style={{ height: 120, color: muted }}
+            >
+              <InlineTrailLoader size={18} />
+            </div>
+          ) : data ? (
+            <div className="rounded-md overflow-hidden">
+              <ActivityHeatmap activityData={activityData} bannerHeight={132} />
+            </div>
+          ) : (
+            <div style={{ color: muted, fontSize: theme.fontSizes[1] }}>
+              Activity unavailable.
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -4596,24 +4779,24 @@ const ToursPane: React.FC<{
         showBorder={false}
         onSelectContributor={onSelectContributor}
         ctaSlot={
-            <button
-              type="button"
-              onClick={() => onOpenView('contributors')}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
-              style={{
-                padding: '10px 14px',
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[1],
-                fontWeight: theme.fontWeights.semibold,
-                cursor: 'pointer',
-                background: theme.colors.primary,
-                color: '#ffffff',
-                border: `1px solid ${theme.colors.primary}`,
-              }}
-            >
-              <Users size={16} />
-              Contributors
-            </button>
+          <button
+            type="button"
+            onClick={() => onOpenView('contributors')}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
+            style={{
+              padding: '10px 14px',
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights.semibold,
+              cursor: 'pointer',
+              background: theme.colors.primary,
+              color: '#ffffff',
+              border: `1px solid ${theme.colors.primary}`,
+            }}
+          >
+            <Users size={16} />
+            Contributors
+          </button>
         }
       />
     );
@@ -4642,33 +4825,33 @@ const ToursPane: React.FC<{
           overscroll-none kills the elastic rubber-band at the scroll ends. */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-none flex flex-col">
         <div className="shrink-0">
-        {!single &&
-          (loading ? (
-            <ListMessage>Loading tours…</ListMessage>
-          ) : (
-            tours.map((item) => (
-              <TourRow
-                key={item.tour.id}
-                tour={item.tour}
-                selected={item.tour.id === selectedTourId}
-                onSelect={() =>
-                  onSelectTour(
-                    item.tour.id === selectedTourId ? null : item.tour.id,
-                  )
-                }
-                // Only store-backed tours are deletable; gate on the validated
-                // session, mirroring trails (author-or-repo-admin).
-                canDelete={
-                  item.store != null &&
-                  viewerUserId !== null &&
-                  (viewerIsRepoAdmin ||
-                    String(item.store.createdBy.githubId) ===
-                      String(viewerUserId))
-                }
-                onDelete={() => onRequestDelete(item)}
-              />
-            ))
-          ))}
+          {!single &&
+            (loading ? (
+              <ListMessage>Loading tours…</ListMessage>
+            ) : (
+              tours.map((item) => (
+                <TourRow
+                  key={item.tour.id}
+                  tour={item.tour}
+                  selected={item.tour.id === selectedTourId}
+                  onSelect={() =>
+                    onSelectTour(
+                      item.tour.id === selectedTourId ? null : item.tour.id,
+                    )
+                  }
+                  // Only store-backed tours are deletable; gate on the validated
+                  // session, mirroring trails (author-or-repo-admin).
+                  canDelete={
+                    item.store != null &&
+                    viewerUserId !== null &&
+                    (viewerIsRepoAdmin ||
+                      String(item.store.createdBy.githubId) ===
+                        String(viewerUserId))
+                  }
+                  onDelete={() => onRequestDelete(item)}
+                />
+              ))
+            ))}
         </div>
       </div>
     </div>
@@ -4681,13 +4864,7 @@ const TourRow: React.FC<{
   onSelect: () => void;
   canDelete: boolean;
   onDelete: () => void;
-}> = ({
-  tour,
-  selected,
-  onSelect,
-  canDelete,
-  onDelete,
-}) => {
+}> = ({ tour, selected, onSelect, canDelete, onDelete }) => {
   const { theme } = useTheme();
   const stepCount = Array.isArray(tour.steps) ? tour.steps.length : 0;
   // `audience` is an optional, loosely-typed field on the tour schema — read
@@ -5046,7 +5223,9 @@ const RightPane: React.FC<{
   leftViewMode: LeftViewMode;
   onSetViewMode: (mode: LeftViewMode) => void;
   /** Package selected in the file city guide's package graph. */
-  onPackageGraphSelect: (pkg: { packagePath: string; packageName: string } | null) => void;
+  onPackageGraphSelect: (
+    pkg: { packagePath: string; packageName: string } | null,
+  ) => void;
 }> = ({
   owner,
   repo,
@@ -5119,8 +5298,18 @@ const RightPane: React.FC<{
   // and forward to the parent so it can show the README in the left panel.
   useEffect(() => {
     const unsub = events.on('package:select', (e) => {
-      const payload = e.payload as { packagePath?: string; packageName?: string } | null;
-      onPackageGraphSelect(payload?.packagePath ? { packagePath: payload.packagePath, packageName: payload.packageName ?? '' } : null);
+      const payload = e.payload as {
+        packagePath?: string;
+        packageName?: string;
+      } | null;
+      onPackageGraphSelect(
+        payload?.packagePath
+          ? {
+              packagePath: payload.packagePath,
+              packageName: payload.packageName ?? '',
+            }
+          : null,
+      );
     });
     return unsub;
   }, [events, onPackageGraphSelect]);
@@ -5277,14 +5466,21 @@ const RightPane: React.FC<{
         scope: 'repository' as const,
         name: 'highlightLayers',
         data:
-          packageHighlightLayers || activityHeatmapLayers || prHeatmapLayers || contributionLayers || vibeCodingHighlightLayer || vibeCodingScanWindowLayer
+          packageHighlightLayers ||
+          activityHeatmapLayers ||
+          prHeatmapLayers ||
+          contributionLayers ||
+          vibeCodingHighlightLayer ||
+          vibeCodingScanWindowLayer
             ? [
                 ...(packageHighlightLayers ?? []),
                 ...(activityHeatmapLayers ?? []),
                 ...(prHeatmapLayers ?? []),
                 ...(contributionLayers ?? []),
                 ...(vibeCodingHighlightLayer ? [vibeCodingHighlightLayer] : []),
-                ...(vibeCodingScanWindowLayer ? [vibeCodingScanWindowLayer] : []),
+                ...(vibeCodingScanWindowLayer
+                  ? [vibeCodingScanWindowLayer]
+                  : []),
               ]
             : null,
         loading: false,
@@ -5297,9 +5493,31 @@ const RightPane: React.FC<{
       packages: {
         scope: 'repository' as const,
         name: 'packages',
-        data: packages.length > 0
-          ? { packages, summary: { isMonorepo: packages.length > 1, totalPackages: packages.length, workspacePackages: packages.map(p => ({ name: p.packageData.name, path: p.packageData.path })), totalDependencies: packages.reduce((sum, p) => sum + Object.keys(p.packageData.dependencies).length, 0), totalDevDependencies: packages.reduce((sum, p) => sum + Object.keys(p.packageData.devDependencies).length, 0), availableScripts: [] } }
-          : null,
+        data:
+          packages.length > 0
+            ? {
+                packages,
+                summary: {
+                  isMonorepo: packages.length > 1,
+                  totalPackages: packages.length,
+                  workspacePackages: packages.map((p) => ({
+                    name: p.packageData.name,
+                    path: p.packageData.path,
+                  })),
+                  totalDependencies: packages.reduce(
+                    (sum, p) =>
+                      sum + Object.keys(p.packageData.dependencies).length,
+                    0,
+                  ),
+                  totalDevDependencies: packages.reduce(
+                    (sum, p) =>
+                      sum + Object.keys(p.packageData.devDependencies).length,
+                    0,
+                  ),
+                  availableScripts: [],
+                },
+              }
+            : null,
         loading: packagesLoading,
         error: null,
         refresh: async () => {},
@@ -5309,9 +5527,33 @@ const RightPane: React.FC<{
       packageGraph: {
         scope: 'repository' as const,
         name: 'packageGraph',
-        data: leftViewMode === 'structure' && packages.length > 0
-          ? { packages: { packages, summary: { isMonorepo: packages.length > 1, totalPackages: packages.length, workspacePackages: packages.map(p => ({ name: p.packageData.name, path: p.packageData.path })), totalDependencies: packages.reduce((sum, p) => sum + Object.keys(p.packageData.dependencies).length, 0), totalDevDependencies: packages.reduce((sum, p) => sum + Object.keys(p.packageData.devDependencies).length, 0), availableScripts: [] } } }
-          : null,
+        data:
+          leftViewMode === 'structure' && packages.length > 0
+            ? {
+                packages: {
+                  packages,
+                  summary: {
+                    isMonorepo: packages.length > 1,
+                    totalPackages: packages.length,
+                    workspacePackages: packages.map((p) => ({
+                      name: p.packageData.name,
+                      path: p.packageData.path,
+                    })),
+                    totalDependencies: packages.reduce(
+                      (sum, p) =>
+                        sum + Object.keys(p.packageData.dependencies).length,
+                      0,
+                    ),
+                    totalDevDependencies: packages.reduce(
+                      (sum, p) =>
+                        sum + Object.keys(p.packageData.devDependencies).length,
+                      0,
+                    ),
+                    availableScripts: [],
+                  },
+                },
+              }
+            : null,
         loading: packagesLoading,
         error: null,
         refresh: async () => {},
@@ -5357,7 +5599,10 @@ const RightPane: React.FC<{
     return (
       <main
         className="flex-1 min-w-0 flex items-center justify-center px-6"
-        style={{ background: theme.colors.background, color: theme.colors.textMuted }}
+        style={{
+          background: theme.colors.background,
+          color: theme.colors.textMuted,
+        }}
       >
         <div
           className="text-center max-w-md"
@@ -5373,7 +5618,10 @@ const RightPane: React.FC<{
     return (
       <main
         className="flex-1 min-w-0 flex items-center justify-center"
-        style={{ background: theme.colors.background, color: theme.colors.textMuted }}
+        style={{
+          background: theme.colors.background,
+          color: theme.colors.textMuted,
+        }}
       >
         <div style={{ fontSize: theme.fontSizes[1] }}>Loading repository…</div>
       </main>
@@ -5411,4 +5659,3 @@ const RightPane: React.FC<{
     </main>
   );
 };
-

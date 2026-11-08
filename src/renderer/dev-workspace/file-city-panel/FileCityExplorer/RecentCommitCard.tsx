@@ -32,9 +32,7 @@ interface RecentCommitCardProps {
   /** Fired with the row's repo-relative path and its status color on
    *  mouse enter, and `null` on leave. The parent uses the color to paint
    *  a darkened hover-highlight that ties the city to the row visually. */
-  onFileHoverChange?: (
-    payload: { path: string; color: string } | null,
-  ) => void;
+  onFileHoverChange?: (payload: { path: string; color: string } | null) => void;
   style?: React.CSSProperties;
 }
 

@@ -9,9 +9,12 @@ interface OnboardingButtonProps {
   onClick: () => void;
 }
 
-export const OnboardingButton: React.FC<OnboardingButtonProps> = ({ onClick }) => {
+export const OnboardingButton: React.FC<OnboardingButtonProps> = ({
+  onClick,
+}) => {
   const { theme } = useTheme();
-  const [onboardingState, setOnboardingState] = useState<OnboardingState | null>(null);
+  const [onboardingState, setOnboardingState] =
+    useState<OnboardingState | null>(null);
 
   useEffect(() => {
     const loadState = async () => {
@@ -36,10 +39,12 @@ export const OnboardingButton: React.FC<OnboardingButtonProps> = ({ onClick }) =
 
   // Calculate completion status
   const completedCount = onboardingState
-    ? Object.values(onboardingState.cardStates).filter((s) => s.completed).length
+    ? Object.values(onboardingState.cardStates).filter((s) => s.completed)
+        .length
     : 0;
   const totalCount = ONBOARDING_CARDS.length;
-  const isComplete = onboardingState?.dismissed || completedCount === totalCount;
+  const isComplete =
+    onboardingState?.dismissed || completedCount === totalCount;
   const showBadge = !isComplete && totalCount > 0;
 
   return (
@@ -54,7 +59,9 @@ export const OnboardingButton: React.FC<OnboardingButtonProps> = ({ onClick }) =
         backgroundColor: isComplete
           ? theme.colors.backgroundSecondary
           : theme.colors.primary,
-        color: isComplete ? theme.colors.textSecondary : theme.colors.textOnPrimary,
+        color: isComplete
+          ? theme.colors.textSecondary
+          : theme.colors.textOnPrimary,
         border: `1px solid ${isComplete ? theme.colors.border : theme.colors.primary}`,
         cursor: 'pointer',
         fontSize: theme.fontSizes[1],
@@ -74,13 +81,18 @@ export const OnboardingButton: React.FC<OnboardingButtonProps> = ({ onClick }) =
       }}
       onMouseLeave={(e) => {
         if (isComplete) {
-          e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+          e.currentTarget.style.backgroundColor =
+            theme.colors.backgroundSecondary;
           e.currentTarget.style.borderColor = theme.colors.border;
         } else {
           e.currentTarget.style.opacity = '1';
         }
       }}
-      title={isComplete ? 'Tutorials complete' : `Tutorials: ${completedCount}/${totalCount} completed`}
+      title={
+        isComplete
+          ? 'Tutorials complete'
+          : `Tutorials: ${completedCount}/${totalCount} completed`
+      }
     >
       <GraduationCap size={14} />
       <span>Tutorials</span>

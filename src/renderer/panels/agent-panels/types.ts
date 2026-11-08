@@ -6,7 +6,10 @@
  */
 
 import type { FileTree } from '@principal-ai/repository-abstraction';
-import type { PanelActions, DataSlice } from '@principal-ade/panel-framework-core';
+import type {
+  PanelActions,
+  DataSlice,
+} from '@principal-ade/panel-framework-core';
 import type { Skill } from './skills/hooks/useSkillsData';
 import type { Agent } from './agents/hooks/useAgentsData';
 import type { Subagent } from './agents/hooks/useSubagentsData';

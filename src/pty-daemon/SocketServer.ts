@@ -203,7 +203,9 @@ export class SocketServer extends EventEmitter {
     };
 
     this.clients.set(clientId, client);
-    this.logger.info(`Client ${clientId} connected (${this.clients.size} total)`);
+    this.logger.info(
+      `Client ${clientId} connected (${this.clients.size} total)`,
+    );
 
     // Add connection event
     addSocketConnectionEvent('connected', clientId);
@@ -224,7 +226,9 @@ export class SocketServer extends EventEmitter {
     // Handle client disconnect
     socket.on('close', () => {
       this.clients.delete(clientId);
-      this.logger.info(`Client ${clientId} disconnected (${this.clients.size} total)`);
+      this.logger.info(
+        `Client ${clientId} disconnected (${this.clients.size} total)`,
+      );
 
       // Add disconnection event
       addSocketConnectionEvent('disconnected', clientId);

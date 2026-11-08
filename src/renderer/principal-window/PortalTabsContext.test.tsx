@@ -54,17 +54,32 @@ beforeEach(() => {
 
 test('bridge ranges update an existing source tab, including repeated identical spans', () => {
   const { result } = renderHook(useWorkspaceTabs, { wrapper });
-  const range = { startLineNumber: 302, startColumn: 1, endLineNumber: 304, endColumn: 2 };
+  const range = {
+    startLineNumber: 302,
+    startColumn: 1,
+    endLineNumber: 304,
+    endColumn: 2,
+  };
   act(() => result.current.openSourceFile('/repo/code.ts', range));
   const firstId = result.current.tabs[0].id;
   act(() => result.current.openSourceFile('/repo/code.ts', range));
   expect(result.current.tabs).toHaveLength(1);
-  expect(result.current.tabs[0]).toMatchObject({ id: firstId, range, rangeRevision: 2 });
+  expect(result.current.tabs[0]).toMatchObject({
+    id: firstId,
+    range,
+    rangeRevision: 2,
+  });
   const next = { ...range, startLineNumber: 102, endLineNumber: 104 };
   act(() => result.current.openSourceFile('/repo/code.ts', next));
-  expect(result.current.tabs[0]).toMatchObject({ range: next, rangeRevision: 3 });
+  expect(result.current.tabs[0]).toMatchObject({
+    range: next,
+    rangeRevision: 3,
+  });
   act(() => result.current.openSourceFile('/repo/code.ts'));
-  expect(result.current.tabs[0]).toMatchObject({ range: next, rangeRevision: 3 });
+  expect(result.current.tabs[0]).toMatchObject({
+    range: next,
+    rangeRevision: 3,
+  });
   expect(result.current.activeTabId).toBe(firstId);
 });
 

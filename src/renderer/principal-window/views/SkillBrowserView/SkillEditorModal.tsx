@@ -50,7 +50,10 @@ export const SkillEditorModal: React.FC<SkillEditorModalProps> = ({
   const handleFileSelect = async (filePath: string) => {
     try {
       setError(null);
-      const result = await SkillLockService.getSkillFileContent(skillName, filePath);
+      const result = await SkillLockService.getSkillFileContent(
+        skillName,
+        filePath,
+      );
       setFileContent(result.content);
       setSelectedFile(filePath);
       setIsDirty(false);
@@ -139,7 +142,14 @@ export const SkillEditorModal: React.FC<SkillEditorModalProps> = ({
             backgroundColor: '#252526',
           }}
         >
-          <h3 style={{ marginBottom: '16px', fontSize: '14px', fontWeight: 600, color: '#ccc' }}>
+          <h3
+            style={{
+              marginBottom: '16px',
+              fontSize: '14px',
+              fontWeight: 600,
+              color: '#ccc',
+            }}
+          >
             Files
           </h3>
           {files.map((file) => (
@@ -149,7 +159,8 @@ export const SkillEditorModal: React.FC<SkillEditorModalProps> = ({
               style={{
                 padding: '8px 12px',
                 cursor: 'pointer',
-                backgroundColor: selectedFile === file ? '#37373d' : 'transparent',
+                backgroundColor:
+                  selectedFile === file ? '#37373d' : 'transparent',
                 borderRadius: '4px',
                 marginBottom: '4px',
                 fontSize: '13px',
@@ -173,7 +184,15 @@ export const SkillEditorModal: React.FC<SkillEditorModalProps> = ({
         </div>
 
         {/* Editor */}
-        <div className="editor" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div
+          className="editor"
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
           {selectedFile ? (
             <textarea
               value={fileContent}
@@ -193,7 +212,13 @@ export const SkillEditorModal: React.FC<SkillEditorModalProps> = ({
               }}
             />
           ) : (
-            <div style={{ padding: '40px 20px', textAlign: 'center', color: '#888' }}>
+            <div
+              style={{
+                padding: '40px 20px',
+                textAlign: 'center',
+                color: '#888',
+              }}
+            >
               Select a file to edit
             </div>
           )}
@@ -211,7 +236,14 @@ export const SkillEditorModal: React.FC<SkillEditorModalProps> = ({
             backgroundColor: '#252526',
           }}
         >
-          <h3 style={{ marginBottom: '16px', fontSize: '14px', fontWeight: 600, color: '#ccc' }}>
+          <h3
+            style={{
+              marginBottom: '16px',
+              fontSize: '14px',
+              fontWeight: 600,
+              color: '#ccc',
+            }}
+          >
             Commit Changes
           </h3>
 
@@ -258,11 +290,13 @@ export const SkillEditorModal: React.FC<SkillEditorModalProps> = ({
             style={{
               width: '100%',
               padding: '10px',
-              backgroundColor: isDirty && commitMessage.trim() ? '#0e639c' : '#2d2d2d',
+              backgroundColor:
+                isDirty && commitMessage.trim() ? '#0e639c' : '#2d2d2d',
               color: isDirty && commitMessage.trim() ? 'white' : '#666',
               border: 'none',
               borderRadius: '4px',
-              cursor: isDirty && commitMessage.trim() ? 'pointer' : 'not-allowed',
+              cursor:
+                isDirty && commitMessage.trim() ? 'pointer' : 'not-allowed',
               fontWeight: 'bold',
               fontSize: '14px',
               transition: 'background-color 0.15s ease',
@@ -271,8 +305,21 @@ export const SkillEditorModal: React.FC<SkillEditorModalProps> = ({
             {isSaving ? 'Committing...' : 'Commit to GitHub'}
           </button>
 
-          <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #333' }}>
-            <h4 style={{ fontSize: '12px', color: '#888', marginBottom: '8px', fontWeight: 600 }}>
+          <div
+            style={{
+              marginTop: '24px',
+              paddingTop: '16px',
+              borderTop: '1px solid #333',
+            }}
+          >
+            <h4
+              style={{
+                fontSize: '12px',
+                color: '#888',
+                marginBottom: '8px',
+                fontWeight: 600,
+              }}
+            >
               Repository
             </h4>
             <p style={{ fontSize: '13px', marginBottom: '4px', color: '#ccc' }}>

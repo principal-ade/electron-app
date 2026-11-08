@@ -53,7 +53,15 @@ interface MockContext extends PanelContextValue {
 
 const FilesPanelHarness: React.FC<{ paths?: string[] }> = ({ paths }) => {
   const events = useMemo(() => new PanelEventBus(), []);
-  const fileTree = useMemo(() => (paths === undefined ? createMockFileTree() : paths.length === 0 ? null : createMockFileTree(paths)), [paths]);
+  const fileTree = useMemo(
+    () =>
+      paths === undefined
+        ? createMockFileTree()
+        : paths.length === 0
+          ? null
+          : createMockFileTree(paths),
+    [paths],
+  );
 
   const context = useMemo<MockContext>(
     () => ({
@@ -110,7 +118,10 @@ export const Empty: Story = {
   args: { paths: [] },
   parameters: {
     docs: {
-      description: { story: 'Renders the empty-state when no fileTree slice data is available.' },
+      description: {
+        story:
+          'Renders the empty-state when no fileTree slice data is available.',
+      },
     },
   },
 };

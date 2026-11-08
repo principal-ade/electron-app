@@ -28,7 +28,11 @@ import {
   type DrawingDeletedPayload,
 } from './drawingsStorage';
 
-export function useDrawingsHost({ events }: { events: PanelEventEmitter }): void {
+export function useDrawingsHost({
+  events,
+}: {
+  events: PanelEventEmitter;
+}): void {
   const { openDrawing, setTabs, setActiveTabId, tabs, activeTabId } =
     useWorkspaceTabs();
 
@@ -50,7 +54,13 @@ export function useDrawingsHost({ events }: { events: PanelEventEmitter }): void
       setTabs((prev) =>
         prev.map((t) =>
           t.id === tabId
-            ? ({ ...(t as DrawingTab), drawingId, path, name, label: name } as WorkspaceTab)
+            ? ({
+                ...(t as DrawingTab),
+                drawingId,
+                path,
+                name,
+                label: name,
+              } as WorkspaceTab)
             : t,
         ),
       );

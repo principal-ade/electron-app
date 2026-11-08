@@ -27,9 +27,7 @@ interface WorkingTreeCardProps {
   /** Fired with the row's repo-relative path and its status color on
    *  mouse enter, and `null` on leave. The parent uses the color to paint
    *  a darkened hover-highlight that ties the city to the row visually. */
-  onFileHoverChange?: (
-    payload: { path: string; color: string } | null,
-  ) => void;
+  onFileHoverChange?: (payload: { path: string; color: string } | null) => void;
   style?: React.CSSProperties;
 }
 
@@ -81,10 +79,7 @@ export const WorkingTreeCard: React.FC<WorkingTreeCardProps> = ({
     whiteSpace: 'nowrap',
   };
 
-  const stagedCount = changes.files.reduce(
-    (n, f) => (f.staged ? n + 1 : n),
-    0,
-  );
+  const stagedCount = changes.files.reduce((n, f) => (f.staged ? n + 1 : n), 0);
   const unstagedCount = changes.filesChanged - stagedCount;
 
   return (

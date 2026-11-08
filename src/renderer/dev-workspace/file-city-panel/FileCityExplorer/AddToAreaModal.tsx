@@ -38,7 +38,7 @@ export const AddToAreaModal: React.FC<{
 
   const trimmedName = areaName.trim();
   const canSubmit = trimmedName.length > 0;
-  const targetArea = areas.find(a => a.name === trimmedName);
+  const targetArea = areas.find((a) => a.name === trimmedName);
   const alreadyClaimed = targetArea?.paths.includes(path) ?? false;
 
   let actionLabel = 'Add';
@@ -72,7 +72,7 @@ export const AddToAreaModal: React.FC<{
       }}
     >
       <div
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         style={{
           width: 520,
           maxHeight: 'min(80vh, 700px)',
@@ -144,14 +144,15 @@ export const AddToAreaModal: React.FC<{
               list="area-name-options"
               autoFocus
               placeholder="e.g. Documentation"
-              onChange={e => onAreaNameChange(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && canSubmit && !alreadyClaimed) onSubmit();
+              onChange={(e) => onAreaNameChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && canSubmit && !alreadyClaimed)
+                  onSubmit();
               }}
               style={inputStyle}
             />
             <datalist id="area-name-options">
-              {areas.map(a => (
+              {areas.map((a) => (
                 <option key={a.name} value={a.name} />
               ))}
             </datalist>
@@ -164,8 +165,8 @@ export const AddToAreaModal: React.FC<{
                 type="text"
                 value={description}
                 placeholder="Why this area exists, what it covers"
-                onChange={e => onDescriptionChange(e.target.value)}
-                onKeyDown={e => {
+                onChange={(e) => onDescriptionChange(e.target.value)}
+                onKeyDown={(e) => {
                   if (e.key === 'Enter' && canSubmit) onSubmit();
                 }}
                 style={{ ...inputStyle, fontFamily: theme.fonts.body }}
@@ -173,7 +174,13 @@ export const AddToAreaModal: React.FC<{
             </label>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: theme.space[2] }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: theme.space[2],
+            }}
+          >
             <button
               onClick={onClose}
               style={{
@@ -193,15 +200,18 @@ export const AddToAreaModal: React.FC<{
               disabled={!canSubmit || alreadyClaimed}
               style={{
                 padding: '8px 14px',
-                background: !canSubmit || alreadyClaimed
-                  ? theme.colors.backgroundSecondary
-                  : theme.colors.textMuted,
-                color: !canSubmit || alreadyClaimed
-                  ? theme.colors.muted
-                  : theme.colors.background,
+                background:
+                  !canSubmit || alreadyClaimed
+                    ? theme.colors.backgroundSecondary
+                    : theme.colors.textMuted,
+                color:
+                  !canSubmit || alreadyClaimed
+                    ? theme.colors.muted
+                    : theme.colors.background,
                 border: `1px solid ${theme.colors.border}`,
                 borderRadius: theme.radii[2],
-                cursor: !canSubmit || alreadyClaimed ? 'not-allowed' : 'pointer',
+                cursor:
+                  !canSubmit || alreadyClaimed ? 'not-allowed' : 'pointer',
                 fontSize: theme.fontSizes[1],
                 fontWeight: theme.fontWeights.medium,
               }}
@@ -213,23 +223,42 @@ export const AddToAreaModal: React.FC<{
 
         <div style={{ padding: '14px 18px', overflowY: 'auto', flex: 1 }}>
           <div style={sectionLabelStyle}>Existing areas (click to prefill)</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: theme.space[2] }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+              marginTop: theme.space[2],
+            }}
+          >
             {areas.length === 0 && (
-              <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textTertiary, fontStyle: 'italic' }}>
+              <div
+                style={{
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textTertiary,
+                  fontStyle: 'italic',
+                }}
+              >
                 No areas yet. Type a name above to create the first one.
               </div>
             )}
-            {areas.map(area => {
+            {areas.map((area) => {
               const claims = area.paths.includes(path);
               return (
                 <button
                   key={area.name}
                   onClick={() => onPickExisting(area.name)}
-                  title={claims ? 'Area already claims this path' : 'Prefill the area name'}
+                  title={
+                    claims
+                      ? 'Area already claims this path'
+                      : 'Prefill the area name'
+                  }
                   style={{
                     fontSize: theme.fontSizes[0],
                     padding: '6px 10px',
-                    background: claims ? theme.colors.background : theme.colors.backgroundSecondary,
+                    background: claims
+                      ? theme.colors.background
+                      : theme.colors.backgroundSecondary,
                     color: claims ? theme.colors.muted : theme.colors.text,
                     border: `1px solid ${theme.colors.border}`,
                     borderRadius: theme.radii[2],
@@ -251,7 +280,9 @@ export const AddToAreaModal: React.FC<{
                       flexShrink: 0,
                     }}
                   />
-                  <span style={{ fontFamily: theme.fonts.monospace }}>{area.name}</span>
+                  <span style={{ fontFamily: theme.fonts.monospace }}>
+                    {area.name}
+                  </span>
                   <span
                     style={{
                       marginLeft: 'auto',
@@ -261,7 +292,16 @@ export const AddToAreaModal: React.FC<{
                   >
                     {area.paths.length} path{area.paths.length === 1 ? '' : 's'}
                   </span>
-                  {claims && <span style={{ marginLeft: theme.space[1], fontSize: theme.fontSizes[0] }}>✓</span>}
+                  {claims && (
+                    <span
+                      style={{
+                        marginLeft: theme.space[1],
+                        fontSize: theme.fontSizes[0],
+                      }}
+                    >
+                      ✓
+                    </span>
+                  )}
                 </button>
               );
             })}

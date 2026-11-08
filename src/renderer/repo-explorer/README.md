@@ -33,16 +33,16 @@ process and no Next server required.
 Everything below is a deliberate stand-in, not a web-ade behavior change. Each is
 the place to swap in the real desktop implementation later.
 
-| Seam | File(s) | Why |
-| --- | --- | --- |
-| `next/link` | `shims/next-link.tsx` | No Next router; degrades to `<a>`. |
-| `next/navigation` | `shims/next-navigation.ts` | `useRouter`/`usePathname` no-ops. |
-| `next/dynamic` | `shims/next-dynamic.tsx` | Everything is client-side; wraps loaders in `React.lazy`. |
-| tRPC client | `lib/trpc/client.ts` | Replaces `@trpc/client` + the web-ade `AppRouter` with fixtures. Real data → main-process hosted-API proxy. |
-| Route handlers | `storybook/mockFetch.ts` | Stubs `/api/**` (commits, issues, PRs, trails, tours, analysis, star, auth…). |
-| Server type stubs | `lib/repo-analysis/s3-cache.ts`, `lib/repo-analysis/identity-cache.ts`, `app/api/github/user/[username]/activity/route.ts` | Type-only imports whose real modules are server-only (AWS SDK / Redis / Next). |
-| Document previews | `components/document/PdfView.tsx`, `shims/unsupported-docx.ts` | `react-pdf` / `pptx-preview` / `mammoth` / `docx-preview` aren't installed yet. |
-| Tailwind | `.storybook/main.ts` (postcss-loader) + `styles/tailwind.css` import in the story | The page is laid out with Tailwind utilities; Storybook's default CSS rule skips PostCSS. |
+| Seam              | File(s)                                                                                                                    | Why                                                                                                         |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `next/link`       | `shims/next-link.tsx`                                                                                                      | No Next router; degrades to `<a>`.                                                                          |
+| `next/navigation` | `shims/next-navigation.ts`                                                                                                 | `useRouter`/`usePathname` no-ops.                                                                           |
+| `next/dynamic`    | `shims/next-dynamic.tsx`                                                                                                   | Everything is client-side; wraps loaders in `React.lazy`.                                                   |
+| tRPC client       | `lib/trpc/client.ts`                                                                                                       | Replaces `@trpc/client` + the web-ade `AppRouter` with fixtures. Real data → main-process hosted-API proxy. |
+| Route handlers    | `storybook/mockFetch.ts`                                                                                                   | Stubs `/api/**` (commits, issues, PRs, trails, tours, analysis, star, auth…).                               |
+| Server type stubs | `lib/repo-analysis/s3-cache.ts`, `lib/repo-analysis/identity-cache.ts`, `app/api/github/user/[username]/activity/route.ts` | Type-only imports whose real modules are server-only (AWS SDK / Redis / Next).                              |
+| Document previews | `components/document/PdfView.tsx`, `shims/unsupported-docx.ts`                                                             | `react-pdf` / `pptx-preview` / `mammoth` / `docx-preview` aren't installed yet.                             |
+| Tailwind          | `.storybook/main.ts` (postcss-loader) + `styles/tailwind.css` import in the story                                          | The page is laid out with Tailwind utilities; Storybook's default CSS rule skips PostCSS.                   |
 
 ## Changes from web-ade
 
@@ -51,7 +51,7 @@ Edits applied on top of the verbatim copy (kept minimal and localized):
 - **Header** (`Header` in `RepoExplorerPage.tsx`): removed the "Principal AI"
   brand link, the repo search bar (desktop + mobile sheet), the bookmark button,
   and the user avatar menu. The header is now just the owner avatar / `owner /
-  repo` crumb plus the agent-view and vibe-coding buttons.
+repo` crumb plus the agent-view and vibe-coding buttons.
 - **Trails**: fully excised the old "trails" concept (shared trail list, trail
   explorer, files-view, trail-derived highlight layers and the "files explored"
   counter). Subsystem-model trails will be added later. The left rail keeps its

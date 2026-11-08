@@ -202,7 +202,9 @@ export const NotePopover: React.FC<NotePopoverProps> = ({
   );
 };
 
-function buttonStyle(theme: ReturnType<typeof useTheme>['theme']): React.CSSProperties {
+function buttonStyle(
+  theme: ReturnType<typeof useTheme>['theme'],
+): React.CSSProperties {
   return {
     padding: '4px 10px',
     fontSize: 12,

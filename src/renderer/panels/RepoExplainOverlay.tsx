@@ -58,10 +58,13 @@ export const SidePanelOverlay: React.FC<SidePanelOverlayProps> = ({
         transition: 'background-color 0.15s ease',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+        e.currentTarget.style.backgroundColor =
+          theme.colors.backgroundSecondary;
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = header ? 'transparent' : theme.colors.surface;
+        e.currentTarget.style.backgroundColor = header
+          ? 'transparent'
+          : theme.colors.surface;
       }}
     >
       <X size={14} />
@@ -176,7 +179,14 @@ export const RepoExplainOverlay: React.FC<RepoExplainOverlayProps> = ({
   const spacing = { xs: 4, sm: 8 };
 
   const audienceToggle = (
-    <div style={{ display: 'flex', gap: 0, border: `1px solid ${theme.colors.border}`, borderRadius: 4 }}>
+    <div
+      style={{
+        display: 'flex',
+        gap: 0,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: 4,
+      }}
+    >
       {(['maintainer', 'non-technical'] as const).map((level, i) => {
         const isActive = audience === level;
         return (
@@ -225,7 +235,12 @@ export const RepoExplainOverlay: React.FC<RepoExplainOverlayProps> = ({
           }}
         >
           <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
-          <span style={{ fontFamily: theme.fonts?.body, fontSize: theme.fontSizes[1] }}>
+          <span
+            style={{
+              fontFamily: theme.fonts?.body,
+              fontSize: theme.fontSizes[1],
+            }}
+          >
             Generating explanation…
           </span>
         </div>

@@ -257,7 +257,9 @@ export class UnifiedSecureStorage {
     return this.secretsDomain.storeSecrets(repoId, repoPath, secrets);
   }
 
-  async getSecrets(repoId: string): Promise<Record<string, SecretValue> | null> {
+  async getSecrets(
+    repoId: string,
+  ): Promise<Record<string, SecretValue> | null> {
     return this.secretsDomain.getSecrets(repoId);
   }
 
@@ -269,9 +271,7 @@ export class UnifiedSecureStorage {
     return this.secretsDomain.getAllRepoIds();
   }
 
-  async getSecretsWithMetadata(
-    repoId: string,
-  ): Promise<{
+  async getSecretsWithMetadata(repoId: string): Promise<{
     data: Record<string, SecretValue>;
     metadata: SecretMetadata;
   } | null> {

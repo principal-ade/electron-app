@@ -7,7 +7,7 @@ import {
 } from './OrgSectionHeaderCard';
 
 const createMockHeader = (
-  overrides: Partial<OrgSectionHeaderCardData> = {}
+  overrides: Partial<OrgSectionHeaderCardData> = {},
 ): OrgSectionHeaderCardData => ({
   orgName: 'acme',
   avatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
@@ -20,7 +20,9 @@ const Wrapper: React.FC<{ children: React.ReactNode; width?: number }> = ({
   width = 360,
 }) => (
   <ThemeProvider>
-    <div style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+    <div
+      style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}
+    >
       <div style={{ maxWidth: width }}>{children}</div>
     </div>
   </ThemeProvider>
@@ -73,7 +75,11 @@ export const BadgeYou: Story = {
   render: () => (
     <Wrapper>
       <OrgSectionHeaderCard
-        header={createMockHeader({ orgName: 'octocat', badge: 'you', repoCount: 3 })}
+        header={createMockHeader({
+          orgName: 'octocat',
+          badge: 'you',
+          repoCount: 3,
+        })}
         isCollapsed={false}
         onToggle={() => console.info('toggle')}
       />

@@ -145,7 +145,10 @@ const PrRow: React.FC<{
         )}
         <div
           className="flex items-center gap-2"
-          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: theme.fontSizes[0],
+          }}
         >
           <span>#{pr.number}</span>
           <span>· {relativeTime(pr.updated_at)}</span>
@@ -184,8 +187,15 @@ export const RepoPullRequestsPane: React.FC<{
 }) => {
   const { theme } = useTheme();
   const [stateFilter, setStateFilter] = React.useState<PrStateFilter>('open');
-  const { pullRequests, loading, loadingMore, error, hasMore, loadMore, refresh } =
-    useRepoPullRequests(owner, repo, { state: stateFilter });
+  const {
+    pullRequests,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+    refresh,
+  } = useRepoPullRequests(owner, repo, { state: stateFilter });
 
   // File-driven filter: when a building is clicked in the city, narrow the list.
   const displayedPullRequests = React.useMemo(() => {
@@ -242,7 +252,9 @@ export const RepoPullRequestsPane: React.FC<{
                     ? theme.colors.backgroundSecondary
                     : 'transparent',
                 color:
-                  stateFilter === s ? theme.colors.text : theme.colors.textMuted,
+                  stateFilter === s
+                    ? theme.colors.text
+                    : theme.colors.textMuted,
                 border: `1px solid ${
                   stateFilter === s ? theme.colors.border : 'transparent'
                 }`,
@@ -270,7 +282,8 @@ export const RepoPullRequestsPane: React.FC<{
               fontSize: theme.fontSizes[0],
             }}
           >
-            {filteredPrNumbers.length} PR{filteredPrNumbers.length !== 1 ? 's' : ''} touch this file
+            {filteredPrNumbers.length} PR
+            {filteredPrNumbers.length !== 1 ? 's' : ''} touch this file
           </span>
           <button
             type="button"
@@ -291,7 +304,10 @@ export const RepoPullRequestsPane: React.FC<{
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center py-12 gap-3">
           <InlineTrailLoader size={40} />
           <span
-            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+            }}
           >
             Loading pull requests…
           </span>
@@ -304,7 +320,10 @@ export const RepoPullRequestsPane: React.FC<{
             Failed to load pull requests
           </span>
           <span
-            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[0],
+            }}
           >
             {error}
           </span>
@@ -326,9 +345,13 @@ export const RepoPullRequestsPane: React.FC<{
       ) : pullRequests.length === 0 ? (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center py-12 px-6 text-center">
           <span
-            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+            }}
           >
-            No {stateFilter === 'all' ? '' : `${stateFilter} `}pull requests found
+            No {stateFilter === 'all' ? '' : `${stateFilter} `}pull requests
+            found
           </span>
         </div>
       ) : (

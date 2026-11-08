@@ -355,7 +355,14 @@ export interface ParsedGitHubUrl {
 export interface InstallSkillOptions {
   githubUrl: string;
   skillPath: string;
-  destination: 'global-universal' | 'global-claude' | 'global-opencode' | 'global-cursor' | 'global-windsurf' | 'project-universal' | 'project-claude';
+  destination:
+    | 'global-universal'
+    | 'global-claude'
+    | 'global-opencode'
+    | 'global-cursor'
+    | 'global-windsurf'
+    | 'project-universal'
+    | 'project-claude';
   repositoryPath?: string;
   skillName?: string;
   fileList: string[]; // List of all files in the skill folder (relative paths) - REQUIRED
@@ -391,9 +398,17 @@ export interface GitHubAPI {
   getIssues: (
     owner: string,
     repo: string,
-    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+    options?: {
+      state?: 'open' | 'closed' | 'all';
+      perPage?: number;
+      page?: number;
+    },
   ) => Promise<unknown[]>;
-  getIssue: (owner: string, repo: string, number: number) => Promise<unknown | null>;
+  getIssue: (
+    owner: string,
+    repo: string,
+    number: number,
+  ) => Promise<unknown | null>;
   createIssue: (
     owner: string,
     repo: string,
@@ -402,11 +417,27 @@ export interface GitHubAPI {
   getPullRequests: (
     owner: string,
     repo: string,
-    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+    options?: {
+      state?: 'open' | 'closed' | 'all';
+      perPage?: number;
+      page?: number;
+    },
   ) => Promise<unknown[]>;
-  getPullRequest: (owner: string, repo: string, number: number) => Promise<unknown | null>;
-  getPullRequestFiles: (owner: string, repo: string, number: number) => Promise<unknown[]>;
-  getCommit: (owner: string, repo: string, sha: string) => Promise<unknown | null>;
+  getPullRequest: (
+    owner: string,
+    repo: string,
+    number: number,
+  ) => Promise<unknown | null>;
+  getPullRequestFiles: (
+    owner: string,
+    repo: string,
+    number: number,
+  ) => Promise<unknown[]>;
+  getCommit: (
+    owner: string,
+    repo: string,
+    sha: string,
+  ) => Promise<unknown | null>;
   getRepositoryCommits: (
     owner: string,
     repo: string,
@@ -415,7 +446,9 @@ export interface GitHubAPI {
   getRepositoryContributors: (
     owner: string,
     repo: string,
-  ) => Promise<Array<{ login: string; contributions: number; avatar_url: string }>>;
+  ) => Promise<
+    Array<{ login: string; contributions: number; avatar_url: string }>
+  >;
   //getThread: (owner: string, repo: string, number: number) => Promise<any>;
   refreshData: (owner: string, repo: string) => Promise<void>;
   checkAuthStatus: () => Promise<{
@@ -574,11 +607,7 @@ export interface GitHubAPI {
     sha: string,
   ) => Promise<Record<string, ChangedFileInfo>>;
   /** Get the unified diff for a commit (used when repo isn't cloned locally) */
-  getCommitDiff: (
-    owner: string,
-    repo: string,
-    sha: string,
-  ) => Promise<string>;
+  getCommitDiff: (owner: string, repo: string, sha: string) => Promise<string>;
   /** Resolve git author emails to GitHub profiles (login + avatar_url) */
   resolveAuthorProfiles: (
     owner: string,

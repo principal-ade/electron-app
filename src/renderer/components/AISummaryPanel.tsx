@@ -8,7 +8,14 @@
 
 import React, { useState, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Sparkles, Loader2, X, Send, AlertCircle, Settings } from 'lucide-react';
+import {
+  Sparkles,
+  Loader2,
+  X,
+  Send,
+  AlertCircle,
+  Settings,
+} from 'lucide-react';
 import { GeminiService } from '../main-process-api/GeminiService';
 import { SecretsService } from '../main-process-api/SecretsService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
@@ -56,9 +63,14 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
 
     try {
       // Get API key from secrets
-      const apiKey = await SecretsService.getSingle(GEMINI_SECRETS_ID, 'apiKey');
+      const apiKey = await SecretsService.getSingle(
+        GEMINI_SECRETS_ID,
+        'apiKey',
+      );
       if (!apiKey) {
-        setError('No API key configured. Please add your Gemini API key in Settings.');
+        setError(
+          'No API key configured. Please add your Gemini API key in Settings.',
+        );
         setLoading(false);
         return;
       }
@@ -81,7 +93,9 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
         setError(result.error || 'Failed to generate summary');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate summary');
+      setError(
+        err instanceof Error ? err.message : 'Failed to generate summary',
+      );
     } finally {
       setLoading(false);
     }
@@ -96,7 +110,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
       acc[commit.repoName].push(commit);
       return acc;
     },
-    {} as Record<string, CommitData[]>
+    {} as Record<string, CommitData[]>,
   );
 
   const repoCount = Object.keys(commitsByRepo).length;
@@ -115,7 +129,10 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
           padding: spacing.md,
         }}
       >
-        <Sparkles size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
+        <Sparkles
+          size={32}
+          style={{ marginBottom: spacing.sm, opacity: 0.3 }}
+        />
         <span style={{ fontSize: theme.fontSizes[1] }}>
           Select cards to summarize
         </span>
@@ -214,8 +231,9 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
             marginBottom: spacing.xs,
           }}
         >
-          {repoCount} repo{repoCount !== 1 ? 's' : ''} · {selectedCommits.length}{' '}
-          commit{selectedCommits.length !== 1 ? 's' : ''}
+          {repoCount} repo{repoCount !== 1 ? 's' : ''} ·{' '}
+          {selectedCommits.length} commit
+          {selectedCommits.length !== 1 ? 's' : ''}
         </div>
         <div
           style={{
@@ -224,21 +242,23 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
             gap: spacing.xs,
           }}
         >
-          {Object.entries(commitsByRepo).slice(0, 3).map(([repoName, commits]) => (
-            <span
-              key={repoName}
-              style={{
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.text,
-                backgroundColor: theme.colors.background,
-                padding: `${spacing.xs}px ${spacing.sm}px`,
-                borderRadius: 4,
-                border: `1px solid ${theme.colors.border}`,
-              }}
-            >
-              {repoName} ({commits.length})
-            </span>
-          ))}
+          {Object.entries(commitsByRepo)
+            .slice(0, 3)
+            .map(([repoName, commits]) => (
+              <span
+                key={repoName}
+                style={{
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.text,
+                  backgroundColor: theme.colors.background,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  borderRadius: 4,
+                  border: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                {repoName} ({commits.length})
+              </span>
+            ))}
           {repoCount > 3 && (
             <span
               style={{

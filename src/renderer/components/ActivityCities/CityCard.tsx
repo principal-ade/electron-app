@@ -62,8 +62,9 @@ export const CityCard: React.FC<CityCardProps> = ({
     const repoId = `${owner}/${repo}`;
     return users.some((user) =>
       user.openRepositories?.some(
-        (session) => session.repoId === repoId && session.agentId === currentDeviceId
-      )
+        (session) =>
+          session.repoId === repoId && session.agentId === currentDeviceId,
+      ),
     );
   }, [users, owner, repo, currentDeviceId]);
 
@@ -257,7 +258,9 @@ export const CityCard: React.FC<CityCardProps> = ({
     whiteSpace: 'nowrap',
   };
 
-  const statusDotStyle = (status: 'online' | 'away' | 'offline'): React.CSSProperties => ({
+  const statusDotStyle = (
+    status: 'online' | 'away' | 'offline',
+  ): React.CSSProperties => ({
     width: 6,
     height: 6,
     borderRadius: '50%',
@@ -415,17 +418,19 @@ export const CityCard: React.FC<CityCardProps> = ({
     // Higher priority = drawn first = appears underneath
     // These show the default colors for all files based on their extensions
     if (showSuffixColors && cityData?.buildings) {
-      const fileSuffixLayers = createFileColorHighlightLayers(cityData.buildings);
+      const fileSuffixLayers = createFileColorHighlightLayers(
+        cityData.buildings,
+      );
 
       // Dim suffix layers when git changes are present to help focus on git status
       // Also boost their priority so they render underneath git layers
       const adjustedSuffixLayers = hasGitChanges
-        ? fileSuffixLayers.map(layer => ({
+        ? fileSuffixLayers.map((layer) => ({
             ...layer,
             opacity: (layer.opacity ?? 1.0) * 0.2, // Reduce opacity to 20% when git changes present
             priority: layer.priority + 100, // Boost priority to render underneath git layers
           }))
-        : fileSuffixLayers.map(layer => ({
+        : fileSuffixLayers.map((layer) => ({
             ...layer,
             priority: layer.priority + 100, // Always boost priority for consistent layering
           }));
@@ -458,14 +463,17 @@ export const CityCard: React.FC<CityCardProps> = ({
             <div style={repoNameStyle} title={repo}>
               {repo}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}
+            >
               <div style={ownerNameStyle} title={owner}>
                 {owner}
               </div>
               {/* Ahead/Behind indicators */}
               {aggregateAheadBehind && (
                 <div style={branchStatusContainerStyle}>
-                  {aggregateAheadBehind.ahead > 0 && aggregateAheadBehind.behind > 0 ? (
+                  {aggregateAheadBehind.ahead > 0 &&
+                  aggregateAheadBehind.behind > 0 ? (
                     // Diverged state
                     <div
                       style={divergedBadgeStyle}
@@ -515,7 +523,10 @@ export const CityCard: React.FC<CityCardProps> = ({
           </div>
         )}
         {hasCurrentDeviceSession && (
-          <div style={deviceBadgeStyle} title="This repository is open on this device">
+          <div
+            style={deviceBadgeStyle}
+            title="This repository is open on this device"
+          >
             This Device
           </div>
         )}
@@ -547,28 +558,46 @@ export const CityCard: React.FC<CityCardProps> = ({
       {/* Users section at bottom */}
       <div style={infoStyle}>
         {/* Timestamps section */}
-        {timestamps && (timestamps.earliestOpenedAt || timestamps.mostRecentActivity || timestamps.mostRecentGitChange) && (
-          <div style={timestampsContainerStyle}>
-            {timestamps.earliestOpenedAt && (
-              <div style={timestampItemStyle} title={`Opened: ${formatAbsoluteTime(timestamps.earliestOpenedAt)}`}>
-                <div style={timestampLabelStyle}>Opened</div>
-                <div style={timestampValueStyle}>{formatRelativeTime(timestamps.earliestOpenedAt)}</div>
-              </div>
-            )}
-            {timestamps.mostRecentGitChange && (
-              <div style={timestampItemStyle} title={`Last Git Change: ${formatAbsoluteTime(timestamps.mostRecentGitChange)}`}>
-                <div style={timestampLabelStyle}>Git Change</div>
-                <div style={timestampValueStyle}>{formatRelativeTime(timestamps.mostRecentGitChange)}</div>
-              </div>
-            )}
-            {timestamps.mostRecentActivity && (
-              <div style={timestampItemStyle} title={`Last Activity: ${formatAbsoluteTime(timestamps.mostRecentActivity)}`}>
-                <div style={timestampLabelStyle}>Activity</div>
-                <div style={timestampValueStyle}>{formatRelativeTime(timestamps.mostRecentActivity)}</div>
-              </div>
-            )}
-          </div>
-        )}
+        {timestamps &&
+          (timestamps.earliestOpenedAt ||
+            timestamps.mostRecentActivity ||
+            timestamps.mostRecentGitChange) && (
+            <div style={timestampsContainerStyle}>
+              {timestamps.earliestOpenedAt && (
+                <div
+                  style={timestampItemStyle}
+                  title={`Opened: ${formatAbsoluteTime(timestamps.earliestOpenedAt)}`}
+                >
+                  <div style={timestampLabelStyle}>Opened</div>
+                  <div style={timestampValueStyle}>
+                    {formatRelativeTime(timestamps.earliestOpenedAt)}
+                  </div>
+                </div>
+              )}
+              {timestamps.mostRecentGitChange && (
+                <div
+                  style={timestampItemStyle}
+                  title={`Last Git Change: ${formatAbsoluteTime(timestamps.mostRecentGitChange)}`}
+                >
+                  <div style={timestampLabelStyle}>Git Change</div>
+                  <div style={timestampValueStyle}>
+                    {formatRelativeTime(timestamps.mostRecentGitChange)}
+                  </div>
+                </div>
+              )}
+              {timestamps.mostRecentActivity && (
+                <div
+                  style={timestampItemStyle}
+                  title={`Last Activity: ${formatAbsoluteTime(timestamps.mostRecentActivity)}`}
+                >
+                  <div style={timestampLabelStyle}>Activity</div>
+                  <div style={timestampValueStyle}>
+                    {formatRelativeTime(timestamps.mostRecentActivity)}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
         <div style={{ ...usersContainerStyle, position: 'relative' }}>
           {users.map((user) => {
@@ -582,8 +611,12 @@ export const CityCard: React.FC<CityCardProps> = ({
                   style={{
                     ...userBadgeStyle,
                     ...(hasDirtyFiles && {
-                      backgroundColor: isSelected ? theme.colors.primary : theme.colors.background,
-                      color: isSelected ? theme.colors.background : theme.colors.textSecondary,
+                      backgroundColor: isSelected
+                        ? theme.colors.primary
+                        : theme.colors.background,
+                      color: isSelected
+                        ? theme.colors.background
+                        : theme.colors.textSecondary,
                     }),
                   }}
                   onClick={() => {
@@ -593,7 +626,8 @@ export const CityCard: React.FC<CityCardProps> = ({
                   }}
                   onMouseEnter={(e) => {
                     if (hasDirtyFiles) {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundSecondary;
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -612,66 +646,83 @@ export const CityCard: React.FC<CityCardProps> = ({
                   <span style={statusDotStyle(user.status)} />
                   <span>{user.userId}</span>
                   {hasDirtyFiles && (
-                    <span style={gitIndicatorStyle(true)} title="Has uncommitted changes" />
+                    <span
+                      style={gitIndicatorStyle(true)}
+                      title="Has uncommitted changes"
+                    />
                   )}
                 </div>
 
                 {/* File list modal */}
                 {isSelected && userGitStatus && (
                   <div style={fileListModalStyle}>
-                    <div style={fileListHeaderStyle}>{user.userId}'s Changes</div>
+                    <div style={fileListHeaderStyle}>
+                      {user.userId}'s Changes
+                    </div>
 
-                    {userGitStatus.stagedFiles && userGitStatus.stagedFiles.length > 0 && (
-                      <div style={fileGroupStyle}>
-                        <div style={{ ...fileGroupLabelStyle, color: '#22c55e' }}>
-                          Staged ({userGitStatus.stagedFiles.length})
-                        </div>
-                        {userGitStatus.stagedFiles.map((file) => (
-                          <div key={file} style={fileItemStyle} title={file}>
-                            {file}
+                    {userGitStatus.stagedFiles &&
+                      userGitStatus.stagedFiles.length > 0 && (
+                        <div style={fileGroupStyle}>
+                          <div
+                            style={{ ...fileGroupLabelStyle, color: '#22c55e' }}
+                          >
+                            Staged ({userGitStatus.stagedFiles.length})
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          {userGitStatus.stagedFiles.map((file) => (
+                            <div key={file} style={fileItemStyle} title={file}>
+                              {file}
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                    {userGitStatus.modifiedFiles && userGitStatus.modifiedFiles.length > 0 && (
-                      <div style={fileGroupStyle}>
-                        <div style={{ ...fileGroupLabelStyle, color: '#f59e0b' }}>
-                          Modified ({userGitStatus.modifiedFiles.length})
-                        </div>
-                        {userGitStatus.modifiedFiles.map((file) => (
-                          <div key={file} style={fileItemStyle} title={file}>
-                            {file}
+                    {userGitStatus.modifiedFiles &&
+                      userGitStatus.modifiedFiles.length > 0 && (
+                        <div style={fileGroupStyle}>
+                          <div
+                            style={{ ...fileGroupLabelStyle, color: '#f59e0b' }}
+                          >
+                            Modified ({userGitStatus.modifiedFiles.length})
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          {userGitStatus.modifiedFiles.map((file) => (
+                            <div key={file} style={fileItemStyle} title={file}>
+                              {file}
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                    {userGitStatus.untrackedFiles && userGitStatus.untrackedFiles.length > 0 && (
-                      <div style={fileGroupStyle}>
-                        <div style={{ ...fileGroupLabelStyle, color: '#3b82f6' }}>
-                          Untracked ({userGitStatus.untrackedFiles.length})
-                        </div>
-                        {userGitStatus.untrackedFiles.map((file) => (
-                          <div key={file} style={fileItemStyle} title={file}>
-                            {file}
+                    {userGitStatus.untrackedFiles &&
+                      userGitStatus.untrackedFiles.length > 0 && (
+                        <div style={fileGroupStyle}>
+                          <div
+                            style={{ ...fileGroupLabelStyle, color: '#3b82f6' }}
+                          >
+                            Untracked ({userGitStatus.untrackedFiles.length})
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          {userGitStatus.untrackedFiles.map((file) => (
+                            <div key={file} style={fileItemStyle} title={file}>
+                              {file}
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                    {userGitStatus.deletedFiles && userGitStatus.deletedFiles.length > 0 && (
-                      <div style={fileGroupStyle}>
-                        <div style={{ ...fileGroupLabelStyle, color: '#ef4444' }}>
-                          Deleted ({userGitStatus.deletedFiles.length})
-                        </div>
-                        {userGitStatus.deletedFiles.map((file) => (
-                          <div key={file} style={fileItemStyle} title={file}>
-                            {file}
+                    {userGitStatus.deletedFiles &&
+                      userGitStatus.deletedFiles.length > 0 && (
+                        <div style={fileGroupStyle}>
+                          <div
+                            style={{ ...fileGroupLabelStyle, color: '#ef4444' }}
+                          >
+                            Deleted ({userGitStatus.deletedFiles.length})
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          {userGitStatus.deletedFiles.map((file) => (
+                            <div key={file} style={fileItemStyle} title={file}>
+                              {file}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                   </div>
                 )}
               </div>

@@ -86,8 +86,7 @@ export const alexandriaAPI: AlexandriaAPI = {
   refreshRepository: (path: string) =>
     tipcInvoke('refreshRepository', { path }),
 
-  updateLastOpened: (path: string) =>
-    tipcInvoke('updateLastOpened', { path }),
+  updateLastOpened: (path: string) => tipcInvoke('updateLastOpened', { path }),
 
   getRepositoryCount: () => tipcInvoke('getRepositoryCount'),
 

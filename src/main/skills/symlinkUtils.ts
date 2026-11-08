@@ -25,7 +25,9 @@ export async function isSymlink(targetPath: string): Promise<boolean> {
 /**
  * Get the target of a symbolic link
  */
-export async function getSymlinkTarget(linkPath: string): Promise<string | null> {
+export async function getSymlinkTarget(
+  linkPath: string,
+): Promise<string | null> {
   try {
     const target = await readlink(linkPath);
     // Resolve relative to the link's directory
@@ -44,7 +46,7 @@ export async function getSymlinkTarget(linkPath: string): Promise<string | null>
  */
 export async function createSkillSymlink(
   canonicalPath: string,
-  agentPath: string
+  agentPath: string,
 ): Promise<void> {
   const resolvedCanonical = resolve(canonicalPath);
   const resolvedAgent = resolve(agentPath);
@@ -62,7 +64,9 @@ export async function createSkillSymlink(
     if (stats.isSymbolicLink()) {
       const existingTarget = await getSymlinkTarget(resolvedAgent);
       if (existingTarget === resolvedCanonical) {
-        console.log(`[Symlink] Symlink already exists and is correct: ${resolvedAgent}`);
+        console.log(
+          `[Symlink] Symlink already exists and is correct: ${resolvedAgent}`,
+        );
         return;
       }
       // Symlink exists but points to wrong target - remove it
@@ -70,7 +74,9 @@ export async function createSkillSymlink(
       await rm(resolvedAgent);
     } else {
       // Regular file/directory exists - remove it
-      console.log(`[Symlink] Removing existing file/directory: ${resolvedAgent}`);
+      console.log(
+        `[Symlink] Removing existing file/directory: ${resolvedAgent}`,
+      );
       await rm(resolvedAgent, { recursive: true });
     }
   } catch (error) {
@@ -81,7 +87,9 @@ export async function createSkillSymlink(
         try {
           await rm(resolvedAgent, { force: true });
         } catch {
-          throw new Error(`Failed to remove broken symlink at ${resolvedAgent}`);
+          throw new Error(
+            `Failed to remove broken symlink at ${resolvedAgent}`,
+          );
         }
       }
     }
@@ -103,7 +111,7 @@ export async function createSkillSymlink(
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(
-      `Failed to create symlink from ${resolvedAgent} to ${resolvedCanonical}: ${errMsg}`
+      `Failed to create symlink from ${resolvedAgent} to ${resolvedCanonical}: ${errMsg}`,
     );
   }
 }
@@ -140,7 +148,7 @@ export async function removeSkillSymlink(linkPath: string): Promise<void> {
  */
 export async function removeAllSymlinksToCanonical(
   canonicalPath: string,
-  agentPaths: string[]
+  agentPaths: string[],
 ): Promise<void> {
   const resolvedCanonical = resolve(canonicalPath);
 

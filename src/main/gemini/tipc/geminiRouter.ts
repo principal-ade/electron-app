@@ -66,7 +66,7 @@ async function fetchModels(apiKey: string): Promise<GeminiModel[]> {
   // Filter to only models that support generateContent
   return (data.models || [])
     .filter((m: { supportedGenerationMethods?: string[] }) =>
-      m.supportedGenerationMethods?.includes('generateContent')
+      m.supportedGenerationMethods?.includes('generateContent'),
     )
     .map(
       (m: {
@@ -81,7 +81,7 @@ async function fetchModels(apiKey: string): Promise<GeminiModel[]> {
         description: m.description,
         inputTokenLimit: m.inputTokenLimit,
         outputTokenLimit: m.outputTokenLimit,
-      })
+      }),
     );
 }
 
@@ -131,7 +131,7 @@ Start directly with the summary. No greetings.`;
 async function generateContent(
   apiKey: string,
   model: string,
-  prompt: string
+  prompt: string,
 ): Promise<string> {
   const url = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
@@ -207,8 +207,7 @@ export const geminiRouter = {
       } catch (error) {
         return {
           success: false,
-          error:
-            error instanceof Error ? error.message : 'Invalid API key',
+          error: error instanceof Error ? error.message : 'Invalid API key',
         } as ValidateApiKeyOutput;
       }
     }),
@@ -224,7 +223,7 @@ export const geminiRouter = {
         const summary = await generateContent(
           input.apiKey,
           input.model,
-          prompt
+          prompt,
         );
         return {
           success: true,

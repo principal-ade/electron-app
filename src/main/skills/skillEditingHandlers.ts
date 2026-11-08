@@ -11,7 +11,10 @@ import { getSkillLockFileService } from './skillLockFile';
 import { initializeSkillPermissionService } from '../services/SkillPermissionService';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 import { GitHubAPICore } from '../version-control-providers/github/apiCore';
-import { getFileContentWithSha, commitFile } from '../version-control-providers/github/repository';
+import {
+  getFileContentWithSha,
+  commitFile,
+} from '../version-control-providers/github/repository';
 import { sendToAllWindows } from '../window/modernWindowManager';
 import {
   SkillLockAPIEvent,
@@ -29,7 +32,10 @@ const globalAdapter = new GitHubAdapter();
 /**
  * Recursively read directory and return file paths
  */
-async function readDirRecursive(dir: string, baseDir: string = dir): Promise<string[]> {
+async function readDirRecursive(
+  dir: string,
+  baseDir: string = dir,
+): Promise<string[]> {
   const files: string[] = [];
 
   try {
@@ -74,7 +80,8 @@ export async function registerSkillEditingHandlers(): Promise<void> {
       try {
         // Use global adapter - skill editing doesn't need window context
         // Owner/repo information comes from the skill lock file
-        const permissionService = initializeSkillPermissionService(globalAdapter);
+        const permissionService =
+          initializeSkillPermissionService(globalAdapter);
         return await permissionService.checkSkillEditPermission(skillName);
       } catch (error) {
         console.error('[SkillEditing] Error checking edit permission:', error);
@@ -83,7 +90,7 @@ export async function registerSkillEditingHandlers(): Promise<void> {
           reason: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    }
+    },
   );
 
   // GET_SKILL_FILES - Get list of files in skill folder
@@ -105,24 +112,32 @@ export async function registerSkillEditingHandlers(): Promise<void> {
         try {
           await fs.access(canonicalPath);
         } catch {
-          console.warn(`[SkillEditing] Skill directory not found: ${canonicalPath}`);
+          console.warn(
+            `[SkillEditing] Skill directory not found: ${canonicalPath}`,
+          );
           return [];
         }
 
         const files = await readDirRecursive(canonicalPath);
-        console.log(`[SkillEditing] Found ${files.length} files in ${skillName}`);
+        console.log(
+          `[SkillEditing] Found ${files.length} files in ${skillName}`,
+        );
         return files;
       } catch (error) {
         console.error('[SkillEditing] Error getting skill files:', error);
         return [];
       }
-    }
+    },
   );
 
   // GET_SKILL_FILE_CONTENT - Get content of a skill file
   ipcMain.handle(
     SkillLockAPIEvent.GET_SKILL_FILE_CONTENT,
-    async (_, skillName: string, filePath: string): Promise<{ content: string; isLocal: boolean } | null> => {
+    async (
+      _,
+      skillName: string,
+      filePath: string,
+    ): Promise<{ content: string; isLocal: boolean } | null> => {
       try {
         const skill = await lockService.getSkill(skillName);
         if (!skill) {
@@ -145,13 +160,15 @@ export async function registerSkillEditingHandlers(): Promise<void> {
         }
 
         const content = await fs.readFile(fullPath, 'utf-8');
-        console.log(`[SkillEditing] Read file: ${filePath} (${content.length} bytes)`);
+        console.log(
+          `[SkillEditing] Read file: ${filePath} (${content.length} bytes)`,
+        );
         return { content, isLocal: true };
       } catch (error) {
         console.error('[SkillEditing] Error reading file:', error);
         return null;
       }
-    }
+    },
   );
 
   // COMMIT_SKILL_FILE - Commit file changes to GitHub
@@ -209,7 +226,7 @@ export async function registerSkillEditingHandlers(): Promise<void> {
           owner,
           repo,
           repoFilePath,
-          branch
+          branch,
         );
 
         // 6. Commit via GitHub API
@@ -221,7 +238,7 @@ export async function registerSkillEditingHandlers(): Promise<void> {
           content,
           message,
           branch,
-          fileInfo?.sha
+          fileInfo?.sha,
         );
 
         if (!result.success) {
@@ -277,7 +294,7 @@ export async function registerSkillEditingHandlers(): Promise<void> {
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    }
+    },
   );
 
   console.log('[SkillEditing] IPC handlers registered');

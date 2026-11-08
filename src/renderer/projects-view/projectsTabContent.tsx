@@ -67,9 +67,7 @@ import {
   type WeekCommitsView,
   type WeekStartsOn,
 } from '@industry-theme/file-city-panel';
-import {
-  emitRepositoryGuideOpenWeek,
-} from '../events/portalIntents';
+import { emitRepositoryGuideOpenWeek } from '../events/portalIntents';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
 import type { HighlightLayer } from '@principal-ai/file-city-react';
 import {
@@ -99,7 +97,8 @@ import { useWorkspaceTabs } from '../principal-window/PortalTabsContext';
 import { commitActivityPanelActions } from '../panels/commitActivityPanelActions';
 import { MarkdownDocTabContent } from './MarkdownDocTabContent';
 import { SourceFileTabContent } from '../panels/SourceFileTabContent';
-import { MediaTabContent } from '../panels/MediaTabContent';import { RepoExplorerTabContent } from '../repo-explorer/RepoExplorerTabContent';
+import { MediaTabContent } from '../panels/MediaTabContent';
+import { RepoExplorerTabContent } from '../repo-explorer/RepoExplorerTabContent';
 
 // `localClones` isn't on the formal AlexandriaEntry type — some entries
 // carry it as a renderer-side extension. Falls back to a single-clone array
@@ -545,7 +544,6 @@ const RepositoryProfileTabContent: React.FC<{
       registerRepository: async (path: string, remoteUrl?: string) => {
         return AlexandriaService.registerRepository(path, remoteUrl);
       },
-
     }),
     [openLocalhostBrowser],
   );
@@ -625,7 +623,6 @@ function mapChangedStatus(
   return status;
 }
 
-
 /**
  * Wrapper component for the File City guide tab content.
  *
@@ -669,7 +666,9 @@ const FileCityGuideTabContent: React.FC<{
   const { statuses: monitoredStatuses } = useRepositoryStatuses(
     weekActive && localPath ? [localPath] : [],
   );
-  const monitoredStatus = localPath ? monitoredStatuses.get(localPath) : undefined;
+  const monitoredStatus = localPath
+    ? monitoredStatuses.get(localPath)
+    : undefined;
 
   // Fetch file tree + line counts when the repo identity changes.
   React.useEffect(() => {
@@ -798,7 +797,9 @@ const FileCityGuideTabContent: React.FC<{
       .finally(() => {
         if (!cancelled) setReadmeLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [readmeActive, readmePath, github?.owner, github?.name]);
 
   // Fetch this week's commits (+ optional dirty working tree) when week mode is on.
@@ -886,7 +887,9 @@ const FileCityGuideTabContent: React.FC<{
                     err,
                   );
                 }
-                const profile = profiles.get(c.authorEmail?.toLowerCase() ?? '');
+                const profile = profiles.get(
+                  c.authorEmail?.toLowerCase() ?? '',
+                );
                 return {
                   sha: c.hash,
                   message: c.message,
@@ -978,7 +981,6 @@ const FileCityGuideTabContent: React.FC<{
             new Date(b.authoredAt).getTime() - new Date(a.authoredAt).getTime(),
         );
 
-
         if (cancelled) return;
         setWeekView({
           rangeStart: rangeStartIso,
@@ -1056,17 +1058,32 @@ const FileCityGuideTabContent: React.FC<{
           }
         : undefined,
     };
-    return makeGuideSlice<ReadmeView | null>('readme', readmeView, readmeLoading);
-  }, [weekActive, readmeActive, readmeContent, readmePath, readmeLoading, github]);
+    return makeGuideSlice<ReadmeView | null>(
+      'readme',
+      readmeView,
+      readmeLoading,
+    );
+  }, [
+    weekActive,
+    readmeActive,
+    readmeContent,
+    readmePath,
+    readmeLoading,
+    github,
+  ]);
 
   const weekCommitsSlice = React.useMemo(() => {
     if (!weekActive) {
       return makeGuideSlice<WeekCommitsView | null>('weekCommits', null);
     }
     const files = monitoredStatus ? monitoredDirtyFiles(monitoredStatus) : [];
-    const dirty: DirtyWorkingTree | null = files.length > 0
-      ? { asOf: monitoredStatus?.lastChangedAt ?? new Date().toISOString(), files }
-      : null;
+    const dirty: DirtyWorkingTree | null =
+      files.length > 0
+        ? {
+            asOf: monitoredStatus?.lastChangedAt ?? new Date().toISOString(),
+            files,
+          }
+        : null;
     return makeGuideSlice<WeekCommitsView | null>(
       'weekCommits',
       weekView ? { ...weekView, dirty } : null,

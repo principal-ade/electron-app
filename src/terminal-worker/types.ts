@@ -227,7 +227,6 @@ export interface TerminalResizeMessage {
 }
 
 export type RendererToWorkerPortMessage =
-  | TerminalWriteMessage
-  | TerminalResizeMessage;
+  TerminalWriteMessage | TerminalResizeMessage;
 
 export type WorkerToRendererPortMessage = TerminalDataMessage;

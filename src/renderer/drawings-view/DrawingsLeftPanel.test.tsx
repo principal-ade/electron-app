@@ -38,7 +38,9 @@ test.each([
       }
     />,
   );
-  const row = await screen.findByRole('button', { name: 'Architecture Drawing' });
+  const row = await screen.findByRole('button', {
+    name: 'Architecture Drawing',
+  });
   expect(row.draggable).toBe(true);
   const dataTransfer = { effectAllowed: 'none', setData: jest.fn() };
   fireEvent.dragStart(row, { dataTransfer });

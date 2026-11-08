@@ -155,7 +155,10 @@ const ContributorCard: React.FC<{
         </div>
         <div
           className="flex items-center gap-2 mt-0.5"
-          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: theme.fontSizes[1],
+          }}
         >
           <span className="inline-flex items-center gap-1">
             <GitCommitHorizontal size={14} />
@@ -177,7 +180,10 @@ const ContributorCard: React.FC<{
       {lastCommitDate && (
         <span
           className="shrink-0"
-          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: theme.fontSizes[1],
+          }}
         >
           {activityTime(lastCommitDate)}
         </span>
@@ -335,7 +341,8 @@ export const RepoActivityPane: React.FC<{
         map.set(key, agg);
       }
       agg.shas.push(c.sha);
-      if (!agg.avatarUrl && c.author?.avatar_url) agg.avatarUrl = c.author.avatar_url;
+      if (!agg.avatarUrl && c.author?.avatar_url)
+        agg.avatarUrl = c.author.avatar_url;
       const files = commitFiles.get(c.sha);
       if (files) for (const f of files) agg.files.add(f.filename);
     }
@@ -452,7 +459,10 @@ export const RepoActivityPane: React.FC<{
       {/* Sticky header */}
       <div
         className="px-4 py-2 border-b sticky top-0 z-10 shrink-0 flex items-center gap-2"
-        style={{ borderColor: theme.colors.border, background: theme.colors.background }}
+        style={{
+          borderColor: theme.colors.border,
+          background: theme.colors.background,
+        }}
       >
         {isOpen && shownContributor ? (
           // Drilled into one contributor: keep the section label as the back
@@ -520,13 +530,21 @@ export const RepoActivityPane: React.FC<{
             >
               Recent Activity
             </span>
-            <span style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}>
+            <span
+              style={{
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textMuted,
+              }}
+            >
               main
             </span>
           </button>
         ) : (
           <>
-            <GitCommitHorizontal size={14} style={{ color: theme.colors.textSecondary }} />
+            <GitCommitHorizontal
+              size={14}
+              style={{ color: theme.colors.textSecondary }}
+            />
             <span
               style={{
                 fontSize: theme.fontSizes[0],
@@ -538,7 +556,12 @@ export const RepoActivityPane: React.FC<{
             >
               Recent Activity
             </span>
-            <span style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}>
+            <span
+              style={{
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textMuted,
+              }}
+            >
               main
             </span>
           </>
@@ -549,7 +572,10 @@ export const RepoActivityPane: React.FC<{
             onClick={refresh}
             disabled={loading}
             className="flex items-center justify-center w-6 h-6 rounded transition-opacity hover:opacity-70"
-            style={{ color: theme.colors.textMuted, cursor: loading ? 'default' : 'pointer' }}
+            style={{
+              color: theme.colors.textMuted,
+              cursor: loading ? 'default' : 'pointer',
+            }}
             title="Refresh commits"
             aria-label="Refresh commits"
           >
@@ -561,16 +587,28 @@ export const RepoActivityPane: React.FC<{
       {loading && commits.length === 0 ? (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center py-12 gap-3">
           <InlineTrailLoader size={40} />
-          <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}>
+          <span
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+            }}
+          >
             Loading commits…
           </span>
         </div>
       ) : error && commits.length === 0 ? (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center py-12 gap-3 px-6 text-center">
-          <span style={{ color: theme.colors.error, fontSize: theme.fontSizes[1] }}>
+          <span
+            style={{ color: theme.colors.error, fontSize: theme.fontSizes[1] }}
+          >
             Failed to load commits
           </span>
-          <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}>
+          <span
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[0],
+            }}
+          >
             {error}
           </span>
           <button
@@ -590,7 +628,12 @@ export const RepoActivityPane: React.FC<{
         </div>
       ) : commits.length === 0 ? (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center py-12 px-6 text-center">
-          <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}>
+          <span
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+            }}
+          >
             No commits found
           </span>
         </div>
@@ -603,7 +646,9 @@ export const RepoActivityPane: React.FC<{
             className={`absolute inset-0 overflow-y-auto transition-transform duration-500 ease-out ${
               isOpen ? 'pointer-events-none' : ''
             }`}
-            style={{ transform: isOpen ? 'translateX(-100%)' : 'translateX(0)' }}
+            style={{
+              transform: isOpen ? 'translateX(-100%)' : 'translateX(0)',
+            }}
             aria-hidden={isOpen}
           >
             <div className="flex flex-col">
@@ -634,9 +679,16 @@ export const RepoActivityPane: React.FC<{
           >
             {authorCommits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 px-6 gap-3 text-center">
-                <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}>
+                <span
+                  style={{
+                    color: theme.colors.textMuted,
+                    fontSize: theme.fontSizes[1],
+                  }}
+                >
                   No recent commits from{' '}
-                  {shownContributor?.login ?? shownContributor?.name ?? 'this contributor'}
+                  {shownContributor?.login ??
+                    shownContributor?.name ??
+                    'this contributor'}
                   {hasMore ? ' in the loaded history.' : '.'}
                 </span>
                 {hasMore && (

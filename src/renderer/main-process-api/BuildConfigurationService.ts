@@ -53,9 +53,9 @@ export class BuildConfigurationService {
     callback: (event: BuildSecretsRequestedEvent) => void,
   ): () => void {
     return ipcOn(BUILD_SECRETS_REQUESTED, (...args: unknown[]) => {
-        const event = args[0] as BuildSecretsRequestedEvent | undefined;
-        if (!event || typeof event.configId !== 'string') return;
-        callback(event);
+      const event = args[0] as BuildSecretsRequestedEvent | undefined;
+      if (!event || typeof event.configId !== 'string') return;
+      callback(event);
     });
   }
 }

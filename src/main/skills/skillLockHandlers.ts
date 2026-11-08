@@ -6,7 +6,10 @@
 
 import { app, ipcMain } from 'electron';
 import * as path from 'path';
-import { getSkillLockFileService, initializeSkillLockFileService } from './skillLockFile';
+import {
+  getSkillLockFileService,
+  initializeSkillLockFileService,
+} from './skillLockFile';
 import { fetchMultipleSkillTrees } from './githubTreeSha';
 import { readLocalSkillBlobs, blobMapsEqual } from './localSkillHash';
 import {
@@ -51,7 +54,7 @@ export async function registerSkillLockHandlers(): Promise<void> {
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    }
+    },
   );
 
   // REMOVE_SKILL_FROM_LOCK - Remove a skill from the lock file
@@ -62,8 +65,12 @@ export async function registerSkillLockHandlers(): Promise<void> {
         const removed = await lockService.removeSkill(name);
         if (removed) {
           // Broadcast to all windows that a skill was uninstalled
-          sendToAllWindows(SkillLockAPIEvent.SKILL_UNINSTALLED, { skillName: name });
-          console.log(`[SkillLock] Broadcasted skill:uninstalled to all windows for: ${name}`);
+          sendToAllWindows(SkillLockAPIEvent.SKILL_UNINSTALLED, {
+            skillName: name,
+          });
+          console.log(
+            `[SkillLock] Broadcasted skill:uninstalled to all windows for: ${name}`,
+          );
         }
         return { success: removed };
       } catch (error) {
@@ -73,7 +80,7 @@ export async function registerSkillLockHandlers(): Promise<void> {
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    }
+    },
   );
 
   // UPDATE_SKILL_IN_LOCK - Update a skill entry in the lock file
@@ -90,7 +97,7 @@ export async function registerSkillLockHandlers(): Promise<void> {
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    }
+    },
   );
 
   // GET_INSTALLED_SKILLS - Get all installed skills from lock file
@@ -170,7 +177,9 @@ export async function registerSkillLockHandlers(): Promise<void> {
         const homeDir = app.getPath('home');
 
         for (const skill of sourceSkills) {
-          const treeResult = skill.skillPath ? treeResults.get(skill.skillPath) : undefined;
+          const treeResult = skill.skillPath
+            ? treeResults.get(skill.skillPath)
+            : undefined;
 
           if (!treeResult || !treeResult.success || !treeResult.folderSha) {
             results.push({
@@ -198,7 +207,9 @@ export async function registerSkillLockHandlers(): Promise<void> {
           if (treeResult.blobs) {
             const localBlobs = await readLocalSkillBlobs(localDir);
             // Missing files on disk => needs reinstall.
-            hasUpdate = localBlobs === null || !blobMapsEqual(localBlobs, treeResult.blobs);
+            hasUpdate =
+              localBlobs === null ||
+              !blobMapsEqual(localBlobs, treeResult.blobs);
           } else {
             // Truncated tree: fall back to folder-SHA comparison.
             hasUpdate = skill.skillFolderHash !== treeResult.folderSha;

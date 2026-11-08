@@ -70,7 +70,9 @@ export const DetailedConfigurationView: React.FC<
   // =========================================================================
   // STATE - MCP Configuration
   // =========================================================================
-  const [mcpServers, setMcpServers] = React.useState<Record<string, unknown>>({});
+  const [mcpServers, setMcpServers] = React.useState<Record<string, unknown>>(
+    {},
+  );
 
   // =========================================================================
   // FILE CHECKING FUNCTIONS

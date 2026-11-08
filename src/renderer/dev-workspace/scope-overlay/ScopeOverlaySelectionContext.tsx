@@ -23,10 +23,7 @@ export const ScopeOverlaySelectionProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const [selection, setSelection] = React.useState<ScopeSelection | null>(null);
-  const value = React.useMemo(
-    () => ({ selection, setSelection }),
-    [selection],
-  );
+  const value = React.useMemo(() => ({ selection, setSelection }), [selection]);
   return (
     <ScopeOverlaySelectionContext.Provider value={value}>
       {children}
@@ -44,8 +41,6 @@ export function useScopeOverlaySelection(): ScopeOverlaySelectionContextValue {
   return value;
 }
 
-export function useScopeOverlaySelectionOptional():
-  | ScopeOverlaySelectionContextValue
-  | null {
+export function useScopeOverlaySelectionOptional(): ScopeOverlaySelectionContextValue | null {
   return React.useContext(ScopeOverlaySelectionContext);
 }

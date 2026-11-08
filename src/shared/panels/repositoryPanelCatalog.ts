@@ -1,16 +1,8 @@
 export type RepositoryPanelSurface =
-  | 'explorer'
-  | 'manager'
-  | 'viewer'
-  | 'agent'
-  | 'principal';
+  'explorer' | 'manager' | 'viewer' | 'agent' | 'principal';
 
 export type RepositoryPanelSlice =
-  | 'git'
-  | 'markdown'
-  | 'fileTree'
-  | 'packages'
-  | 'quality';
+  'git' | 'markdown' | 'fileTree' | 'packages' | 'quality';
 
 export interface RepositoryPanelDefinitionBase {
   id: string;

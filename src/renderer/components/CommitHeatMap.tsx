@@ -42,7 +42,20 @@ export interface CommitHeatMapProps {
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // Month labels
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 const DAY_LABEL_WIDTH = 28;
 const MIN_CELL_SIZE = 8;
@@ -91,7 +104,7 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
     const delay = 20; // ms
 
     const timeout = setTimeout(() => {
-      setDissolvedCells(prev => {
+      setDissolvedCells((prev) => {
         const next = new Set(prev);
         const allCellKeys: string[] = [];
 
@@ -226,9 +239,8 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
     const primaryColor = theme.colors.primary;
 
     // Calculate intensity (0-4 levels like GitHub)
-    const intensity = maxCount > 0
-      ? Math.min(4, Math.ceil((count / maxCount) * 4))
-      : 0;
+    const intensity =
+      maxCount > 0 ? Math.min(4, Math.ceil((count / maxCount) * 4)) : 0;
 
     // Return color with appropriate opacity
     const opacities = [0.2, 0.4, 0.6, 0.8, 1.0];
@@ -266,7 +278,8 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
   const getMonthLabelStyle = (column: number, index: number, total: number) => {
     const position = DAY_LABEL_WIDTH + column * (cellSize + CELL_GAP);
     // Calculate width until next month or end
-    const nextColumn = index < total - 1 ? monthLabels[index + 1].column : weeks;
+    const nextColumn =
+      index < total - 1 ? monthLabels[index + 1].column : weeks;
     const width = (nextColumn - column) * (cellSize + CELL_GAP);
 
     return {
@@ -334,7 +347,11 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
           {monthLabels.map(({ label, column }) => (
             <span
               key={`month-${column}`}
-              style={getMonthLabelStyle(column, monthLabels.findIndex(m => m.column === column), monthLabels.length)}
+              style={getMonthLabelStyle(
+                column,
+                monthLabels.findIndex((m) => m.column === column),
+                monthLabels.length,
+              )}
             >
               {label}
             </span>
@@ -373,62 +390,74 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
           {/* Heat map grid */}
           <div style={{ display: 'flex', gap: CELL_GAP, flex: 1 }}>
             {grid.map((week, weekIndex) => {
-              const weekKey = week.find(d => d !== null)?.date || `empty-${weekIndex}`;
+              const weekKey =
+                week.find((d) => d !== null)?.date || `empty-${weekIndex}`;
               return (
-              <div
-                key={`week-${weekKey}`}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: CELL_GAP,
-                }}
-              >
-                {week.map((day, dayIndex) => {
-                  const isSelected = day && selectedDate === day.date;
-                  const cellKey = `${weekIndex}-${dayIndex}`;
-                  const isDissolved = dissolvedCells.has(cellKey);
+                <div
+                  key={`week-${weekKey}`}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: CELL_GAP,
+                  }}
+                >
+                  {week.map((day, dayIndex) => {
+                    const isSelected = day && selectedDate === day.date;
+                    const cellKey = `${weekIndex}-${dayIndex}`;
+                    const isDissolved = dissolvedCells.has(cellKey);
 
-                  // When dissolved, show the "0 commits" color (empty state)
-                  const emptyColor = theme.colors.backgroundTertiary;
+                    // When dissolved, show the "0 commits" color (empty state)
+                    const emptyColor = theme.colors.backgroundTertiary;
 
-                  return (
-                  <div
-                    key={day?.date || `empty-${weekKey}-${dayIndex}`}
-                    title={day ? `${day.date}: ${day.count} commit${day.count !== 1 ? 's' : ''}` : ''}
-                    style={{
-                      width: cellSize,
-                      height: cellSize,
-                      borderRadius: 2,
-                      backgroundColor: isDissolved
-                        ? emptyColor
-                        : (day ? getColor(day.count) : emptyColor),
-                      cursor: day && onDayClick && !isDissolving ? 'pointer' : 'default',
-                      transition: 'transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease-out',
-                      boxShadow: isSelected && !isDissolved
-                        ? `0 0 0 2px ${theme.colors.background}, 0 0 0 4px ${theme.colors.primary}`
-                        : 'none',
-                      position: 'relative',
-                      zIndex: isSelected ? 1 : 0,
-                    }}
-                    onClick={() => {
-                      if (day && onDayClick && !isDissolving) {
-                        onDayClick(day.date, day.count);
-                      }
-                    }}
-                    onMouseEnter={(e) => {
-                      if (day && !isDissolving) {
-                        e.currentTarget.style.transform = 'scale(1.2)';
-                        e.currentTarget.style.zIndex = '2';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                      e.currentTarget.style.zIndex = isSelected ? '1' : '0';
-                    }}
-                  />
-                  );
-                })}
-              </div>
+                    return (
+                      <div
+                        key={day?.date || `empty-${weekKey}-${dayIndex}`}
+                        title={
+                          day
+                            ? `${day.date}: ${day.count} commit${day.count !== 1 ? 's' : ''}`
+                            : ''
+                        }
+                        style={{
+                          width: cellSize,
+                          height: cellSize,
+                          borderRadius: 2,
+                          backgroundColor: isDissolved
+                            ? emptyColor
+                            : day
+                              ? getColor(day.count)
+                              : emptyColor,
+                          cursor:
+                            day && onDayClick && !isDissolving
+                              ? 'pointer'
+                              : 'default',
+                          transition:
+                            'transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease-out',
+                          boxShadow:
+                            isSelected && !isDissolved
+                              ? `0 0 0 2px ${theme.colors.background}, 0 0 0 4px ${theme.colors.primary}`
+                              : 'none',
+                          position: 'relative',
+                          zIndex: isSelected ? 1 : 0,
+                        }}
+                        onClick={() => {
+                          if (day && onDayClick && !isDissolving) {
+                            onDayClick(day.date, day.count);
+                          }
+                        }}
+                        onMouseEnter={(e) => {
+                          if (day && !isDissolving) {
+                            e.currentTarget.style.transform = 'scale(1.2)';
+                            e.currentTarget.style.zIndex = '2';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.zIndex = isSelected ? '1' : '0';
+                        }}
+                      />
+                    );
+                  })}
+                </div>
               );
             })}
           </div>
@@ -557,7 +586,9 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
                   width: cellSize,
                   height: cellSize,
                   borderRadius: 2,
-                  backgroundColor: getColor(level === 0 ? 0 : (level / 4) * (maxCount || 1)),
+                  backgroundColor: getColor(
+                    level === 0 ? 0 : (level / 4) * (maxCount || 1),
+                  ),
                 }}
               />
             ))}

@@ -12,16 +12,55 @@ import {
   type OrgProfilePanelActions,
 } from './OrgProfilePanel';
 import type { RepoCardData, Contributor } from './RepoCard';
-import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+import {
+  PathsFileTreeBuilder,
+  type FileTree,
+} from '@principal-ai/repository-abstraction';
 import type { GitHubOrgMember } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 const mockMembers: GitHubOrgMember[] = [
-  { id: 1, login: 'alice',   avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4',   type: 'User', site_admin: false },
-  { id: 2, login: 'bob',     avatar_url: 'https://avatars.githubusercontent.com/u/2?v=4',   type: 'User', site_admin: false },
-  { id: 3, login: 'carol',   avatar_url: 'https://avatars.githubusercontent.com/u/3?v=4',   type: 'User', site_admin: false },
-  { id: 4, login: 'dave',    avatar_url: 'https://avatars.githubusercontent.com/u/4?v=4',   type: 'User', site_admin: false },
-  { id: 5, login: 'eve',     avatar_url: 'https://avatars.githubusercontent.com/u/5?v=4',   type: 'User', site_admin: false },
-  { id: 6, login: 'frank',   avatar_url: 'https://avatars.githubusercontent.com/u/6?v=4',   type: 'User', site_admin: false },
+  {
+    id: 1,
+    login: 'alice',
+    avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4',
+    type: 'User',
+    site_admin: false,
+  },
+  {
+    id: 2,
+    login: 'bob',
+    avatar_url: 'https://avatars.githubusercontent.com/u/2?v=4',
+    type: 'User',
+    site_admin: false,
+  },
+  {
+    id: 3,
+    login: 'carol',
+    avatar_url: 'https://avatars.githubusercontent.com/u/3?v=4',
+    type: 'User',
+    site_admin: false,
+  },
+  {
+    id: 4,
+    login: 'dave',
+    avatar_url: 'https://avatars.githubusercontent.com/u/4?v=4',
+    type: 'User',
+    site_admin: false,
+  },
+  {
+    id: 5,
+    login: 'eve',
+    avatar_url: 'https://avatars.githubusercontent.com/u/5?v=4',
+    type: 'User',
+    site_admin: false,
+  },
+  {
+    id: 6,
+    login: 'frank',
+    avatar_url: 'https://avatars.githubusercontent.com/u/6?v=4',
+    type: 'User',
+    site_admin: false,
+  },
 ];
 
 // Create mock file tree using PathsFileTreeBuilder
@@ -53,10 +92,15 @@ class MockEventEmitter implements PanelEventEmitter {
   emit<T>(event: PanelEvent<T>): void {
     console.info('[Mock Event]:', event);
     const eventListeners = this.listeners.get(event.type) || [];
-    eventListeners.forEach((listener) => listener(event as PanelEvent<unknown>));
+    eventListeners.forEach((listener) =>
+      listener(event as PanelEvent<unknown>),
+    );
   }
 
-  on<T>(eventType: string, handler: (event: PanelEvent<T>) => void): () => void {
+  on<T>(
+    eventType: string,
+    handler: (event: PanelEvent<T>) => void,
+  ): () => void {
     const listeners = this.listeners.get(eventType) || [];
     const wrappedHandler = handler as EventHandler;
     listeners.push(wrappedHandler);
@@ -114,7 +158,10 @@ const createMockContributors = (count: number = 5): Contributor[] => {
 };
 
 // Generate mock repositories for organization
-const createMockOrgRepositories = (orgName: string, count: number = 9): RepoCardData[] => {
+const createMockOrgRepositories = (
+  orgName: string,
+  count: number = 9,
+): RepoCardData[] => {
   const repoData = [
     {
       name: 'core-framework',
@@ -183,8 +230,12 @@ const createMockOrgRepositories = (orgName: string, count: number = 9): RepoCard
 
   return repoData.slice(0, count).map((repo) => {
     const createdDate = new Date();
-    createdDate.setFullYear(createdDate.getFullYear() - Math.floor(repo.yearsAgo));
-    createdDate.setMonth(createdDate.getMonth() - Math.floor((repo.yearsAgo % 1) * 12));
+    createdDate.setFullYear(
+      createdDate.getFullYear() - Math.floor(repo.yearsAgo),
+    );
+    createdDate.setMonth(
+      createdDate.getMonth() - Math.floor((repo.yearsAgo % 1) * 12),
+    );
 
     return {
       repoName: repo.name,
@@ -202,14 +253,15 @@ const createMockOrgRepositories = (orgName: string, count: number = 9): RepoCard
 
 // Generate mock organization profile data
 const createMockOrgProfile = (
-  overrides: Partial<OrgProfileData> = {}
+  overrides: Partial<OrgProfileData> = {},
 ): OrgProfileData => {
   const defaultProfile: OrgProfileData = {
     orgName: 'github',
     name: 'GitHub',
     email: 'support@github.com',
     avatarUrl: 'https://avatars.githubusercontent.com/u/9919?v=4',
-    description: 'How people build software. Millions of developers use GitHub to build personal projects, support their businesses, and work together on open source.',
+    description:
+      'How people build software. Millions of developers use GitHub to build personal projects, support their businesses, and work together on open source.',
     location: 'San Francisco, CA',
     twitterHandle: 'github',
     websiteUrl: 'https://github.com',
@@ -329,7 +381,8 @@ export const HighActivity = {
       orgData={createMockOrgProfile({
         orgName: 'vercel',
         name: 'Vercel',
-        description: 'Develop. Preview. Ship. The best frontend teams use Vercel to build and deploy their web applications.',
+        description:
+          'Develop. Preview. Ship. The best frontend teams use Vercel to build and deploy their web applications.',
         location: 'San Francisco, CA',
         twitterHandle: 'vercel',
         websiteUrl: 'https://vercel.com',
@@ -357,7 +410,9 @@ export const MinimalProfile = {
         totalCommits: 234,
         publicRepos: 12,
         members: 5,
-        createdDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days ago
+        createdDate: new Date(
+          Date.now() - 90 * 24 * 60 * 60 * 1000,
+        ).toISOString(), // 90 days ago
       })}
     />
   ),
@@ -375,7 +430,9 @@ export const NewOrg = {
         totalCommits: 89,
         publicRepos: 3,
         members: 8,
-        createdDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days ago
+        createdDate: new Date(
+          Date.now() - 60 * 24 * 60 * 60 * 1000,
+        ).toISOString(), // 60 days ago
       })}
     />
   ),
@@ -418,7 +475,11 @@ export const Loading: Story = {
 
     return (
       <ThemeProvider>
-        <OrgProfilePanel context={mockContext} actions={mockActions} events={mockEvents} />
+        <OrgProfilePanel
+          context={mockContext}
+          actions={mockActions}
+          events={mockEvents}
+        />
       </ThemeProvider>
     );
   },
@@ -439,7 +500,9 @@ export const Error: Story = {
       getOrgProfile: async () => {
         // Simulate error
         await new Promise((resolve) => setTimeout(resolve, 500));
-        throw new globalThis.Error('Failed to load organization profile. Please try again.');
+        throw new globalThis.Error(
+          'Failed to load organization profile. Please try again.',
+        );
       },
       openFile: async () => {},
     };
@@ -448,7 +511,11 @@ export const Error: Story = {
 
     return (
       <ThemeProvider>
-        <OrgProfilePanel context={mockContext} actions={mockActions} events={mockEvents} />
+        <OrgProfilePanel
+          context={mockContext}
+          actions={mockActions}
+          events={mockEvents}
+        />
       </ThemeProvider>
     );
   },
@@ -476,7 +543,11 @@ export const Empty: Story = {
 
     return (
       <ThemeProvider>
-        <OrgProfilePanel context={mockContext} actions={mockActions} events={mockEvents} />
+        <OrgProfilePanel
+          context={mockContext}
+          actions={mockActions}
+          events={mockEvents}
+        />
       </ThemeProvider>
     );
   },
@@ -491,7 +562,8 @@ export const CompleteProfile = {
         name: 'Microsoft',
         email: 'opensource@microsoft.com',
         avatarUrl: 'https://avatars.githubusercontent.com/u/6154722?v=4',
-        description: 'Open source projects and samples from Microsoft. We are working to build community through open source technology.',
+        description:
+          'Open source projects and samples from Microsoft. We are working to build community through open source technology.',
         location: 'Redmond, WA',
         twitterHandle: 'Microsoft',
         websiteUrl: 'https://opensource.microsoft.com',
@@ -509,7 +581,8 @@ export const LongDescription = {
   render: () => (
     <OrgProfilePanelStory
       orgData={createMockOrgProfile({
-        description: 'We are a global organization dedicated to building innovative open source software that empowers developers around the world. Our mission is to create tools, frameworks, and platforms that enable developers to build amazing applications. We believe in the power of community and collaboration, and we are committed to making our software accessible to everyone. Join us in building the future of technology.',
+        description:
+          'We are a global organization dedicated to building innovative open source software that empowers developers around the world. Our mission is to create tools, frameworks, and platforms that enable developers to build amazing applications. We believe in the power of community and collaboration, and we are committed to making our software accessible to everyone. Join us in building the future of technology.',
       })}
     />
   ),

@@ -51,7 +51,9 @@ function findFiberFromDOM(element: HTMLElement): FiberNode | null {
       key.startsWith('__reactFiber$'),
     );
     if (propsKey) {
-      return (element as unknown as Record<string, unknown>)[propsKey] as FiberNode;
+      return (element as unknown as Record<string, unknown>)[
+        propsKey
+      ] as FiberNode;
     }
   }
 
@@ -67,9 +69,11 @@ function getComponentNameFromFiber(fiber: FiberNode): string {
   // Try different ways to get component name
   if (fiber.type) {
     if (typeof fiber.type === 'function') {
-      return (fiber.type as { displayName?: string; name?: string }).displayName ||
-             (fiber.type as { displayName?: string; name?: string }).name ||
-             'Component';
+      return (
+        (fiber.type as { displayName?: string; name?: string }).displayName ||
+        (fiber.type as { displayName?: string; name?: string }).name ||
+        'Component'
+      );
     }
     if (typeof fiber.type === 'string') {
       return fiber.type; // DOM element
@@ -82,18 +86,30 @@ function getComponentNameFromFiber(fiber: FiberNode): string {
 
   if (fiber.elementType) {
     if (typeof fiber.elementType === 'function') {
-      const elemType = fiber.elementType as { displayName?: string; name?: string };
+      const elemType = fiber.elementType as {
+        displayName?: string;
+        name?: string;
+      };
       return elemType.displayName || elemType.name || 'Component';
     }
   }
 
   // Check for memo/forward ref components
-  if (fiber.elementType && typeof fiber.elementType === 'object' && fiber.elementType !== null) {
+  if (
+    fiber.elementType &&
+    typeof fiber.elementType === 'object' &&
+    fiber.elementType !== null
+  ) {
     const elemTypeWithType = fiber.elementType as { type?: unknown };
     const innerType = elemTypeWithType.type;
     if (typeof innerType === 'function') {
-      const innerTypeWithProps = innerType as { displayName?: string; name?: string };
-      return innerTypeWithProps.displayName || innerTypeWithProps.name || 'Component';
+      const innerTypeWithProps = innerType as {
+        displayName?: string;
+        name?: string;
+      };
+      return (
+        innerTypeWithProps.displayName || innerTypeWithProps.name || 'Component'
+      );
     }
   }
 

@@ -15,7 +15,10 @@ import {
 } from './UserProfilePanel';
 import type { RepoCardData, Contributor } from './RepoCard';
 import type { CommitActivityPanelActions } from './CommitActivityPanel';
-import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+import {
+  PathsFileTreeBuilder,
+  type FileTree,
+} from '@principal-ai/repository-abstraction';
 import type { GitHubOrganization } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 const mockCommitActivityActions: CommitActivityPanelActions = {
@@ -36,10 +39,30 @@ const mockCommitActivityActions: CommitActivityPanelActions = {
 };
 
 const mockUserOrgs: GitHubOrganization[] = [
-  { id: 1, login: 'vercel',     avatar_url: 'https://avatars.githubusercontent.com/u/14985020?v=4', description: 'Vercel' },
-  { id: 2, login: 'facebook',   avatar_url: 'https://avatars.githubusercontent.com/u/69631?v=4',    description: 'Facebook' },
-  { id: 3, login: 'microsoft',  avatar_url: 'https://avatars.githubusercontent.com/u/6154722?v=4',  description: 'Microsoft' },
-  { id: 4, login: 'google',     avatar_url: 'https://avatars.githubusercontent.com/u/1342004?v=4',  description: 'Google' },
+  {
+    id: 1,
+    login: 'vercel',
+    avatar_url: 'https://avatars.githubusercontent.com/u/14985020?v=4',
+    description: 'Vercel',
+  },
+  {
+    id: 2,
+    login: 'facebook',
+    avatar_url: 'https://avatars.githubusercontent.com/u/69631?v=4',
+    description: 'Facebook',
+  },
+  {
+    id: 3,
+    login: 'microsoft',
+    avatar_url: 'https://avatars.githubusercontent.com/u/6154722?v=4',
+    description: 'Microsoft',
+  },
+  {
+    id: 4,
+    login: 'google',
+    avatar_url: 'https://avatars.githubusercontent.com/u/1342004?v=4',
+    description: 'Google',
+  },
 ];
 
 // Create mock file tree using PathsFileTreeBuilder
@@ -71,10 +94,15 @@ class MockEventEmitter implements PanelEventEmitter {
   emit<T>(event: PanelEvent<T>): void {
     console.info('[Mock Event]:', event);
     const eventListeners = this.listeners.get(event.type) || [];
-    eventListeners.forEach((listener) => listener(event as PanelEvent<unknown>));
+    eventListeners.forEach((listener) =>
+      listener(event as PanelEvent<unknown>),
+    );
   }
 
-  on<T>(eventType: string, handler: (event: PanelEvent<T>) => void): () => void {
+  on<T>(
+    eventType: string,
+    handler: (event: PanelEvent<T>) => void,
+  ): () => void {
     const listeners = this.listeners.get(eventType) || [];
     const wrappedHandler = handler as EventHandler;
     listeners.push(wrappedHandler);
@@ -99,7 +127,9 @@ class MockEventEmitter implements PanelEventEmitter {
 }
 
 // Generate mock activity data for heatmap (full year - 365 days)
-const generateMockActivityData = (intensity: 'low' | 'medium' | 'high' = 'medium'): Map<string, number> => {
+const generateMockActivityData = (
+  intensity: 'low' | 'medium' | 'high' = 'medium',
+): Map<string, number> => {
   const activityMap = new Map<string, number>();
   const today = new Date();
   const daysToGenerate = 365; // Full year
@@ -131,7 +161,10 @@ const generateMockActivityData = (intensity: 'low' | 'medium' | 'high' = 'medium
 };
 
 // Generate mock recent commits (last 24 hours)
-const generateMockRecentCommits = (username: string, count: number = 3): RecentCommitActivity[] => {
+const generateMockRecentCommits = (
+  username: string,
+  count: number = 3,
+): RecentCommitActivity[] => {
   const repos = [
     { name: 'awesome-project', owner: username },
     { name: 'cli-tool', owner: username },
@@ -165,20 +198,37 @@ const generateMockRecentCommits = (username: string, count: number = 3): RecentC
   }
 
   // Sort by timestamp descending (most recent first)
-  return commits.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return commits.sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
 };
 
 // Generate mock contributed repositories (past ~5 months)
-const generateMockContributedRepos = (username: string, count: number = 5): ContributedRepository[] => {
+const generateMockContributedRepos = (
+  username: string,
+  count: number = 5,
+): ContributedRepository[] => {
   const repos = [
     { name: 'awesome-project', owner: username, ownerType: 'User' as const },
     { name: 'cli-tool', owner: username, ownerType: 'User' as const },
-    { name: 'web-framework', owner: 'facebook', ownerType: 'Organization' as const },
+    {
+      name: 'web-framework',
+      owner: 'facebook',
+      ownerType: 'Organization' as const,
+    },
     { name: 'react', owner: 'facebook', ownerType: 'Organization' as const },
-    { name: 'typescript', owner: 'microsoft', ownerType: 'Organization' as const },
+    {
+      name: 'typescript',
+      owner: 'microsoft',
+      ownerType: 'Organization' as const,
+    },
     { name: 'vscode', owner: 'microsoft', ownerType: 'Organization' as const },
     { name: 'next.js', owner: 'vercel', ownerType: 'Organization' as const },
-    { name: 'tensorflow', owner: 'tensorflow', ownerType: 'Organization' as const },
+    {
+      name: 'tensorflow',
+      owner: 'tensorflow',
+      ownerType: 'Organization' as const,
+    },
   ];
 
   const now = Date.now();
@@ -204,8 +254,10 @@ const generateMockContributedRepos = (username: string, count: number = 5): Cont
   }
 
   // Sort by lastContributedAt descending (most recent first)
-  return contributedRepos.sort((a, b) =>
-    new Date(b.lastContributedAt).getTime() - new Date(a.lastContributedAt).getTime()
+  return contributedRepos.sort(
+    (a, b) =>
+      new Date(b.lastContributedAt).getTime() -
+      new Date(a.lastContributedAt).getTime(),
   );
 };
 
@@ -243,11 +295,15 @@ const createMockContributors = (count: number = 5): Contributor[] => {
 };
 
 // Generate mock repositories
-const createMockRepositories = (username: string, count: number = 6): RepoCardData[] => {
+const createMockRepositories = (
+  username: string,
+  count: number = 6,
+): RepoCardData[] => {
   const repoData = [
     {
       name: 'awesome-project',
-      description: 'A fantastic open source project built with React and TypeScript',
+      description:
+        'A fantastic open source project built with React and TypeScript',
       language: 'TypeScript',
       stars: 1234,
       yearsAgo: 2,
@@ -312,8 +368,12 @@ const createMockRepositories = (username: string, count: number = 6): RepoCardDa
 
   return repoData.slice(0, count).map((repo) => {
     const createdDate = new Date();
-    createdDate.setFullYear(createdDate.getFullYear() - Math.floor(repo.yearsAgo));
-    createdDate.setMonth(createdDate.getMonth() - Math.floor((repo.yearsAgo % 1) * 12));
+    createdDate.setFullYear(
+      createdDate.getFullYear() - Math.floor(repo.yearsAgo),
+    );
+    createdDate.setMonth(
+      createdDate.getMonth() - Math.floor((repo.yearsAgo % 1) * 12),
+    );
 
     return {
       repoName: repo.name,
@@ -323,14 +383,16 @@ const createMockRepositories = (username: string, count: number = 6): RepoCardDa
       language: repo.language,
       stars: repo.stars,
       createdAt: createdDate.toISOString(),
-      topContributors: createMockContributors(Math.floor(Math.random() * 3) + 2), // 2-5 contributors
+      topContributors: createMockContributors(
+        Math.floor(Math.random() * 3) + 2,
+      ), // 2-5 contributors
     };
   });
 };
 
 // Generate mock user profile data
 const createMockUserProfile = (
-  overrides: Partial<UserProfileData> = {}
+  overrides: Partial<UserProfileData> = {},
 ): UserProfileData => {
   const username = overrides.username || 'octocat';
   const defaultProfile: UserProfileData = {
@@ -531,7 +593,9 @@ export const NewUser = {
         totalRepos: 3,
         followers: 5,
         following: 42,
-        joinedDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
+        joinedDate: new Date(
+          Date.now() - 30 * 24 * 60 * 60 * 1000,
+        ).toISOString(), // 30 days ago
       })}
     />
   ),
@@ -578,7 +642,12 @@ export const Loading: Story = {
 
     return (
       <ThemeProvider>
-        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} commitActivityActions={mockCommitActivityActions} />
+        <UserProfilePanel
+          context={mockContext}
+          actions={mockActions}
+          events={mockEvents}
+          commitActivityActions={mockCommitActivityActions}
+        />
       </ThemeProvider>
     );
   },
@@ -599,7 +668,9 @@ export const Error: Story = {
       getUserProfile: async () => {
         // Simulate error
         await new Promise((resolve) => setTimeout(resolve, 500));
-        throw new globalThis.Error('Failed to load user profile. Please try again.');
+        throw new globalThis.Error(
+          'Failed to load user profile. Please try again.',
+        );
       },
       getUserActivity: async () => {
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -612,7 +683,12 @@ export const Error: Story = {
 
     return (
       <ThemeProvider>
-        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} commitActivityActions={mockCommitActivityActions} />
+        <UserProfilePanel
+          context={mockContext}
+          actions={mockActions}
+          events={mockEvents}
+          commitActivityActions={mockCommitActivityActions}
+        />
       </ThemeProvider>
     );
   },
@@ -643,7 +719,12 @@ export const Empty: Story = {
 
     return (
       <ThemeProvider>
-        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} commitActivityActions={mockCommitActivityActions} />
+        <UserProfilePanel
+          context={mockContext}
+          actions={mockActions}
+          events={mockEvents}
+          commitActivityActions={mockCommitActivityActions}
+        />
       </ThemeProvider>
     );
   },

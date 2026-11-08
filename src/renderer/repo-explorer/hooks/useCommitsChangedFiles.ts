@@ -16,9 +16,9 @@ export function useCommitsChangedFiles(
   shas: string[],
   { enabled = true, cap = 30 }: { enabled?: boolean; cap?: number } = {},
 ) {
-  const [filesByCommit, setFilesByCommit] = useState<Map<string, ChangedFile[]>>(
-    new Map(),
-  );
+  const [filesByCommit, setFilesByCommit] = useState<
+    Map<string, ChangedFile[]>
+  >(new Map());
   // Per-sha cache that survives re-renders; keyed `${owner}/${repo}@${sha}`.
   const cacheRef = useRef<Map<string, ChangedFile[]>>(new Map());
 

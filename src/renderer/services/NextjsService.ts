@@ -61,9 +61,8 @@ export function findNextjsPackages(
       : repositoryPath;
 
     // Check for "dev" script
-    const hasDevScript = packageData.availableCommands?.some(
-      (cmd) => cmd.name === 'dev',
-    ) ?? false;
+    const hasDevScript =
+      packageData.availableCommands?.some((cmd) => cmd.name === 'dev') ?? false;
 
     // Check for "next" in dependencies
     const allDeps = {

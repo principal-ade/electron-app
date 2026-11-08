@@ -6,7 +6,10 @@ import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
-import { FileSystemAPIEvent, type GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import {
+  FileSystemAPIEvent,
+  type GlobalSkill,
+} from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import type { IModernApplicationWindow } from '../window/types';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 import { SkillsConfigService } from '../services/SkillsConfigService';
@@ -1387,7 +1390,10 @@ export function registerFileSystemIpcHandlers(
       try {
         return FileSystemService.getDirectoryInfo(dirPath);
       } catch (error) {
-        console.error('GET_DIRECTORY_INFO: Error getting directory info', error);
+        console.error(
+          'GET_DIRECTORY_INFO: Error getting directory info',
+          error,
+        );
         return null;
       }
     },
@@ -1717,7 +1723,9 @@ export function registerFileSystemIpcHandlers(
       const findSkillFiles = async (dir: string): Promise<string[]> => {
         const skillFiles: string[] = [];
         try {
-          const entries = await fsPromises.readdir(dir, { withFileTypes: true });
+          const entries = await fsPromises.readdir(dir, {
+            withFileTypes: true,
+          });
           for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
             if (entry.isDirectory()) {
@@ -1729,7 +1737,10 @@ export function registerFileSystemIpcHandlers(
           }
         } catch (error) {
           // Ignore permission errors and continue
-          console.warn(`[getGlobalSkills] Could not read directory ${dir}:`, error);
+          console.warn(
+            `[getGlobalSkills] Could not read directory ${dir}:`,
+            error,
+          );
         }
         return skillFiles;
       };
@@ -1783,7 +1794,15 @@ export function registerFileSystemIpcHandlers(
       };
 
       // Helper function to validate skill frontmatter
-      const validateFrontmatter = (content: string, _skillName: string): { isValid: boolean; hasStructure: boolean; missingFields: string[]; errorMessage?: string } => {
+      const validateFrontmatter = (
+        content: string,
+        _skillName: string,
+      ): {
+        isValid: boolean;
+        hasStructure: boolean;
+        missingFields: string[];
+        errorMessage?: string;
+      } => {
         const missingFields: string[] = [];
 
         // Check for basic structure (heading)
@@ -1801,12 +1820,17 @@ export function registerFileSystemIpcHandlers(
           isValid,
           hasStructure: hasHeading,
           missingFields,
-          errorMessage: isValid ? undefined : 'Skill is missing required structure',
+          errorMessage: isValid
+            ? undefined
+            : 'Skill is missing required structure',
         };
       };
 
       // Helper function to parse SKILL.md content
-      const parseSkillContent = async (skillPath: string, source: 'global-universal' | 'global-claude'): Promise<GlobalSkill | null> => {
+      const parseSkillContent = async (
+        skillPath: string,
+        source: 'global-universal' | 'global-claude',
+      ): Promise<GlobalSkill | null> => {
         try {
           const content = await fsPromises.readFile(skillPath, 'utf-8');
           const skillDir = path.dirname(skillPath);
@@ -1841,14 +1865,16 @@ export function registerFileSystemIpcHandlers(
           const structure = await analyzeSkillStructure(skillPath);
 
           // Read metadata from centralized lock file (add-skill convention)
-          let metadata: {
-            installedFrom?: string;
-            skillPath?: string;
-            owner?: string;
-            repo?: string;
-            sha?: string;
-            installedAt?: string;
-          } | undefined;
+          let metadata:
+            | {
+                installedFrom?: string;
+                skillPath?: string;
+                owner?: string;
+                repo?: string;
+                sha?: string;
+                installedAt?: string;
+              }
+            | undefined;
           try {
             const lockService = getSkillLockFileService();
             const skillEntry = await lockService.getSkill(skillDirName);
@@ -1861,15 +1887,22 @@ export function registerFileSystemIpcHandlers(
                 sha: skillEntry.skillFolderHash,
                 installedAt: skillEntry.installedAt?.toString(),
               };
-              console.log(`[getGlobalSkills] Loaded metadata from lock file for skill: ${skillDirName}`);
+              console.log(
+                `[getGlobalSkills] Loaded metadata from lock file for skill: ${skillDirName}`,
+              );
             }
           } catch (_error) {
             // Lock file doesn't exist or skill not found - this is fine
-            console.debug(`[getGlobalSkills] No lock file entry for skill: ${skillDirName}`);
+            console.debug(
+              `[getGlobalSkills] No lock file entry for skill: ${skillDirName}`,
+            );
           }
 
           // Validate frontmatter
-          const frontmatterValidation = validateFrontmatter(content, skillDirName);
+          const frontmatterValidation = validateFrontmatter(
+            content,
+            skillDirName,
+          );
 
           return {
             id: skillPath,
@@ -1885,7 +1918,10 @@ export function registerFileSystemIpcHandlers(
             frontmatterValidation,
           };
         } catch (error) {
-          console.error(`[getGlobalSkills] Failed to parse skill at ${skillPath}:`, error);
+          console.error(
+            `[getGlobalSkills] Failed to parse skill at ${skillPath}:`,
+            error,
+          );
           return null;
         }
       };
@@ -1929,16 +1965,18 @@ export function registerFileSystemIpcHandlers(
       _event,
       repositoryPath: string,
       filePath: string,
-      revision: string = 'HEAD'
+      revision: string = 'HEAD',
     ) => {
       try {
-        console.log(`[getFileContentAtRevision] Getting content for ${filePath} at ${revision} in ${repositoryPath}`);
+        console.log(
+          `[getFileContentAtRevision] Getting content for ${filePath} at ${revision} in ${repositoryPath}`,
+        );
 
         // Use gitClientFactory to get file content from git
         const content = await gitClientFactory.getFileContentAtRevision(
           repositoryPath,
           filePath,
-          revision
+          revision,
         );
 
         return content;
@@ -1946,7 +1984,7 @@ export function registerFileSystemIpcHandlers(
         console.error('[getFileContentAtRevision] Failed:', error);
         return null;
       }
-    }
+    },
   );
 
   // Handler for syncing global skills from Git repository
@@ -1957,7 +1995,10 @@ export function registerFileSystemIpcHandlers(
       return { success };
     } catch (error) {
       console.error('[syncGlobalSkills] Failed to sync:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   });
 
@@ -1984,52 +2025,87 @@ export function registerFileSystemIpcHandlers(
   });
 
   // Handler for updating sync configuration
-  ipcMain.handle(FileSystemAPIEvent.UPDATE_SYNC_CONFIG, async (event, updates) => {
-    try {
-      console.log('[updateSyncConfig] Updating config:', updates);
-      const config = await configService.updateConfig(updates);
-      return config;
-    } catch (error) {
-      console.error('[updateSyncConfig] Failed to update config:', error);
-      return null;
-    }
-  });
+  ipcMain.handle(
+    FileSystemAPIEvent.UPDATE_SYNC_CONFIG,
+    async (event, updates) => {
+      try {
+        console.log('[updateSyncConfig] Updating config:', updates);
+        const config = await configService.updateConfig(updates);
+        return config;
+      } catch (error) {
+        console.error('[updateSyncConfig] Failed to update config:', error);
+        return null;
+      }
+    },
+  );
 
   // Handler for enabling sync for a skill
-  ipcMain.handle(FileSystemAPIEvent.ENABLE_SKILL_SYNC, async (event, { skillPath, syncSource }) => {
-    try {
-      console.log('[enableSkillSync] Enabling sync for:', skillPath);
-      const success = await syncService.enableSkillSync(skillPath, syncSource);
-      return { success };
-    } catch (error) {
-      console.error('[enableSkillSync] Failed to enable sync:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+  ipcMain.handle(
+    FileSystemAPIEvent.ENABLE_SKILL_SYNC,
+    async (event, { skillPath, syncSource }) => {
+      try {
+        console.log('[enableSkillSync] Enabling sync for:', skillPath);
+        const success = await syncService.enableSkillSync(
+          skillPath,
+          syncSource,
+        );
+        return { success };
+      } catch (error) {
+        console.error('[enableSkillSync] Failed to enable sync:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   // Handler for disabling sync for a skill
-  ipcMain.handle(FileSystemAPIEvent.DISABLE_SKILL_SYNC, async (event, { skillPath }) => {
-    try {
-      console.log('[disableSkillSync] Disabling sync for:', skillPath);
-      const success = await syncService.disableSkillSync(skillPath);
-      return { success };
-    } catch (error) {
-      console.error('[disableSkillSync] Failed to disable sync:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+  ipcMain.handle(
+    FileSystemAPIEvent.DISABLE_SKILL_SYNC,
+    async (event, { skillPath }) => {
+      try {
+        console.log('[disableSkillSync] Disabling sync for:', skillPath);
+        const success = await syncService.disableSkillSync(skillPath);
+        return { success };
+      } catch (error) {
+        console.error('[disableSkillSync] Failed to disable sync:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   // Handler for resolving skill conflicts
-  ipcMain.handle(FileSystemAPIEvent.RESOLVE_SKILL_CONFLICT, async (event, { skillPath, resolution }) => {
-    try {
-      console.log('[resolveSkillConflict] Resolving conflict for:', skillPath, 'with:', resolution);
-      const success = await syncService.resolveConflict(skillPath, resolution);
-      return { success };
-    } catch (error) {
-      console.error('[resolveSkillConflict] Failed to resolve conflict:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+  ipcMain.handle(
+    FileSystemAPIEvent.RESOLVE_SKILL_CONFLICT,
+    async (event, { skillPath, resolution }) => {
+      try {
+        console.log(
+          '[resolveSkillConflict] Resolving conflict for:',
+          skillPath,
+          'with:',
+          resolution,
+        );
+        const success = await syncService.resolveConflict(
+          skillPath,
+          resolution,
+        );
+        return { success };
+      } catch (error) {
+        console.error(
+          '[resolveSkillConflict] Failed to resolve conflict:',
+          error,
+        );
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   // Handler for getting all local skills (for migration)
   ipcMain.handle(FileSystemAPIEvent.GET_ALL_LOCAL_SKILLS, async () => {
@@ -2039,102 +2115,135 @@ export function registerFileSystemIpcHandlers(
       return { skills };
     } catch (error) {
       console.error('[getAllLocalSkills] Failed:', error);
-      return { skills: [], error: error instanceof Error ? error.message : String(error) };
+      return {
+        skills: [],
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   });
 
   // Handler for initializing a new skills repository
-  ipcMain.handle(FileSystemAPIEvent.INITIALIZE_SKILLS_REPO, async (event, { repoUrl }) => {
-    try {
-      console.log('[initializeSkillsRepo] Initializing with URL:', repoUrl);
+  ipcMain.handle(
+    FileSystemAPIEvent.INITIALIZE_SKILLS_REPO,
+    async (event, { repoUrl }) => {
+      try {
+        console.log('[initializeSkillsRepo] Initializing with URL:', repoUrl);
 
-      // Update config with the repo URL
-      await configService.updateConfig({
-        enabled: true,
-        repoUrl: repoUrl || '',
-        branch: 'main',
-      });
+        // Update config with the repo URL
+        await configService.updateConfig({
+          enabled: true,
+          repoUrl: repoUrl || '',
+          branch: 'main',
+        });
 
-      // Initialize the local Git repository
-      const success = await gitService.initializeRepository();
+        // Initialize the local Git repository
+        const success = await gitService.initializeRepository();
 
-      if (!success) {
-        throw new Error('Failed to initialize repository');
-      }
-
-      // If a remote URL is provided, set it
-      if (repoUrl) {
-        await gitService.setRemote(repoUrl);
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('[initializeSkillsRepo] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
-
-  // Handler for migrating skills to the repository
-  ipcMain.handle(FileSystemAPIEvent.MIGRATE_SKILLS_TO_REPO, async (event, { skillPaths }) => {
-    try {
-      console.log('[migrateSkillsToRepo] Migrating', skillPaths.length, 'skills');
-
-      const config = await configService.getConfig();
-      // Use localPath if it exists (backwards compatibility), otherwise use first directory's clone path
-      const repoPath = config.localPath || (config.directories.length > 0 ? config.directories[0].localClonePath : null);
-
-      if (!repoPath) {
-        throw new Error('No repository path configured');
-      }
-
-      // Copy each skill to the repository
-      for (const skillPath of skillPaths) {
-        const skillName = path.basename(skillPath);
-        const targetPath = path.join(repoPath, skillName);
-
-        console.log(`[migrateSkillsToRepo] Copying ${skillName}`);
-
-        // Use recursive copy
-        await copyDir(skillPath, targetPath);
-      }
-
-      // Commit all skills
-      const commitSuccess = await gitService.commitSkills('Migrate existing skills');
-
-      if (!commitSuccess) {
-        throw new Error('Failed to commit skills');
-      }
-
-      // Push to remote if configured
-      if (config.repoUrl) {
-        console.log('[migrateSkillsToRepo] Pushing to remote...');
-
-        // Try pushing to remote (normal push should work now that we don't auto_init repos)
-        const pushSuccess = await gitService.pushToRemote('origin', config.branch);
-
-        if (!pushSuccess) {
-          throw new Error('Failed to push skills to GitHub. Please check your network connection and repository access.');
+        if (!success) {
+          throw new Error('Failed to initialize repository');
         }
 
-        console.log('[migrateSkillsToRepo] Successfully pushed to remote');
+        // If a remote URL is provided, set it
+        if (repoUrl) {
+          await gitService.setRemote(repoUrl);
+        }
+
+        return { success: true };
+      } catch (error) {
+        console.error('[initializeSkillsRepo] Failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
       }
+    },
+  );
 
-      // Sync to global directories
-      await gitService.syncToGlobalDirectories();
+  // Handler for migrating skills to the repository
+  ipcMain.handle(
+    FileSystemAPIEvent.MIGRATE_SKILLS_TO_REPO,
+    async (event, { skillPaths }) => {
+      try {
+        console.log(
+          '[migrateSkillsToRepo] Migrating',
+          skillPaths.length,
+          'skills',
+        );
 
-      return { success: true };
-    } catch (error) {
-      console.error('[migrateSkillsToRepo] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+        const config = await configService.getConfig();
+        // Use localPath if it exists (backwards compatibility), otherwise use first directory's clone path
+        const repoPath =
+          config.localPath ||
+          (config.directories.length > 0
+            ? config.directories[0].localClonePath
+            : null);
+
+        if (!repoPath) {
+          throw new Error('No repository path configured');
+        }
+
+        // Copy each skill to the repository
+        for (const skillPath of skillPaths) {
+          const skillName = path.basename(skillPath);
+          const targetPath = path.join(repoPath, skillName);
+
+          console.log(`[migrateSkillsToRepo] Copying ${skillName}`);
+
+          // Use recursive copy
+          await copyDir(skillPath, targetPath);
+        }
+
+        // Commit all skills
+        const commitSuccess = await gitService.commitSkills(
+          'Migrate existing skills',
+        );
+
+        if (!commitSuccess) {
+          throw new Error('Failed to commit skills');
+        }
+
+        // Push to remote if configured
+        if (config.repoUrl) {
+          console.log('[migrateSkillsToRepo] Pushing to remote...');
+
+          // Try pushing to remote (normal push should work now that we don't auto_init repos)
+          const pushSuccess = await gitService.pushToRemote(
+            'origin',
+            config.branch,
+          );
+
+          if (!pushSuccess) {
+            throw new Error(
+              'Failed to push skills to GitHub. Please check your network connection and repository access.',
+            );
+          }
+
+          console.log('[migrateSkillsToRepo] Successfully pushed to remote');
+        }
+
+        // Sync to global directories
+        await gitService.syncToGlobalDirectories();
+
+        return { success: true };
+      } catch (error) {
+        console.error('[migrateSkillsToRepo] Failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   // Handler for getting all skill directories
   ipcMain.handle(FileSystemAPIEvent.GET_SKILL_DIRECTORIES, async () => {
     try {
       console.log('[getSkillDirectories] Getting skill directories...');
       const config = await configService.getConfig();
-      console.log('[getSkillDirectories] Config loaded, directories:', config.directories?.length || 0);
+      console.log(
+        '[getSkillDirectories] Config loaded, directories:',
+        config.directories?.length || 0,
+      );
 
       // Enrich directories with status information
       const directoriesWithStatus = await Promise.all(
@@ -2143,52 +2252,76 @@ export function registerFileSystemIpcHandlers(
             const status = await gitService.getDirectoryStatus(dir.id);
             return { ...dir, status };
           } catch (error) {
-            console.error(`[getSkillDirectories] Failed to get status for ${dir.displayName}:`, error);
+            console.error(
+              `[getSkillDirectories] Failed to get status for ${dir.displayName}:`,
+              error,
+            );
             return dir; // Return directory without status on error
           }
-        })
+        }),
       );
 
       return directoriesWithStatus;
     } catch (error) {
       console.error('[getSkillDirectories] Failed with error:', error);
-      console.error('[getSkillDirectories] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error(
+        '[getSkillDirectories] Stack trace:',
+        error instanceof Error ? error.stack : 'No stack trace',
+      );
       return [];
     }
   });
 
   // Handler for adding a skill directory
-  ipcMain.handle(FileSystemAPIEvent.ADD_SKILL_DIRECTORY, async (event, directory) => {
-    try {
-      const result = await configService.addDirectory(directory);
-      return { success: true, directory: result };
-    } catch (error) {
-      console.error('[addSkillDirectory] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+  ipcMain.handle(
+    FileSystemAPIEvent.ADD_SKILL_DIRECTORY,
+    async (event, directory) => {
+      try {
+        const result = await configService.addDirectory(directory);
+        return { success: true, directory: result };
+      } catch (error) {
+        console.error('[addSkillDirectory] Failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   // Handler for updating a skill directory
-  ipcMain.handle(FileSystemAPIEvent.UPDATE_SKILL_DIRECTORY, async (event, { id, updates }) => {
-    try {
-      const result = await configService.updateDirectory(id, updates);
-      return { success: true, directory: result };
-    } catch (error) {
-      console.error('[updateSkillDirectory] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+  ipcMain.handle(
+    FileSystemAPIEvent.UPDATE_SKILL_DIRECTORY,
+    async (event, { id, updates }) => {
+      try {
+        const result = await configService.updateDirectory(id, updates);
+        return { success: true, directory: result };
+      } catch (error) {
+        console.error('[updateSkillDirectory] Failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   // Handler for removing a skill directory
-  ipcMain.handle(FileSystemAPIEvent.REMOVE_SKILL_DIRECTORY, async (event, id) => {
-    try {
-      const success = await configService.removeDirectory(id);
-      return { success };
-    } catch (error) {
-      console.error('[removeSkillDirectory] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+  ipcMain.handle(
+    FileSystemAPIEvent.REMOVE_SKILL_DIRECTORY,
+    async (event, id) => {
+      try {
+        const success = await configService.removeDirectory(id);
+        return { success };
+      } catch (error) {
+        console.error('[removeSkillDirectory] Failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   // Handler for detecting preset directories that have skills
   ipcMain.handle(FileSystemAPIEvent.DETECT_PRESET_DIRECTORIES, async () => {
@@ -2202,43 +2335,47 @@ export function registerFileSystemIpcHandlers(
   });
 
   // Handler for creating agent skill directories
-  ipcMain.handle(FileSystemAPIEvent.CREATE_AGENT_DIRECTORIES, async (_event, agentIds: string[]) => {
-    try {
-      const homeDir = app.getPath('home');
-      const createdDirs: string[] = [];
+  ipcMain.handle(
+    FileSystemAPIEvent.CREATE_AGENT_DIRECTORIES,
+    async (_event, agentIds: string[]) => {
+      try {
+        const homeDir = app.getPath('home');
+        const createdDirs: string[] = [];
 
-      const directoryMap: Record<string, string> = {
-        'claude-specific': path.join(homeDir, '.claude', 'skills'),
-        'opencode': path.join(homeDir, '.config', 'opencode', 'skill'),
-        'cursor-ide': path.join(homeDir, '.cursor', 'skills'),
-        'windsurf': path.join(homeDir, '.windsurf', 'skills'),
-      };
+        const directoryMap: Record<string, string> = {
+          'claude-specific': path.join(homeDir, '.claude', 'skills'),
+          opencode: path.join(homeDir, '.config', 'opencode', 'skill'),
+          'cursor-ide': path.join(homeDir, '.cursor', 'skills'),
+          windsurf: path.join(homeDir, '.windsurf', 'skills'),
+        };
 
-      const agentNames: Record<string, string> = {
-        'claude-specific': 'Claude',
-        'opencode': 'OpenCode',
-        'cursor-ide': 'Cursor',
-        'windsurf': 'Windsurf',
-      };
+        const agentNames: Record<string, string> = {
+          'claude-specific': 'Claude',
+          opencode: 'OpenCode',
+          'cursor-ide': 'Cursor',
+          windsurf: 'Windsurf',
+        };
 
-      for (const agentId of agentIds) {
-        const dirPath = directoryMap[agentId];
-        if (!dirPath) {
-          console.warn(`[createAgentDirectories] Unknown agent ID: ${agentId}`);
-          continue;
-        }
+        for (const agentId of agentIds) {
+          const dirPath = directoryMap[agentId];
+          if (!dirPath) {
+            console.warn(
+              `[createAgentDirectories] Unknown agent ID: ${agentId}`,
+            );
+            continue;
+          }
 
-        // Create directory if it doesn't exist
-        await fsPromises.mkdir(dirPath, { recursive: true });
-        createdDirs.push(dirPath);
-        console.log(`[createAgentDirectories] Created directory: ${dirPath}`);
+          // Create directory if it doesn't exist
+          await fsPromises.mkdir(dirPath, { recursive: true });
+          createdDirs.push(dirPath);
+          console.log(`[createAgentDirectories] Created directory: ${dirPath}`);
 
-        // Create a placeholder skill directory so the directory is detected
-        // This allows the directory to show up in "Identified Agent Skills"
-        const placeholderDir = path.join(dirPath, '.placeholder');
-        const placeholderReadme = path.join(placeholderDir, 'SKILL.md');
+          // Create a placeholder skill directory so the directory is detected
+          // This allows the directory to show up in "Identified Agent Skills"
+          const placeholderDir = path.join(dirPath, '.placeholder');
+          const placeholderReadme = path.join(placeholderDir, 'SKILL.md');
 
-        const readmeContent = `# ${agentNames[agentId] || 'Agent'} Skills Directory
+          const readmeContent = `# ${agentNames[agentId] || 'Agent'} Skills Directory
 
 This directory has been set up to store skills for ${agentNames[agentId] || 'your AI agent'}.
 
@@ -2252,145 +2389,189 @@ You can install skills to this directory by:
 This placeholder skill can be safely deleted once you've installed your first skill.
 `;
 
-        try {
-          await fsPromises.mkdir(placeholderDir, { recursive: true });
-          await fsPromises.writeFile(placeholderReadme, readmeContent, 'utf-8');
-          console.log(`[createAgentDirectories] Created placeholder in: ${placeholderDir}`);
-        } catch (placeholderError) {
-          console.warn(`[createAgentDirectories] Failed to create placeholder:`, placeholderError);
-          // Continue even if placeholder fails
+          try {
+            await fsPromises.mkdir(placeholderDir, { recursive: true });
+            await fsPromises.writeFile(
+              placeholderReadme,
+              readmeContent,
+              'utf-8',
+            );
+            console.log(
+              `[createAgentDirectories] Created placeholder in: ${placeholderDir}`,
+            );
+          } catch (placeholderError) {
+            console.warn(
+              `[createAgentDirectories] Failed to create placeholder:`,
+              placeholderError,
+            );
+            // Continue even if placeholder fails
+          }
         }
-      }
 
-      return { success: true, createdDirectories: createdDirs };
-    } catch (error) {
-      console.error('[createAgentDirectories] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-    }
-  });
-
-  // Handler for deleting agent skill directories (only if empty or only contains placeholder)
-  ipcMain.handle(FileSystemAPIEvent.DELETE_AGENT_DIRECTORY, async (_event, agentId: string) => {
-    try {
-      const homeDir = app.getPath('home');
-
-      const directoryMap: Record<string, string> = {
-        'claude-specific': path.join(homeDir, '.claude', 'skills'),
-        'opencode': path.join(homeDir, '.config', 'opencode', 'skill'),
-        'cursor-ide': path.join(homeDir, '.cursor', 'skills'),
-        'windsurf': path.join(homeDir, '.windsurf', 'skills'),
-      };
-
-      const dirPath = directoryMap[agentId];
-      if (!dirPath) {
-        return { success: false, error: `Unknown agent ID: ${agentId}` };
-      }
-
-      // Check if directory exists
-      try {
-        await fsPromises.access(dirPath);
-      } catch {
-        return { success: false, error: 'Directory does not exist' };
-      }
-
-      // Read directory contents
-      const contents = await fsPromises.readdir(dirPath);
-
-      // Only allow deletion if directory is empty or only contains .placeholder
-      const hasOnlyPlaceholder = contents.length === 0 ||
-        (contents.length === 1 && contents[0] === '.placeholder');
-
-      if (!hasOnlyPlaceholder) {
+        return { success: true, createdDirectories: createdDirs };
+      } catch (error) {
+        console.error('[createAgentDirectories] Failed:', error);
         return {
           success: false,
-          error: 'Directory contains skills and cannot be deleted. Please remove all skills first.'
+          error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
+    },
+  );
 
-      // Delete the directory
-      await fsPromises.rm(dirPath, { recursive: true, force: true });
-      console.log(`[deleteAgentDirectory] Deleted directory: ${dirPath}`);
+  // Handler for deleting agent skill directories (only if empty or only contains placeholder)
+  ipcMain.handle(
+    FileSystemAPIEvent.DELETE_AGENT_DIRECTORY,
+    async (_event, agentId: string) => {
+      try {
+        const homeDir = app.getPath('home');
 
-      return { success: true };
-    } catch (error) {
-      console.error('[deleteAgentDirectory] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-    }
-  });
+        const directoryMap: Record<string, string> = {
+          'claude-specific': path.join(homeDir, '.claude', 'skills'),
+          opencode: path.join(homeDir, '.config', 'opencode', 'skill'),
+          'cursor-ide': path.join(homeDir, '.cursor', 'skills'),
+          windsurf: path.join(homeDir, '.windsurf', 'skills'),
+        };
+
+        const dirPath = directoryMap[agentId];
+        if (!dirPath) {
+          return { success: false, error: `Unknown agent ID: ${agentId}` };
+        }
+
+        // Check if directory exists
+        try {
+          await fsPromises.access(dirPath);
+        } catch {
+          return { success: false, error: 'Directory does not exist' };
+        }
+
+        // Read directory contents
+        const contents = await fsPromises.readdir(dirPath);
+
+        // Only allow deletion if directory is empty or only contains .placeholder
+        const hasOnlyPlaceholder =
+          contents.length === 0 ||
+          (contents.length === 1 && contents[0] === '.placeholder');
+
+        if (!hasOnlyPlaceholder) {
+          return {
+            success: false,
+            error:
+              'Directory contains skills and cannot be deleted. Please remove all skills first.',
+          };
+        }
+
+        // Delete the directory
+        await fsPromises.rm(dirPath, { recursive: true, force: true });
+        console.log(`[deleteAgentDirectory] Deleted directory: ${dirPath}`);
+
+        return { success: true };
+      } catch (error) {
+        console.error('[deleteAgentDirectory] Failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+  );
 
   // Handler for deleting a skill directory
   // Symlink-aware: removes symlinks without touching canonical files
-  ipcMain.handle(FileSystemAPIEvent.DELETE_SKILL, async (_event, skillPath: string) => {
-    try {
-      console.log(`[deleteSkill] Deleting skill at: ${skillPath}`);
-
-      // Verify the path exists
+  ipcMain.handle(
+    FileSystemAPIEvent.DELETE_SKILL,
+    async (_event, skillPath: string) => {
       try {
-        await fsPromises.access(skillPath);
-      } catch {
-        console.log(`[deleteSkill] Skill directory does not exist: ${skillPath}`);
-        // Consider this a success - the skill is already gone
+        console.log(`[deleteSkill] Deleting skill at: ${skillPath}`);
+
+        // Verify the path exists
+        try {
+          await fsPromises.access(skillPath);
+        } catch {
+          console.log(
+            `[deleteSkill] Skill directory does not exist: ${skillPath}`,
+          );
+          // Consider this a success - the skill is already gone
+          return { success: true };
+        }
+
+        // Get skill name from path for lock file operations
+        const skillName = path.basename(skillPath);
+        const homeDir = app.getPath('home');
+        const canonicalPath = path.join(
+          homeDir,
+          '.agents',
+          'skills',
+          skillName,
+        );
+
+        // Check if this is a symlink (agent directory pointing to canonical)
+        const pathIsSymlink = await isSymlink(skillPath);
+
+        if (pathIsSymlink) {
+          // This is a symlink - just remove the symlink, not the canonical files
+          console.log(`[deleteSkill] Path is a symlink, removing symlink only`);
+          await removeSkillSymlink(skillPath);
+          console.log(
+            `[deleteSkill] Successfully removed symlink at: ${skillPath}`,
+          );
+          // Don't remove from lock file - the canonical files still exist
+          return { success: true };
+        }
+
+        // Not a symlink - verify this is actually a skill directory by checking for SKILL.md
+        const contents = await fsPromises.readdir(skillPath);
+        const hasSkillFile = contents.some(
+          (file) => file === 'SKILL.md' || file.toLowerCase() === 'skill.md',
+        );
+
+        if (!hasSkillFile) {
+          return {
+            success: false,
+            error: 'Directory does not appear to be a skill (missing SKILL.md)',
+          };
+        }
+
+        // Check if this is the canonical location
+        const isCanonical =
+          path.resolve(skillPath) === path.resolve(canonicalPath);
+
+        // Delete the skill directory recursively
+        await fsPromises.rm(skillPath, { recursive: true, force: true });
+        console.log(
+          `[deleteSkill] Successfully deleted skill at: ${skillPath}`,
+        );
+
+        // Only remove from lock file if this was the canonical location
+        if (isCanonical) {
+          try {
+            const lockService = getSkillLockFileService();
+            await lockService.removeSkill(skillName);
+            console.log(
+              `[deleteSkill] Removed skill from lock file: ${skillName}`,
+            );
+          } catch (lockError) {
+            // Non-fatal - skill files are deleted, lock file update is best-effort
+            console.warn(
+              `[deleteSkill] Failed to remove from lock file: ${lockError}`,
+            );
+          }
+        } else {
+          console.log(
+            `[deleteSkill] Not canonical location, keeping lock file entry`,
+          );
+        }
+
         return { success: true };
-      }
-
-      // Get skill name from path for lock file operations
-      const skillName = path.basename(skillPath);
-      const homeDir = app.getPath('home');
-      const canonicalPath = path.join(homeDir, '.agents', 'skills', skillName);
-
-      // Check if this is a symlink (agent directory pointing to canonical)
-      const pathIsSymlink = await isSymlink(skillPath);
-
-      if (pathIsSymlink) {
-        // This is a symlink - just remove the symlink, not the canonical files
-        console.log(`[deleteSkill] Path is a symlink, removing symlink only`);
-        await removeSkillSymlink(skillPath);
-        console.log(`[deleteSkill] Successfully removed symlink at: ${skillPath}`);
-        // Don't remove from lock file - the canonical files still exist
-        return { success: true };
-      }
-
-      // Not a symlink - verify this is actually a skill directory by checking for SKILL.md
-      const contents = await fsPromises.readdir(skillPath);
-      const hasSkillFile = contents.some(file =>
-        file === 'SKILL.md' ||
-        file.toLowerCase() === 'skill.md'
-      );
-
-      if (!hasSkillFile) {
+      } catch (error) {
+        console.error('[deleteSkill] Failed:', error);
         return {
           success: false,
-          error: 'Directory does not appear to be a skill (missing SKILL.md)'
+          error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-
-      // Check if this is the canonical location
-      const isCanonical = path.resolve(skillPath) === path.resolve(canonicalPath);
-
-      // Delete the skill directory recursively
-      await fsPromises.rm(skillPath, { recursive: true, force: true });
-      console.log(`[deleteSkill] Successfully deleted skill at: ${skillPath}`);
-
-      // Only remove from lock file if this was the canonical location
-      if (isCanonical) {
-        try {
-          const lockService = getSkillLockFileService();
-          await lockService.removeSkill(skillName);
-          console.log(`[deleteSkill] Removed skill from lock file: ${skillName}`);
-        } catch (lockError) {
-          // Non-fatal - skill files are deleted, lock file update is best-effort
-          console.warn(`[deleteSkill] Failed to remove from lock file: ${lockError}`);
-        }
-      } else {
-        console.log(`[deleteSkill] Not canonical location, keeping lock file entry`);
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('[deleteSkill] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-    }
-  });
+    },
+  );
 
   // Handler for pushing repository to remote
   ipcMain.handle(FileSystemAPIEvent.PUSH_SKILLS_REPO, async () => {
@@ -2408,7 +2589,9 @@ This placeholder skill can be safely deleted once you've installed your first sk
 
       // If it fails (likely due to diverged history), try force push
       if (!success) {
-        console.log('[pushSkillsRepo] Normal push failed, trying force push...');
+        console.log(
+          '[pushSkillsRepo] Normal push failed, trying force push...',
+        );
         success = await gitService.pushToRemote('origin', config.branch, true);
       }
 
@@ -2420,7 +2603,10 @@ This placeholder skill can be safely deleted once you've installed your first sk
       }
     } catch (error) {
       console.error('[pushSkillsRepo] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   });
 
@@ -2455,7 +2641,11 @@ This placeholder skill can be safely deleted once you've installed your first sk
       }
 
       // Check each enabled global directory for unsynced skills
-      const unsyncedSkills: Array<{ name: string; path: string; directory: string }> = [];
+      const unsyncedSkills: Array<{
+        name: string;
+        path: string;
+        directory: string;
+      }> = [];
       const enabledDirs = await configService.getEnabledDirectories();
 
       for (const directory of enabledDirs) {
@@ -2487,101 +2677,132 @@ This placeholder skill can be safely deleted once you've installed your first sk
             }
           }
         } catch (error) {
-          console.warn(`[detectUnsyncedSkills] Error reading directory ${directory.path}:`, error);
+          console.warn(
+            `[detectUnsyncedSkills] Error reading directory ${directory.path}:`,
+            error,
+          );
         }
       }
 
       // Remove duplicates (same skill in multiple directories)
       const uniqueSkills = Array.from(
-        new Map(unsyncedSkills.map(skill => [skill.name, skill])).values()
+        new Map(unsyncedSkills.map((skill) => [skill.name, skill])).values(),
       );
 
-      console.log(`[detectUnsyncedSkills] Found ${uniqueSkills.length} unsynced skills`);
+      console.log(
+        `[detectUnsyncedSkills] Found ${uniqueSkills.length} unsynced skills`,
+      );
       return { skills: uniqueSkills };
     } catch (error) {
       console.error('[detectUnsyncedSkills] Failed:', error);
-      return { skills: [], error: error instanceof Error ? error.message : String(error) };
+      return {
+        skills: [],
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   });
 
   // Handler for adding skills to the repository
-  ipcMain.handle(FileSystemAPIEvent.ADD_SKILLS_TO_REPO, async (event, { skillPaths }) => {
-    try {
-      console.log('[addSkillsToRepo] Adding', skillPaths.length, 'skills to repo');
+  ipcMain.handle(
+    FileSystemAPIEvent.ADD_SKILLS_TO_REPO,
+    async (event, { skillPaths }) => {
+      try {
+        console.log(
+          '[addSkillsToRepo] Adding',
+          skillPaths.length,
+          'skills to repo',
+        );
 
-      const config = await configService.getConfig();
-      const repoPath = await configService.getLocalPath();
+        const config = await configService.getConfig();
+        const repoPath = await configService.getLocalPath();
 
-      if (!repoPath) {
-        throw new Error('No repository path configured');
-      }
-
-      // Copy each skill to the repository
-      for (const skillPath of skillPaths) {
-        const skillName = path.basename(skillPath);
-        const targetPath = path.join(repoPath, skillName);
-
-        console.log(`[addSkillsToRepo] Copying ${skillName}`);
-
-        // Use recursive copy
-        await copyDir(skillPath, targetPath);
-      }
-
-      // Commit the new skills
-      const commitSuccess = await gitService.commitSkills(`Add ${skillPaths.length} skill${skillPaths.length !== 1 ? 's' : ''} to repository`);
-
-      if (!commitSuccess) {
-        throw new Error('Failed to commit skills');
-      }
-
-      // Push to remote if configured
-      if (config.repoUrl) {
-        console.log('[addSkillsToRepo] Pushing to remote...');
-        const pushSuccess = await gitService.pushToRemote('origin', config.branch);
-
-        if (!pushSuccess) {
-          throw new Error('Failed to push skills to GitHub');
+        if (!repoPath) {
+          throw new Error('No repository path configured');
         }
 
-        console.log('[addSkillsToRepo] Successfully pushed to remote');
+        // Copy each skill to the repository
+        for (const skillPath of skillPaths) {
+          const skillName = path.basename(skillPath);
+          const targetPath = path.join(repoPath, skillName);
+
+          console.log(`[addSkillsToRepo] Copying ${skillName}`);
+
+          // Use recursive copy
+          await copyDir(skillPath, targetPath);
+        }
+
+        // Commit the new skills
+        const commitSuccess = await gitService.commitSkills(
+          `Add ${skillPaths.length} skill${skillPaths.length !== 1 ? 's' : ''} to repository`,
+        );
+
+        if (!commitSuccess) {
+          throw new Error('Failed to commit skills');
+        }
+
+        // Push to remote if configured
+        if (config.repoUrl) {
+          console.log('[addSkillsToRepo] Pushing to remote...');
+          const pushSuccess = await gitService.pushToRemote(
+            'origin',
+            config.branch,
+          );
+
+          if (!pushSuccess) {
+            throw new Error('Failed to push skills to GitHub');
+          }
+
+          console.log('[addSkillsToRepo] Successfully pushed to remote');
+        }
+
+        // Sync to global directories
+        await gitService.syncToGlobalDirectories();
+
+        return { success: true };
+      } catch (error) {
+        console.error('[addSkillsToRepo] Failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
       }
-
-      // Sync to global directories
-      await gitService.syncToGlobalDirectories();
-
-      return { success: true };
-    } catch (error) {
-      console.error('[addSkillsToRepo] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+    },
+  );
 
   // Handler for syncing a single directory
-  ipcMain.handle(FileSystemAPIEvent.SYNC_SINGLE_DIRECTORY, async (event, directoryId) => {
-    try {
-      const directory = await configService.getDirectory(directoryId);
-      if (!directory) {
-        return { success: false, error: 'Directory not found' };
-      }
+  ipcMain.handle(
+    FileSystemAPIEvent.SYNC_SINGLE_DIRECTORY,
+    async (event, directoryId) => {
+      try {
+        const directory = await configService.getDirectory(directoryId);
+        if (!directory) {
+          return { success: false, error: 'Directory not found' };
+        }
 
-      const success = await gitService.syncSingleDirectory(directory);
-      return { success };
-    } catch (error) {
-      console.error('[syncSingleDirectory] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+        const success = await gitService.syncSingleDirectory(directory);
+        return { success };
+      } catch (error) {
+        console.error('[syncSingleDirectory] Failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   // Handler for getting pending changes
   ipcMain.handle(FileSystemAPIEvent.GET_PENDING_CHANGES, async () => {
     try {
       const pendingChanges = syncService.getPendingChanges();
       // Convert Map to array of objects for serialization
-      return Array.from(pendingChanges.entries()).map(([directoryId, changes]) => ({
-        directoryId,
-        changes: changes.changes,
-        lastDetected: changes.lastDetected,
-      }));
+      return Array.from(pendingChanges.entries()).map(
+        ([directoryId, changes]) => ({
+          directoryId,
+          changes: changes.changes,
+          lastDetected: changes.lastDetected,
+        }),
+      );
     } catch (error) {
       console.error('[getPendingChanges] Failed:', error);
       return [];
@@ -2589,15 +2810,21 @@ This placeholder skill can be safely deleted once you've installed your first sk
   });
 
   // Handler for clearing pending changes for a directory
-  ipcMain.handle(FileSystemAPIEvent.CLEAR_PENDING_CHANGES, async (event, directoryId) => {
-    try {
-      syncService.clearPendingChanges(directoryId);
-      return { success: true };
-    } catch (error) {
-      console.error('[clearPendingChanges] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+  ipcMain.handle(
+    FileSystemAPIEvent.CLEAR_PENDING_CHANGES,
+    async (event, directoryId) => {
+      try {
+        syncService.clearPendingChanges(directoryId);
+        return { success: true };
+      } catch (error) {
+        console.error('[clearPendingChanges] Failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   // Helper function for recursive directory copy
   async function copyDir(source: string, target: string): Promise<void> {
@@ -2635,19 +2862,28 @@ This placeholder skill can be safely deleted once you've installed your first sk
       return { success: true };
     } catch (error) {
       console.error('[addRecentRepo] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   });
 
-  ipcMain.handle(RecentReposAPIEvent.REMOVE_RECENT_REPO, async (event, { owner, repo }) => {
-    try {
-      recentReposService.removeRecentRepo(owner, repo);
-      return { success: true };
-    } catch (error) {
-      console.error('[removeRecentRepo] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+  ipcMain.handle(
+    RecentReposAPIEvent.REMOVE_RECENT_REPO,
+    async (event, { owner, repo }) => {
+      try {
+        recentReposService.removeRecentRepo(owner, repo);
+        return { success: true };
+      } catch (error) {
+        console.error('[removeRecentRepo] Failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   ipcMain.handle(RecentReposAPIEvent.CLEAR_RECENT_REPOS, async () => {
     try {
@@ -2655,7 +2891,10 @@ This placeholder skill can be safely deleted once you've installed your first sk
       return { success: true };
     } catch (error) {
       console.error('[clearRecentRepos] Failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   });
 
@@ -2663,27 +2902,50 @@ This placeholder skill can be safely deleted once you've installed your first sk
   ipcMain.handle(FileSystemAPIEvent.GET_TOP_LEVEL_FOLDERS, async () => {
     try {
       const homeDir = os.homedir();
-      const entries = await fsPromises.readdir(homeDir, { withFileTypes: true });
+      const entries = await fsPromises.readdir(homeDir, {
+        withFileTypes: true,
+      });
 
       // Categorize folders
       const devFolders = new Set([
-        'Developer', 'Development', 'Code', 'Projects',
-        'dev', 'repos', 'workspace', 'work', 'src'
+        'Developer',
+        'Development',
+        'Code',
+        'Projects',
+        'dev',
+        'repos',
+        'workspace',
+        'work',
+        'src',
       ]);
 
       const systemFolders = new Set([
-        '.local', '.config', '.vscode', '.npm', '.cache',
-        'Music', 'Movies', 'Pictures', 'Public',
-        'Library', 'Applications', '.Trash',
+        '.local',
+        '.config',
+        '.vscode',
+        '.npm',
+        '.cache',
+        'Music',
+        'Movies',
+        'Pictures',
+        'Public',
+        'Library',
+        'Applications',
+        '.Trash',
         'Downloads',
-        '.dropbox', 'Dropbox',
-        'Google Drive', 'OneDrive', 'iCloud Drive',
-        '.git', '.ssh', '.gnupg'
+        '.dropbox',
+        'Dropbox',
+        'Google Drive',
+        'OneDrive',
+        'iCloud Drive',
+        '.git',
+        '.ssh',
+        '.gnupg',
       ]);
 
       const folders = entries
-        .filter(entry => entry.isDirectory())
-        .map(entry => {
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => {
           const name = entry.name;
           let category: 'dev' | 'common' | 'system' = 'common';
 
@@ -2698,7 +2960,7 @@ This placeholder skill can be safely deleted once you've installed your first sk
             path: path.join(homeDir, name),
             category,
             // Pre-select dev folders, exclude system folders
-            selected: category === 'dev'
+            selected: category === 'dev',
           };
         })
         // Sort: dev folders first, then common, then system
@@ -2717,103 +2979,121 @@ This placeholder skill can be safely deleted once you've installed your first sk
     }
   });
 
-  ipcMain.handle(FileSystemAPIEvent.SCAN_FOLDERS_FOR_REPOS, async (event, folderPaths: string[]) => {
-    try {
-      const scanner = GitRepositoryScannerService.getInstance();
-      const alexandriaService = AlexandriaRegistryService.getInstance();
-      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+  ipcMain.handle(
+    FileSystemAPIEvent.SCAN_FOLDERS_FOR_REPOS,
+    async (event, folderPaths: string[]) => {
+      try {
+        const scanner = GitRepositoryScannerService.getInstance();
+        const alexandriaService = AlexandriaRegistryService.getInstance();
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
 
-      let allRepos: string[] = [];
-      let currentFolder = 0;
-      const totalFolders = folderPaths.length;
+        let allRepos: string[] = [];
+        let currentFolder = 0;
+        const totalFolders = folderPaths.length;
 
-      // Scan each folder
-      for (const folderPath of folderPaths) {
-        currentFolder++;
+        // Scan each folder
+        for (const folderPath of folderPaths) {
+          currentFolder++;
 
-        // Send progress update
-        if (senderWindow) {
-          senderWindow.webContents.send(FileSystemAPIEvent.REPO_SCAN_PROGRESS, {
-            current: currentFolder,
-            total: totalFolders,
-            currentFolder: path.basename(folderPath),
-            foundRepos: allRepos.length
-          });
+          // Send progress update
+          if (senderWindow) {
+            senderWindow.webContents.send(
+              FileSystemAPIEvent.REPO_SCAN_PROGRESS,
+              {
+                current: currentFolder,
+                total: totalFolders,
+                currentFolder: path.basename(folderPath),
+                foundRepos: allRepos.length,
+              },
+            );
+          }
+
+          // Scan this folder (depth 3 for better coverage)
+          const repos = await scanner.scanFolderForGitRepos(folderPath, 3);
+          allRepos = allRepos.concat(repos);
         }
 
-        // Scan this folder (depth 3 for better coverage)
-        const repos = await scanner.scanFolderForGitRepos(folderPath, 3);
-        allRepos = allRepos.concat(repos);
-      }
+        // Get repository info (including owner from git remotes)
+        const scannedRepos = await scanner.getRepositoriesInfo(allRepos);
 
-      // Get repository info (including owner from git remotes)
-      const scannedRepos = await scanner.getRepositoriesInfo(allRepos);
+        // Register each repository with Alexandria one at a time
+        const reposWithStatus = await Promise.all(
+          scannedRepos.map(async (repo) => {
+            try {
+              // Check if repo is already registered at this exact path
+              const existingByPath =
+                await alexandriaService.getRepositoryByPath(repo.path);
+              if (existingByPath) {
+                console.log(
+                  `[scanFoldersForRepos] Repository already registered at path: ${repo.path}`,
+                );
+                return {
+                  ...repo,
+                  registered: true,
+                  alreadyRegistered: true,
+                };
+              }
 
-      // Register each repository with Alexandria one at a time
-      const reposWithStatus = await Promise.all(
-        scannedRepos.map(async (repo) => {
-          try {
-            // Check if repo is already registered at this exact path
-            const existingByPath = await alexandriaService.getRepositoryByPath(repo.path);
-            if (existingByPath) {
-              console.log(`[scanFoldersForRepos] Repository already registered at path: ${repo.path}`);
+              // Try to get remote URL from git
+              let remoteUrl: string | undefined;
+              try {
+                const remotes = await gitClientFactory.getRemotes(repo.path);
+                const originRemote = remotes.find((r) => r.name === 'origin');
+                remoteUrl = originRemote?.url;
+              } catch (error) {
+                console.log(
+                  `[scanFoldersForRepos] Could not get remote URL for ${repo.name}:`,
+                  error,
+                );
+              }
+
+              // Path is the canonical key — name collisions across forks are
+              // expected and handled by the library (purl-based identity).
+              // Shared path so open windows reload their repository lists.
+              const { entry: registered } = await registerRepository(
+                repo.path,
+                remoteUrl,
+                { registry: alexandriaService },
+              );
+
+              console.log(
+                `[scanFoldersForRepos] Successfully registered: ${registered.name} at ${repo.path}`,
+              );
+
               return {
                 ...repo,
+                name: registered.name,
                 registered: true,
-                alreadyRegistered: true
+                alreadyRegistered: false,
+              };
+            } catch (error) {
+              const errorMessage =
+                error instanceof Error ? error.message : String(error);
+              console.error(
+                `[scanFoldersForRepos] Failed to register ${repo.name}:`,
+                errorMessage,
+              );
+
+              return {
+                ...repo,
+                registered: false,
+                registrationError: errorMessage,
               };
             }
+          }),
+        );
 
-            // Try to get remote URL from git
-            let remoteUrl: string | undefined;
-            try {
-              const remotes = await gitClientFactory.getRemotes(repo.path);
-              const originRemote = remotes.find((r) => r.name === 'origin');
-              remoteUrl = originRemote?.url;
-            } catch (error) {
-              console.log(`[scanFoldersForRepos] Could not get remote URL for ${repo.name}:`, error);
-            }
-
-            // Path is the canonical key — name collisions across forks are
-            // expected and handled by the library (purl-based identity).
-            // Shared path so open windows reload their repository lists.
-            const { entry: registered } = await registerRepository(
-              repo.path,
-              remoteUrl,
-              { registry: alexandriaService },
-            );
-
-            console.log(`[scanFoldersForRepos] Successfully registered: ${registered.name} at ${repo.path}`);
-
-            return {
-              ...repo,
-              name: registered.name,
-              registered: true,
-              alreadyRegistered: false
-            };
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`[scanFoldersForRepos] Failed to register ${repo.name}:`, errorMessage);
-
-            return {
-              ...repo,
-              registered: false,
-              registrationError: errorMessage
-            };
-          }
-        })
-      );
-
-      return { success: true, repos: reposWithStatus };
-    } catch (error) {
-      console.error('[scanFoldersForRepos] Failed:', error);
-      return {
-        success: false,
-        repos: [],
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
+        return { success: true, repos: reposWithStatus };
+      } catch (error) {
+        console.error('[scanFoldersForRepos] Failed:', error);
+        return {
+          success: false,
+          repos: [],
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   console.log('[File System] Global IPC handlers registered.');
 }

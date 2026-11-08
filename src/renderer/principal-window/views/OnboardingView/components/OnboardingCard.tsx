@@ -81,7 +81,9 @@ export const OnboardingCard: React.FC<OnboardingCardProps> = ({
         >
           <Icon
             size={20}
-            color={isCompleted ? theme.colors.primary : theme.colors.textSecondary}
+            color={
+              isCompleted ? theme.colors.primary : theme.colors.textSecondary
+            }
           />
         </div>
 

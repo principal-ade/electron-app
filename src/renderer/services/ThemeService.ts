@@ -132,11 +132,11 @@ class ThemeServiceClass extends EventEmitter {
 
     try {
       const preferences = await UserPreferencesService.getPreferences();
-      const globalOverrides = preferences.customThemeOverrides?.[name]?.overrides;
+      const globalOverrides =
+        preferences.customThemeOverrides?.[name]?.overrides;
       const scopedOverrides = this.scopeKey
-        ? preferences.repoThemeOverrides?.[this.scopeKey]?.customThemeOverrides?.[
-            name
-          ]?.overrides
+        ? preferences.repoThemeOverrides?.[this.scopeKey]
+            ?.customThemeOverrides?.[name]?.overrides
         : undefined;
 
       if (!globalOverrides && !scopedOverrides) {

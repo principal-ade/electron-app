@@ -32,7 +32,11 @@ function mulberry32(seed: number) {
 function withAlpha(color: string, alpha: number): string {
   if (/^#([0-9a-f]{3}){1,2}$/i.test(color)) {
     let hex = color.slice(1);
-    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    if (hex.length === 3)
+      hex = hex
+        .split('')
+        .map((c) => c + c)
+        .join('');
     const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255)
       .toString(16)
       .padStart(2, '0');
@@ -42,28 +46,123 @@ function withAlpha(color: string, alpha: number): string {
 }
 
 const TETROMINOES: ReadonlyArray<ReadonlyArray<Cell>> = [
-  [{ col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }, { col: 3, row: 0 }],
-  [{ col: 0, row: 0 }, { col: 0, row: 1 }, { col: 0, row: 2 }, { col: 0, row: 3 }],
-  [{ col: 0, row: 0 }, { col: 1, row: 0 }, { col: 0, row: 1 }, { col: 1, row: 1 }],
-  [{ col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }, { col: 1, row: 1 }],
-  [{ col: 1, row: 0 }, { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 1, row: 2 }],
-  [{ col: 1, row: 0 }, { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 }],
-  [{ col: 0, row: 0 }, { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 0, row: 2 }],
-  [{ col: 1, row: 0 }, { col: 2, row: 0 }, { col: 0, row: 1 }, { col: 1, row: 1 }],
-  [{ col: 0, row: 0 }, { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 1, row: 2 }],
-  [{ col: 0, row: 0 }, { col: 1, row: 0 }, { col: 1, row: 1 }, { col: 2, row: 1 }],
-  [{ col: 1, row: 0 }, { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 0, row: 2 }],
-  [{ col: 0, row: 0 }, { col: 0, row: 1 }, { col: 0, row: 2 }, { col: 1, row: 2 }],
-  [{ col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }, { col: 0, row: 1 }],
-  [{ col: 0, row: 0 }, { col: 1, row: 0 }, { col: 1, row: 1 }, { col: 1, row: 2 }],
-  [{ col: 2, row: 0 }, { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 }],
-  [{ col: 1, row: 0 }, { col: 1, row: 1 }, { col: 0, row: 2 }, { col: 1, row: 2 }],
-  [{ col: 0, row: 0 }, { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 }],
-  [{ col: 0, row: 0 }, { col: 1, row: 0 }, { col: 0, row: 1 }, { col: 0, row: 2 }],
-  [{ col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }, { col: 2, row: 1 }],
+  [
+    { col: 0, row: 0 },
+    { col: 1, row: 0 },
+    { col: 2, row: 0 },
+    { col: 3, row: 0 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 0, row: 1 },
+    { col: 0, row: 2 },
+    { col: 0, row: 3 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 1, row: 0 },
+    { col: 0, row: 1 },
+    { col: 1, row: 1 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 1, row: 0 },
+    { col: 2, row: 0 },
+    { col: 1, row: 1 },
+  ],
+  [
+    { col: 1, row: 0 },
+    { col: 0, row: 1 },
+    { col: 1, row: 1 },
+    { col: 1, row: 2 },
+  ],
+  [
+    { col: 1, row: 0 },
+    { col: 0, row: 1 },
+    { col: 1, row: 1 },
+    { col: 2, row: 1 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 0, row: 1 },
+    { col: 1, row: 1 },
+    { col: 0, row: 2 },
+  ],
+  [
+    { col: 1, row: 0 },
+    { col: 2, row: 0 },
+    { col: 0, row: 1 },
+    { col: 1, row: 1 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 0, row: 1 },
+    { col: 1, row: 1 },
+    { col: 1, row: 2 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 1, row: 0 },
+    { col: 1, row: 1 },
+    { col: 2, row: 1 },
+  ],
+  [
+    { col: 1, row: 0 },
+    { col: 0, row: 1 },
+    { col: 1, row: 1 },
+    { col: 0, row: 2 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 0, row: 1 },
+    { col: 0, row: 2 },
+    { col: 1, row: 2 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 1, row: 0 },
+    { col: 2, row: 0 },
+    { col: 0, row: 1 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 1, row: 0 },
+    { col: 1, row: 1 },
+    { col: 1, row: 2 },
+  ],
+  [
+    { col: 2, row: 0 },
+    { col: 0, row: 1 },
+    { col: 1, row: 1 },
+    { col: 2, row: 1 },
+  ],
+  [
+    { col: 1, row: 0 },
+    { col: 1, row: 1 },
+    { col: 0, row: 2 },
+    { col: 1, row: 2 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 0, row: 1 },
+    { col: 1, row: 1 },
+    { col: 2, row: 1 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 1, row: 0 },
+    { col: 0, row: 1 },
+    { col: 0, row: 2 },
+  ],
+  [
+    { col: 0, row: 0 },
+    { col: 1, row: 0 },
+    { col: 2, row: 0 },
+    { col: 2, row: 1 },
+  ],
 ];
 
-const TETROMINO_ANCHORS: ReadonlyArray<Cell> = TETROMINOES.map(piece => {
+const TETROMINO_ANCHORS: ReadonlyArray<Cell> = TETROMINOES.map((piece) => {
   let anchor = piece[0]!;
   for (const cell of piece) {
     if (
@@ -77,8 +176,13 @@ const TETROMINO_ANCHORS: ReadonlyArray<Cell> = TETROMINOES.map(piece => {
 });
 
 const PIECE_PALETTE: ReadonlyArray<string> = [
-  '#22d3ee', '#facc15', '#a78bfa', '#10b981',
-  '#f87171', '#fb923c', '#60a5fa',
+  '#22d3ee',
+  '#facc15',
+  '#a78bfa',
+  '#10b981',
+  '#f87171',
+  '#fb923c',
+  '#60a5fa',
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -166,7 +270,7 @@ function generateGraph(
     const c = Math.floor(rng() * cols);
     const r = Math.floor(rng() * rows);
     const tooClose = hubs.some(
-      h => Math.hypot(h.col - c, h.row - r) < minDist,
+      (h) => Math.hypot(h.col - c, h.row - r) < minDist,
     );
     if (!tooClose) hubs.push({ col: c, row: r });
   }
@@ -178,7 +282,7 @@ function generateGraph(
         j,
         d: Math.hypot(h.col - hubs[i]!.col, h.row - hubs[i]!.row),
       }))
-      .filter(d => d.j !== i)
+      .filter((d) => d.j !== i)
       .sort((a, b) => a.d - b.d);
     const links = 1 + Math.floor(rng() * 2);
     for (let k = 0; k < Math.min(links, dists.length); k++) {
@@ -206,7 +310,9 @@ function resolveCellColor(
   rows: number,
   fallbackColor: string,
   graph: GraphData | null,
-  sampled: ReadonlyArray<ReadonlyArray<{ r: number; g: number; b: number; a: number }>> | null,
+  sampled: ReadonlyArray<
+    ReadonlyArray<{ r: number; g: number; b: number; a: number }>
+  > | null,
 ): { fill: string; stroke: string } {
   if (sampled) {
     const px = sampled[cell.row]?.[cell.col];
@@ -226,7 +332,10 @@ function resolveCellColor(
     const on = sampleMask(BRAIN_MASK, cell.col, cell.row, cols, rows);
     return on
       ? { fill: withAlpha('#f472b6', 0.5), stroke: withAlpha('#f472b6', 0.95) }
-      : { fill: withAlpha('#f472b6', 0.05), stroke: withAlpha('#f472b6', 0.14) };
+      : {
+          fill: withAlpha('#f472b6', 0.05),
+          stroke: withAlpha('#f472b6', 0.14),
+        };
   }
   if (image === 'skyline') {
     const on = sampleMask(SKYLINE_MASK, cell.col, cell.row, cols, rows);
@@ -238,10 +347,7 @@ function resolveCellColor(
     const left = cell.col < cols / 2;
     const top = cell.row < rows / 2;
     const district =
-      left && top ? 'UI'
-      : !left && top ? 'API'
-      : left && !top ? 'DB'
-      : 'AUTH';
+      left && top ? 'UI' : !left && top ? 'API' : left && !top ? 'DB' : 'AUTH';
     const color = DISTRICT_COLORS[district];
     return {
       fill: withAlpha(color, 0.42),
@@ -250,7 +356,7 @@ function resolveCellColor(
   }
   if (image === 'graph' && graph) {
     const isHub = graph.hubs.some(
-      h => h.col === cell.col && h.row === cell.row,
+      (h) => h.col === cell.col && h.row === cell.row,
     );
     return isHub
       ? { fill: withAlpha('#22d3ee', 0.7), stroke: withAlpha('#22d3ee', 1) }
@@ -308,7 +414,7 @@ function tileGrid(
           }
         }
         if (fits) {
-          placedCells = piece.map(cell => ({
+          placedCells = piece.map((cell) => ({
             col: cell.col + dc,
             row: cell.row + dr,
           }));
@@ -533,9 +639,9 @@ export function FileCityBlockDrop({
   // Load + sample an arbitrary image into a cols×rows pixel grid when
   // `imageSrc` is set. Cover-fit, centered. Setting state to null on
   // load failure falls back to the mask-based `image` mode (or none).
-  const [sampledPixels, setSampledPixels] = useState<
-    ReadonlyArray<ReadonlyArray<{ r: number; g: number; b: number; a: number }>> | null
-  >(null);
+  const [sampledPixels, setSampledPixels] = useState<ReadonlyArray<
+    ReadonlyArray<{ r: number; g: number; b: number; a: number }>
+  > | null>(null);
   useEffect(() => {
     if (!imageSrc) {
       setSampledPixels(null);
@@ -569,7 +675,8 @@ export function FileCityBlockDrop({
         // Likely a CORS taint — bail and let the fallback color path run.
         return;
       }
-      const grid: Array<Array<{ r: number; g: number; b: number; a: number }>> = [];
+      const grid: Array<Array<{ r: number; g: number; b: number; a: number }>> =
+        [];
       for (let r = 0; r < rows; r++) {
         const row: Array<{ r: number; g: number; b: number; a: number }> = [];
         for (let c = 0; c < cols; c++) {
@@ -628,12 +735,12 @@ export function FileCityBlockDrop({
     // Step 2: resolve each cell's color. With an image, color comes
     // from the image function — pieces still fall as groups but each
     // cell carries its final color, so the picture forms as blocks land.
-    return groups.map(group => {
+    return groups.map((group) => {
       const fallbackColor =
         image === 'none' && colorPieces
           ? PIECE_PALETTE[Math.floor(rng() * PIECE_PALETTE.length)]!
           : accent;
-      const cells: ColoredCell[] = group.cells.map(cell => {
+      const cells: ColoredCell[] = group.cells.map((cell) => {
         const { fill, stroke } = resolveCellColor(
           image,
           cell,
@@ -674,12 +781,12 @@ export function FileCityBlockDrop({
     }
     let cancelled = false;
     Promise.all(
-      layers.map(layer =>
+      layers.map((layer) =>
         loadAndSampleImage(layer.imageSrc, cols, rows)
-          .then(grid => ({ id: layer.id, grid }))
+          .then((grid) => ({ id: layer.id, grid }))
           .catch(() => ({ id: layer.id, grid: null as PixelGrid | null })),
       ),
-    ).then(results => {
+    ).then((results) => {
       if (cancelled) return;
       const next = new Map<string, PixelGrid>();
       for (const { id, grid } of results) {
@@ -835,7 +942,7 @@ export function FileCityBlockDrop({
       setRevealed(1);
       if (pieces.length > 1) {
         intervalId = window.setInterval(() => {
-          setRevealed(prev => {
+          setRevealed((prev) => {
             const next = prev + 1;
             if (next >= pieces.length) {
               window.clearInterval(intervalId);
@@ -981,7 +1088,8 @@ export function FileCityBlockDrop({
                       stroke,
                       strokeWidth: 1.25,
                       opacity: isOwned ? 1 : 0,
-                      transition: 'opacity 280ms ease, fill 280ms ease, stroke 280ms ease',
+                      transition:
+                        'opacity 280ms ease, fill 280ms ease, stroke 280ms ease',
                     }}
                   />
                 </g>
@@ -998,7 +1106,7 @@ export function FileCityBlockDrop({
           key={`controlled-${resetKey ?? 'initial'}`}
           clipPath={`url(#block-drop-clip-${resetKey ?? 'initial'})`}
         >
-          {flatColoredCells.map(cell => {
+          {flatColoredCells.map((cell) => {
             const idx = cellRevealIndex.get(`${cell.col},${cell.row}`) ?? 0;
             const isRevealed = idx < revealCount;
             const x = padding + cell.col * cellSize + 4;
@@ -1054,7 +1162,7 @@ export function FileCityBlockDrop({
                   transition: `opacity ${fadeMs}ms ease, transform ${dropDurationMs}ms cubic-bezier(0.22, 1, 0.36, 1)`,
                 }}
               >
-                {piece.cells.map(cell => (
+                {piece.cells.map((cell) => (
                   <rect
                     key={`${cell.col},${cell.row}`}
                     x={padding + cell.col * cellSize + 4}
@@ -1076,7 +1184,7 @@ export function FileCityBlockDrop({
       )}
 
       {/* Graph wiring — drawn after pieces, fades in once all blocks
-        * have landed. Lines connect hub-cell centers. */}
+       * have landed. Lines connect hub-cell centers. */}
       {image === 'graph' && graph && (
         <g
           style={{
@@ -1104,7 +1212,7 @@ export function FileCityBlockDrop({
       )}
 
       {/* District labels — fade in once all blocks land, so the
-        * neighborhoods name themselves at the payoff moment. */}
+       * neighborhoods name themselves at the payoff moment. */}
       {image === 'districts' && (
         <g
           style={{
@@ -1113,7 +1221,7 @@ export function FileCityBlockDrop({
             pointerEvents: 'none',
           }}
         >
-          {(['UI', 'API', 'DB', 'AUTH'] as const).map(q => {
+          {(['UI', 'API', 'DB', 'AUTH'] as const).map((q) => {
             const left = q === 'UI' || q === 'DB';
             const top = q === 'UI' || q === 'API';
             const cx = padding + (left ? cols / 4 : (cols * 3) / 4) * cellSize;

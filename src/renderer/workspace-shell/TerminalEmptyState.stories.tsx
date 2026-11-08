@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React from 'react';
-import { ThemeProvider, slateNeonTheme, useTheme } from '@principal-ade/industry-theme';
+import {
+  ThemeProvider,
+  slateNeonTheme,
+  useTheme,
+} from '@principal-ade/industry-theme';
 import {
   DEFAULT_TERMINAL_EMPTY_STATE_TIPS,
   TerminalEmptyState,

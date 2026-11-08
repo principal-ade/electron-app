@@ -346,135 +346,135 @@ export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
         }}
       >
         {ready && (
-        <svg
-          width={gridW}
-          height={gridH}
-          viewBox={`0 0 ${gridW} ${gridH}`}
-          style={{ overflow: 'visible', maxWidth: '100%', maxHeight: '100%' }}
-          role="img"
-          aria-label={message || 'Loading'}
-        >
-        {/* Base grid: squares + dots */}
-        {cells.map((cell) => {
-          const sx = cell.cx - squareSize / 2;
-          const sy = cell.cy - squareSize / 2;
-          const hits = settledHits.get(`${cell.col}:${cell.row}`);
-          const hasSettledDot = !!hits && hits.length > 0;
-          const isLatestHit = latest?.points.some(
-            (p) => p.col === cell.col && p.row === cell.row,
-          );
-          const anyHit = hasSettledDot || isLatestHit;
-          return (
-            <g key={`cell-${cell.col}-${cell.row}`}>
-              <rect
-                x={sx}
-                y={sy}
-                width={squareSize}
-                height={squareSize}
-                rx={3}
-                fill="none"
-                stroke={borderColor}
-                strokeWidth={1}
-                opacity={anyHit ? 0.6 : 0.4}
-              />
-              {!hasSettledDot && (
-                <circle
-                  cx={cell.cx}
-                  cy={cell.cy}
-                  r={dotR}
-                  fill={theme.colors.textMuted}
-                  opacity={0.55}
-                />
-              )}
-              {/* Persisted colored dots for settled trails passing through */}
-              {hits?.map((t) => (
-                <circle
-                  key={`settled-${t.id}-${cell.col}-${cell.row}`}
-                  cx={cell.cx}
-                  cy={cell.cy}
-                  r={dotR * 1.4}
-                  fill={t.color}
-                  opacity={0.85}
-                />
-              ))}
-            </g>
-          );
-        })}
-
-        {/* Settled trails: static lines */}
-        {settled.map((t) => (
-          <path
-            key={`settled-path-${t.id}`}
-            d={t.pathD}
-            fill="none"
-            stroke={t.color}
-            strokeWidth={1.6}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity={0.75}
-            style={{
-              filter: `drop-shadow(0 0 4px ${t.color})`,
-            }}
-          />
-        ))}
-
-        {/* Active (drawing) trail */}
-        {latest && (
-          <>
-            <path
-              key={`active-path-${latest.id}`}
-              d={latest.pathD}
-              fill="none"
-              stroke={latest.color}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              pathLength={1}
-              style={{
-                filter: `drop-shadow(0 0 6px ${latest.color})`,
-                strokeDasharray: 1,
-                strokeDashoffset: 1,
-                animation: `trailDraw ${drawDuration}ms linear forwards`,
-              }}
-            />
-            {latest.points.map((p, i) => {
-              const delay = latestDelays[i] ?? 0;
-              const sx = p.cx - squareSize / 2;
-              const sy = p.cy - squareSize / 2;
+          <svg
+            width={gridW}
+            height={gridH}
+            viewBox={`0 0 ${gridW} ${gridH}`}
+            style={{ overflow: 'visible', maxWidth: '100%', maxHeight: '100%' }}
+            role="img"
+            aria-label={message || 'Loading'}
+          >
+            {/* Base grid: squares + dots */}
+            {cells.map((cell) => {
+              const sx = cell.cx - squareSize / 2;
+              const sy = cell.cy - squareSize / 2;
+              const hits = settledHits.get(`${cell.col}:${cell.row}`);
+              const hasSettledDot = !!hits && hits.length > 0;
+              const isLatestHit = latest?.points.some(
+                (p) => p.col === cell.col && p.row === cell.row,
+              );
+              const anyHit = hasSettledDot || isLatestHit;
               return (
-                <g key={`active-pt-${latest.id}-${i}`}>
+                <g key={`cell-${cell.col}-${cell.row}`}>
                   <rect
                     x={sx}
                     y={sy}
                     width={squareSize}
                     height={squareSize}
                     rx={3}
-                    fill={`${latest.color}26`}
-                    stroke={latest.color}
-                    strokeWidth={1.4}
-                    opacity={0}
-                    style={{
-                      animation: `trailSquarePop ${drawDuration}ms ease-out ${delay}ms forwards`,
-                    }}
+                    fill="none"
+                    stroke={borderColor}
+                    strokeWidth={1}
+                    opacity={anyHit ? 0.6 : 0.4}
                   />
-                  <circle
-                    cx={p.cx}
-                    cy={p.cy}
-                    r={dotR * 1.6}
-                    fill={latest.color}
-                    opacity={0}
-                    style={{
-                      transformOrigin: `${p.cx}px ${p.cy}px`,
-                      animation: `trailDotPop ${drawDuration}ms ease-out ${delay}ms forwards`,
-                      filter: `drop-shadow(0 0 4px ${latest.color})`,
-                    }}
-                  />
+                  {!hasSettledDot && (
+                    <circle
+                      cx={cell.cx}
+                      cy={cell.cy}
+                      r={dotR}
+                      fill={theme.colors.textMuted}
+                      opacity={0.55}
+                    />
+                  )}
+                  {/* Persisted colored dots for settled trails passing through */}
+                  {hits?.map((t) => (
+                    <circle
+                      key={`settled-${t.id}-${cell.col}-${cell.row}`}
+                      cx={cell.cx}
+                      cy={cell.cy}
+                      r={dotR * 1.4}
+                      fill={t.color}
+                      opacity={0.85}
+                    />
+                  ))}
                 </g>
               );
             })}
-          </>
-        )}
-        </svg>
+
+            {/* Settled trails: static lines */}
+            {settled.map((t) => (
+              <path
+                key={`settled-path-${t.id}`}
+                d={t.pathD}
+                fill="none"
+                stroke={t.color}
+                strokeWidth={1.6}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity={0.75}
+                style={{
+                  filter: `drop-shadow(0 0 4px ${t.color})`,
+                }}
+              />
+            ))}
+
+            {/* Active (drawing) trail */}
+            {latest && (
+              <>
+                <path
+                  key={`active-path-${latest.id}`}
+                  d={latest.pathD}
+                  fill="none"
+                  stroke={latest.color}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  pathLength={1}
+                  style={{
+                    filter: `drop-shadow(0 0 6px ${latest.color})`,
+                    strokeDasharray: 1,
+                    strokeDashoffset: 1,
+                    animation: `trailDraw ${drawDuration}ms linear forwards`,
+                  }}
+                />
+                {latest.points.map((p, i) => {
+                  const delay = latestDelays[i] ?? 0;
+                  const sx = p.cx - squareSize / 2;
+                  const sy = p.cy - squareSize / 2;
+                  return (
+                    <g key={`active-pt-${latest.id}-${i}`}>
+                      <rect
+                        x={sx}
+                        y={sy}
+                        width={squareSize}
+                        height={squareSize}
+                        rx={3}
+                        fill={`${latest.color}26`}
+                        stroke={latest.color}
+                        strokeWidth={1.4}
+                        opacity={0}
+                        style={{
+                          animation: `trailSquarePop ${drawDuration}ms ease-out ${delay}ms forwards`,
+                        }}
+                      />
+                      <circle
+                        cx={p.cx}
+                        cy={p.cy}
+                        r={dotR * 1.6}
+                        fill={latest.color}
+                        opacity={0}
+                        style={{
+                          transformOrigin: `${p.cx}px ${p.cy}px`,
+                          animation: `trailDotPop ${drawDuration}ms ease-out ${delay}ms forwards`,
+                          filter: `drop-shadow(0 0 4px ${latest.color})`,
+                        }}
+                      />
+                    </g>
+                  );
+                })}
+              </>
+            )}
+          </svg>
         )}
       </div>
 

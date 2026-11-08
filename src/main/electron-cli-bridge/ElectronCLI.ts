@@ -290,7 +290,9 @@ export class ElectronCLI {
   /**
    * Restart the universal worker (for diagnostics)
    */
-  async restartWorker(name: string = 'universal'): Promise<{ success: boolean; error?: string }> {
+  async restartWorker(
+    name: string = 'universal',
+  ): Promise<{ success: boolean; error?: string }> {
     return this.bridge.restartWorker(name);
   }
 }

@@ -134,7 +134,8 @@ export class LinksDomain {
 
       return { success: true, metadata };
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to store links', {
         repoId,
         error: errorMessage,
@@ -158,7 +159,8 @@ export class LinksDomain {
       this.logAudit('info', 'Retrieved links for repository', { repoId });
       return data.links || [];
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to retrieve links', {
         repoId,
         error: errorMessage,
@@ -176,7 +178,8 @@ export class LinksDomain {
       const data = result.success ? result.data : undefined;
       return data || null;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to retrieve links with metadata', {
         repoId,
         error: errorMessage,
@@ -190,7 +193,8 @@ export class LinksDomain {
       await this.storage.delete(repoId, StaticNamespaces.REPOSITORY_LINKS);
       this.logAudit('info', 'Deleted links for repository', { repoId });
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to delete links', {
         repoId,
         error: errorMessage,
@@ -219,7 +223,8 @@ export class LinksDomain {
 
       return metadata;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to get all metadata', {
         error: errorMessage,
       });
@@ -252,7 +257,8 @@ export class LinksDomain {
 
       return await this.storeLinks(repoId, repoPath, updatedLinks);
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to add link', {
         repoId,
         error: errorMessage,
@@ -293,7 +299,8 @@ export class LinksDomain {
 
       return await this.storeLinks(repoId, repoPath, updatedLinks);
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to update link', {
         repoId,
         linkId,
@@ -320,7 +327,8 @@ export class LinksDomain {
 
       return await this.storeLinks(repoId, repoPath, updatedLinks);
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to remove link', {
         repoId,
         linkId,

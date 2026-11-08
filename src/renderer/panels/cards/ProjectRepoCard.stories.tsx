@@ -3,7 +3,9 @@ import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import { ProjectRepoCard, type ProjectRepoCardData } from './ProjectRepoCard';
 
-const createMockRepo = (overrides: Partial<ProjectRepoCardData> = {}): ProjectRepoCardData => ({
+const createMockRepo = (
+  overrides: Partial<ProjectRepoCardData> = {},
+): ProjectRepoCardData => ({
   repoName: 'my-awesome-project',
   ownerLogin: 'octocat',
   ownerAvatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
@@ -17,7 +19,9 @@ const Wrapper: React.FC<{ children: React.ReactNode; width?: number }> = ({
   width = 360,
 }) => (
   <ThemeProvider>
-    <div style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+    <div
+      style={{ padding: 24, backgroundColor: '#1a1a1a', minHeight: '100vh' }}
+    >
       <div style={{ maxWidth: width }}>{children}</div>
     </div>
   </ThemeProvider>
@@ -45,7 +49,10 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   render: () => (
     <Wrapper>
-      <ProjectRepoCard repo={createMockRepo()} onClick={() => console.info('clicked')} />
+      <ProjectRepoCard
+        repo={createMockRepo()}
+        onClick={() => console.info('clicked')}
+      />
     </Wrapper>
   ),
 };
@@ -103,7 +110,8 @@ export const LongRepoName: Story = {
     <Wrapper width={320}>
       <ProjectRepoCard
         repo={createMockRepo({
-          repoName: 'an-extraordinarily-long-repository-name-that-should-truncate',
+          repoName:
+            'an-extraordinarily-long-repository-name-that-should-truncate',
           timeLabel: '5mo ago',
         })}
         onClick={() => console.info('clicked')}

@@ -25,24 +25,34 @@ export async function findAvailablePort(
 ): Promise<number> {
   // Validate port range
   if (startPort < 1 || startPort > 65535) {
-    throw new Error(`Invalid startPort: ${startPort}. Must be between 1 and 65535.`);
+    throw new Error(
+      `Invalid startPort: ${startPort}. Must be between 1 and 65535.`,
+    );
   }
   if (endPort < 1 || endPort > 65535) {
-    throw new Error(`Invalid endPort: ${endPort}. Must be between 1 and 65535.`);
+    throw new Error(
+      `Invalid endPort: ${endPort}. Must be between 1 and 65535.`,
+    );
   }
   if (startPort > endPort) {
-    throw new Error(`startPort (${startPort}) cannot be greater than endPort (${endPort})`);
+    throw new Error(
+      `startPort (${startPort}) cannot be greater than endPort (${endPort})`,
+    );
   }
 
   // Get currently running servers to check which ports are occupied
   const scanResult = await LocalhostDetectionService.detectRunningServers();
-  const occupiedPorts = new Set(scanResult.servers.map((server) => server.port));
+  const occupiedPorts = new Set(
+    scanResult.servers.map((server) => server.port),
+  );
 
   // Try each port in sequence
   for (let port = startPort; port <= endPort; port++) {
     // Skip if we know this port is occupied
     if (occupiedPorts.has(port)) {
-      console.info(`[portDetection] Port ${port} is occupied by running server`);
+      console.info(
+        `[portDetection] Port ${port} is occupied by running server`,
+      );
       continue;
     }
 
@@ -53,7 +63,9 @@ export async function findAvailablePort(
         console.info(`[portDetection] Port ${port} is available`);
         return port;
       }
-      console.info(`[portDetection] Port ${port} is occupied (check returned true)`);
+      console.info(
+        `[portDetection] Port ${port} is occupied (check returned true)`,
+      );
     } catch (error) {
       console.error(`[portDetection] Error checking port ${port}:`, error);
       // Continue to next port on error
@@ -88,30 +100,41 @@ export async function waitForPortReady(
   const startTime = Date.now();
   let attempts = 0;
 
-  console.info(`[portDetection] Waiting for port ${port} to become responsive (timeout: ${timeout}ms)`);
+  console.info(
+    `[portDetection] Waiting for port ${port} to become responsive (timeout: ${timeout}ms)`,
+  );
 
   while (Date.now() - startTime < timeout) {
     attempts++;
     try {
       const isResponsive = await LocalhostDetectionService.checkPort(port, 500);
       if (isResponsive) {
-        console.info(`[portDetection] ✅ Port ${port} is now responsive (took ${Date.now() - startTime}ms, ${attempts} attempts)`);
+        console.info(
+          `[portDetection] ✅ Port ${port} is now responsive (took ${Date.now() - startTime}ms, ${attempts} attempts)`,
+        );
         return true;
       }
 
       // Log progress every 5 attempts (5 seconds)
       if (attempts % 5 === 0) {
-        console.info(`[portDetection] Still waiting for port ${port}... (${Date.now() - startTime}ms elapsed)`);
+        console.info(
+          `[portDetection] Still waiting for port ${port}... (${Date.now() - startTime}ms elapsed)`,
+        );
       }
     } catch (error) {
-      console.warn(`[portDetection] Port check attempt ${attempts} failed:`, error);
+      console.warn(
+        `[portDetection] Port check attempt ${attempts} failed:`,
+        error,
+      );
     }
 
     // Wait before next check
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
 
-  console.error(`[portDetection] ❌ Port ${port} did not become responsive after ${attempts} attempts over ${timeout}ms`);
+  console.error(
+    `[portDetection] ❌ Port ${port} did not become responsive after ${attempts} attempts over ${timeout}ms`,
+  );
   throw new Error(
     `Port ${port} did not become responsive within ${timeout}ms. The server may have failed to start. Check the terminal output for errors.`,
   );

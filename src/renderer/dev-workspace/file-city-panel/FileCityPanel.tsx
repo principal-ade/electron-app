@@ -16,7 +16,8 @@ import {
 } from './buildCityDataFromContext';
 import { FileOverlay } from './FileOverlay';
 
-const MEDIA_RE = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i;
+const MEDIA_RE =
+  /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i;
 const isOverlayable = (path: string): boolean => {
   if (MEDIA_RE.test(path)) return false;
   if (path.endsWith('.md') || path.endsWith('.mdx')) return false;
@@ -47,9 +48,7 @@ export const FileCityPanel: React.FC<FileCityPanelProps> = ({
   const repoOwner = context.repository?.owner ?? null;
   const repoName = context.repository?.name ?? null;
   const repoLabel =
-    repoOwner && repoName
-      ? `${repoOwner}/${repoName}`
-      : (repoName ?? null);
+    repoOwner && repoName ? `${repoOwner}/${repoName}` : (repoName ?? null);
 
   const [cityData, setCityData] = React.useState<CityData | null>(null);
   const [isBuilding, setIsBuilding] = React.useState(false);

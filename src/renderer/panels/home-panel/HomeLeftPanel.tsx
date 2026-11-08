@@ -186,15 +186,13 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   const pinnedTabEntries = useMemo(
     () => [
       ...preferencePins.filter((entry) => entry.kind !== 'http-request'),
-      ...savedRequests.map(
-        (request): HomeTabEntry => ({
-          id: `http-request-${request.id}`,
-          kind: 'http-request',
-          savedRequestId: request.id,
-          label: request.title,
-          repoPath: request.repositoryPath,
-        }),
-      ),
+      ...savedRequests.map((request): HomeTabEntry => ({
+        id: `http-request-${request.id}`,
+        kind: 'http-request',
+        savedRequestId: request.id,
+        label: request.title,
+        repoPath: request.repositoryPath,
+      })),
     ],
     [preferencePins, savedRequests],
   );

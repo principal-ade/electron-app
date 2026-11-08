@@ -41,7 +41,10 @@ export function parseWorkflowFile(content: string): ParsedWorkflow | null {
     if (workflow.jobs && typeof workflow.jobs === 'object') {
       for (const [_jobId, job] of Object.entries(workflow.jobs)) {
         if (typeof job === 'object' && job !== null) {
-          extractSecretsFromJob(job as Record<string, unknown>, requiredSecrets);
+          extractSecretsFromJob(
+            job as Record<string, unknown>,
+            requiredSecrets,
+          );
         }
       }
     }
@@ -60,7 +63,10 @@ export function parseWorkflowFile(content: string): ParsedWorkflow | null {
 /**
  * Extract secret references from a job definition
  */
-function extractSecretsFromJob(job: Record<string, unknown>, secrets: Set<string>): void {
+function extractSecretsFromJob(
+  job: Record<string, unknown>,
+  secrets: Set<string>,
+): void {
   // Check job-level env
   if (job.env && typeof job.env === 'object') {
     extractSecretsFromEnv(job.env as Record<string, unknown>, secrets);
@@ -73,12 +79,18 @@ function extractSecretsFromJob(job: Record<string, unknown>, secrets: Set<string
         const stepObj = step as Record<string, unknown>;
         // Check step env
         if (stepObj.env && typeof stepObj.env === 'object') {
-          extractSecretsFromEnv(stepObj.env as Record<string, unknown>, secrets);
+          extractSecretsFromEnv(
+            stepObj.env as Record<string, unknown>,
+            secrets,
+          );
         }
 
         // Check step with
         if (stepObj.with && typeof stepObj.with === 'object') {
-          extractSecretsFromObject(stepObj.with as Record<string, unknown>, secrets);
+          extractSecretsFromObject(
+            stepObj.with as Record<string, unknown>,
+            secrets,
+          );
         }
 
         // Check step run command

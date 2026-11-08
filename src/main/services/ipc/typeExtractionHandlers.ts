@@ -26,7 +26,8 @@ export function setupTypeExtractionHandlers() {
         };
       } catch (error: unknown) {
         console.error('[TypeExtraction] Error extracting types:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Failed to extract types';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to extract types';
         return {
           success: false,
           error: errorMessage,
@@ -62,7 +63,10 @@ export function setupTypeExtractionHandlers() {
           '[TypeExtraction] Error generating definition file:',
           error,
         );
-        const errorMessage = error instanceof Error ? error.message : 'Failed to generate definition file';
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : 'Failed to generate definition file';
         return {
           success: false,
           error: errorMessage,
@@ -94,7 +98,10 @@ export function setupTypeExtractionHandlers() {
           '[TypeExtraction] Error extracting types from layer:',
           error,
         );
-        const errorMessage = error instanceof Error ? error.message : 'Failed to extract types from layer';
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : 'Failed to extract types from layer';
         return {
           success: false,
           error: errorMessage,

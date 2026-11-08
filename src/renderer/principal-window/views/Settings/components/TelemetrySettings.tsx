@@ -274,8 +274,8 @@ export const TelemetrySettings: React.FC = () => {
               marginBottom: '8px',
             }}
           >
-            Traces are {resolved?.enabled ? 'being exported' : 'not exported'} to{' '}
-            <code>{resolved?.endpoint ?? DEFAULT_OTLP_ENDPOINT}</code>
+            Traces are {resolved?.enabled ? 'being exported' : 'not exported'}{' '}
+            to <code>{resolved?.endpoint ?? DEFAULT_OTLP_ENDPOINT}</code>
           </p>
           <p
             style={{

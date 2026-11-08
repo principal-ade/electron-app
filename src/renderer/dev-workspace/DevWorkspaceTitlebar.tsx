@@ -247,7 +247,9 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
         {onToggleLeftPanel && (
           <button
             onClick={onToggleLeftPanel}
-            title={isLeftCollapsed ? 'Expand left panel' : 'Collapse left panel'}
+            title={
+              isLeftCollapsed ? 'Expand left panel' : 'Collapse left panel'
+            }
             style={{
               position: 'absolute',
               left: '80px',
@@ -382,7 +384,9 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                   <RefreshCw
                     size={14}
                     style={{
-                      animation: isSyncingWorkspace ? 'spin 1s linear infinite' : 'none',
+                      animation: isSyncingWorkspace
+                        ? 'spin 1s linear infinite'
+                        : 'none',
                     }}
                   />
                   <span>{isSyncingWorkspace ? 'Syncing...' : 'Sync'}</span>
@@ -768,11 +772,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                     : theme.colors.textSecondary;
                 }}
               >
-                {sidebarsHidden ? (
-                  <Columns3 size={14} />
-                ) : (
-                  <Square size={14} />
-                )}
+                {sidebarsHidden ? <Columns3 size={14} /> : <Square size={14} />}
                 <span>{sidebarsHidden ? 'Sidebars' : 'Focus'}</span>
               </button>
             )}
@@ -782,7 +782,9 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               <button
                 onClick={onToggleRightPanel}
                 title={
-                  isRightCollapsed ? 'Expand right panel' : 'Collapse right panel'
+                  isRightCollapsed
+                    ? 'Expand right panel'
+                    : 'Collapse right panel'
                 }
                 style={{
                   // @ts-ignore - WebkitAppRegion is not in CSSProperties
@@ -848,7 +850,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               <Settings size={18} />
             </button>
           </div>
-
         </div>
       </BaseTitlebar>
       <DevWorkspaceConfigModal

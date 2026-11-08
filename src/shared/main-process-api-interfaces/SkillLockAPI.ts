@@ -238,13 +238,19 @@ export interface SkillLockAPI {
   getSkillLock: () => Promise<SkillLockFile | null>;
 
   /** Add a skill to the lock file */
-  addSkillToLock: (options: AddSkillToLockOptions) => Promise<{ success: boolean; error?: string }>;
+  addSkillToLock: (
+    options: AddSkillToLockOptions,
+  ) => Promise<{ success: boolean; error?: string }>;
 
   /** Remove a skill from the lock file */
-  removeSkillFromLock: (name: string) => Promise<{ success: boolean; error?: string }>;
+  removeSkillFromLock: (
+    name: string,
+  ) => Promise<{ success: boolean; error?: string }>;
 
   /** Update a skill entry in the lock file */
-  updateSkillInLock: (options: UpdateSkillInLockOptions) => Promise<{ success: boolean; error?: string }>;
+  updateSkillInLock: (
+    options: UpdateSkillInLockOptions,
+  ) => Promise<{ success: boolean; error?: string }>;
 
   /** Check for updates on all installed skills */
   checkSkillUpdates: () => Promise<SkillUpdateCheckResult[]>;
@@ -253,25 +259,36 @@ export interface SkillLockAPI {
   getInstalledSkills: () => Promise<InstalledSkillInfo[]>;
 
   /** Check if user can edit a skill */
-  checkEditPermission: (skillName: string) => Promise<SkillEditPermissionResult>;
+  checkEditPermission: (
+    skillName: string,
+  ) => Promise<SkillEditPermissionResult>;
 
   /** Get list of files in a skill folder */
   getSkillFiles: (skillName: string) => Promise<string[]>;
 
   /** Get content of a skill file */
-  getSkillFileContent: (skillName: string, filePath: string) => Promise<{ content: string; isLocal: boolean }>;
+  getSkillFileContent: (
+    skillName: string,
+    filePath: string,
+  ) => Promise<{ content: string; isLocal: boolean }>;
 
   /** Commit a skill file to GitHub */
   commitSkillFile: (options: SkillCommitOptions) => Promise<SkillCommitResult>;
 
   /** Listen for skill installed events (broadcast from main process) */
-  onSkillInstalled: (callback: (payload: SkillInstalledPayload) => void) => () => void;
+  onSkillInstalled: (
+    callback: (payload: SkillInstalledPayload) => void,
+  ) => () => void;
 
   /** Listen for skill uninstalled events (broadcast from main process) */
-  onSkillUninstalled: (callback: (payload: SkillUninstalledPayload) => void) => () => void;
+  onSkillUninstalled: (
+    callback: (payload: SkillUninstalledPayload) => void,
+  ) => () => void;
 
   /** Listen for skill updated events (broadcast from main process) */
-  onSkillUpdated: (callback: (payload: SkillUpdatedPayload) => void) => () => void;
+  onSkillUpdated: (
+    callback: (payload: SkillUpdatedPayload) => void,
+  ) => () => void;
 }
 
 /**
@@ -289,10 +306,7 @@ export function createEmptyLockFile(): SkillLockFile {
  */
 export function normalizeGitHubSource(url: string): string {
   // Handle various GitHub URL formats
-  const patterns = [
-    /github\.com\/([^/]+\/[^/]+)/,
-    /^([^/]+\/[^/]+)$/,
-  ];
+  const patterns = [/github\.com\/([^/]+\/[^/]+)/, /^([^/]+\/[^/]+)$/];
 
   for (const pattern of patterns) {
     const match = url.match(pattern);

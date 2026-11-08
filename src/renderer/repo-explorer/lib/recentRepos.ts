@@ -61,7 +61,7 @@ export function readRecentRepos(): HeaderRepoSearchItem[] {
           name:
             typeof o.name === 'string'
               ? o.name
-              : o.full_name.split('/')[1] ?? o.full_name,
+              : (o.full_name.split('/')[1] ?? o.full_name),
           owner: { login: owner.login, avatar_url: owner.avatar_url },
           description: typeof o.description === 'string' ? o.description : null,
           stargazers_count:

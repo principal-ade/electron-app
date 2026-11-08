@@ -303,11 +303,7 @@ export type BuildConfiguration = z.infer<typeof buildConfigurationSchema>;
 
 /** Lifecycle of a terminal-backed build run. */
 export type BuildRunStatus =
-  | 'running'
-  | 'succeeded'
-  | 'failed'
-  | 'timed-out'
-  | 'cancelled';
+  'running' | 'succeeded' | 'failed' | 'timed-out' | 'cancelled';
 
 /** A tracked build run. Records live in memory; tabs may outlive them. */
 export interface BuildRunRecord {
@@ -340,8 +336,7 @@ export type StoredBuildConfiguration = BuildConfiguration & {
 // ---------------------------------------------------------------------------
 
 export type BuildConfigurationValidation =
-  | { ok: true; config: BuildConfiguration }
-  | { ok: false; issues: string[] };
+  { ok: true; config: BuildConfiguration } | { ok: false; issues: string[] };
 
 export interface BuildConfigurationValidateOptions {
   /**

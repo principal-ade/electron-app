@@ -72,7 +72,7 @@ export class AuthMethodDetector {
   async detectAuthMethods(): Promise<AuthMethodStatus> {
     // Return cached if valid
     const now = Date.now();
-    if (this.cachedStatus && (now - this.cacheTimestamp) < this.CACHE_TTL) {
+    if (this.cachedStatus && now - this.cacheTimestamp < this.CACHE_TTL) {
       return this.cachedStatus;
     }
 

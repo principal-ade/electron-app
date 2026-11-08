@@ -33,9 +33,7 @@ export interface DocumentNotesAPI {
   /**
    * List every file that has stored notes, optionally filtered by repository.
    */
-  listLibrary: (
-    repositoryPath?: string,
-  ) => Promise<DocumentNotesFileSummary[]>;
+  listLibrary: (repositoryPath?: string) => Promise<DocumentNotesFileSummary[]>;
 
   /**
    * Create a note. The store assigns id + timestamps.

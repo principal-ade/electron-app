@@ -6,11 +6,7 @@
  * Supported editor identifiers.
  */
 export type EditorId =
-  | 'vscode'
-  | 'cursor'
-  | 'webstorm'
-  | 'sublime'
-  | 'intellij';
+  'vscode' | 'cursor' | 'webstorm' | 'sublime' | 'intellij';
 
 /**
  * Human-friendly labels for supported editors.

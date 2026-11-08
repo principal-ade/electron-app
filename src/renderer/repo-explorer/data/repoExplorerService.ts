@@ -85,7 +85,9 @@ export interface RepoExplorerServiceImpl {
     owner: string,
     repo: string,
     sha: string,
-  ): Promise<Map<string, { status: string; additions: number; deletions: number }>>;
+  ): Promise<
+    Map<string, { status: string; additions: number; deletions: number }>
+  >;
   getCommitAuthorsByEmail(
     owner: string,
     repo: string,
@@ -123,10 +125,12 @@ export interface RepoExplorerServiceImpl {
   getUserActivity(login: string): Promise<unknown | null>;
 }
 
-function decodeFileContent(data: {
-  content?: string;
-  encoding?: string;
-} | null): string {
+function decodeFileContent(
+  data: {
+    content?: string;
+    encoding?: string;
+  } | null,
+): string {
   if (!data) return '';
   if (data.content && data.encoding === 'base64') {
     try {
@@ -303,7 +307,9 @@ const ipcImpl: RepoExplorerServiceImpl = {
 let impl: RepoExplorerServiceImpl = ipcImpl;
 
 /** Swap the implementation (Storybook / tests). */
-export function setRepoExplorerServiceImpl(next: RepoExplorerServiceImpl): void {
+export function setRepoExplorerServiceImpl(
+  next: RepoExplorerServiceImpl,
+): void {
   impl = next;
 }
 

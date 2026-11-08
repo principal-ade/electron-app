@@ -317,8 +317,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       const id = `source-file-${filePath}`;
       setTabs((previous) => {
         const existing = previous.find((tab) => tab.id === id) as
-          | SourceFileTab
-          | undefined;
+          SourceFileTab | undefined;
         if (existing) {
           if (!range) return previous;
           return previous.map((tab) =>

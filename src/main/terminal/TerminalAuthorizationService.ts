@@ -139,9 +139,7 @@ export class TerminalAuthorizationService {
   /**
    * Validate remote client credentials
    */
-  validateClientCredentials(
-    clientInfo: RemoteClientInfo,
-  ): AuthorizationResult {
+  validateClientCredentials(clientInfo: RemoteClientInfo): AuthorizationResult {
     // Basic validation
     if (!clientInfo.clientId) {
       return { authorized: false, reason: 'Missing client ID' };

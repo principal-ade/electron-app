@@ -10,7 +10,10 @@ import type {
 import { useSkillsData, type Skill } from './skills/hooks/useSkillsData';
 import { SkillCard } from './skills/components/SkillCard';
 
-export interface GlobalSkillsPanelProps extends PanelComponentProps<AgentPanelActions, SkillsPanelContext> {
+export interface GlobalSkillsPanelProps extends PanelComponentProps<
+  AgentPanelActions,
+  SkillsPanelContext
+> {
   /**
    * When true, shows the refresh button and enables refresh functionality.
    * The host must support handling 'skills:refresh' events.
@@ -42,10 +45,14 @@ export const GlobalSkillsPanel: React.FC<GlobalSkillsPanelProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Load skills data
-  const { skills, isLoading, error, refreshSkills } = useSkillsData({ context });
+  const { skills, isLoading, error, refreshSkills } = useSkillsData({
+    context,
+  });
 
   // Listen for panel focus events
-  usePanelFocusListener('global-skills', events, () => panelRef.current?.focus());
+  usePanelFocusListener('global-skills', events, () =>
+    panelRef.current?.focus(),
+  );
 
   // Listen for skill installation/uninstallation events to refresh the list
   useEffect(() => {
@@ -70,11 +77,14 @@ export const GlobalSkillsPanel: React.FC<GlobalSkillsPanelProps> = ({
       // If skill has multiple installations, check if any are global
       if (skill.installedLocations && skill.installedLocations.length > 0) {
         return skill.installedLocations.some(
-          (loc) => loc.source === 'global-universal' || loc.source === 'global-claude'
+          (loc) =>
+            loc.source === 'global-universal' || loc.source === 'global-claude',
         );
       }
       // Otherwise check the primary source
-      return skill.source === 'global-universal' || skill.source === 'global-claude';
+      return (
+        skill.source === 'global-universal' || skill.source === 'global-claude'
+      );
     });
 
     // Then filter by search query
@@ -86,7 +96,9 @@ export const GlobalSkillsPanel: React.FC<GlobalSkillsPanelProps> = ({
         // Search in description
         if (skill.description?.toLowerCase().includes(query)) return true;
         // Search in capabilities
-        if (skill.capabilities?.some((cap) => cap.toLowerCase().includes(query)))
+        if (
+          skill.capabilities?.some((cap) => cap.toLowerCase().includes(query))
+        )
           return true;
         // Search in path
         if (skill.path.toLowerCase().includes(query)) return true;
@@ -177,8 +189,12 @@ export const GlobalSkillsPanel: React.FC<GlobalSkillsPanelProps> = ({
                 color: 'inherit',
                 textDecoration: 'none',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.textDecoration = 'underline')
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.textDecoration = 'none')
+              }
             >
               Global Skills
             </a>
@@ -194,12 +210,21 @@ export const GlobalSkillsPanel: React.FC<GlobalSkillsPanelProps> = ({
                 borderRadius: theme.radii[1],
               }}
             >
-              {filteredSkills.length} {filteredSkills.length === 1 ? 'skill' : 'skills'}
+              {filteredSkills.length}{' '}
+              {filteredSkills.length === 1 ? 'skill' : 'skills'}
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 200px', maxWidth: '400px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            flex: '1 1 200px',
+            maxWidth: '400px',
+          }}
+        >
           {/* Search input */}
           <div
             style={{
@@ -349,7 +374,9 @@ export const GlobalSkillsPanel: React.FC<GlobalSkillsPanelProps> = ({
             <FileCode size={48} color={theme.colors.border} />
             <div style={{ textAlign: 'center' }}>
               <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>
-                {searchQuery ? 'No global skills match your search' : 'No global skills found'}
+                {searchQuery
+                  ? 'No global skills match your search'
+                  : 'No global skills found'}
               </p>
               <p style={{ margin: '8px 0 0 0', fontSize: theme.fontSizes[1] }}>
                 {searchQuery

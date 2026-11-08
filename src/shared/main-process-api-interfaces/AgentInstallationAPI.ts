@@ -24,11 +24,7 @@ export interface AgentInstallStatus {
 }
 
 export type AgentInstallProgressStage =
-  | 'downloading'
-  | 'installing'
-  | 'configuring'
-  | 'completed'
-  | 'error';
+  'downloading' | 'installing' | 'configuring' | 'completed' | 'error';
 export interface AgentInstallProgress {
   agentType: SupportedAgent;
   stage: AgentInstallProgressStage;

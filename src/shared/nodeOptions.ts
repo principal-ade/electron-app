@@ -38,9 +38,9 @@ export function stripTsNodePreload(nodeOptions: string): string {
  * Return a copy of `env` with the ts-node preload and TS_NODE_* variables
  * removed. Other Node options are preserved.
  */
-export function stripTsNodeEnv<
-  T extends Record<string, string | undefined>,
->(env: T): T {
+export function stripTsNodeEnv<T extends Record<string, string | undefined>>(
+  env: T,
+): T {
   const cleaned: Record<string, string | undefined> = { ...env };
 
   for (const key of TS_NODE_ENV_KEYS) {

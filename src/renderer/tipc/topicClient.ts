@@ -108,16 +108,16 @@ export const topicClient: TopicClient = {
   linkSession: (input) => getTipcClient().topic_linkSession(input),
   onSessionLinked: (callback) => {
     return ipcOn(TopicAPIEvent.SESSION_LINKED, (...args: unknown[]) => {
-        const event = args[0] as SessionLinkedEvent | undefined;
-        if (!event) return;
-        callback(event);
+      const event = args[0] as SessionLinkedEvent | undefined;
+      if (!event) return;
+      callback(event);
     });
   },
   onTopicActivate: (callback) => {
     return ipcOn(TopicAPIEvent.TOPIC_ACTIVATE, (...args: unknown[]) => {
-        const event = args[0] as TopicActivateEvent | undefined;
-        if (!event) return;
-        callback(event);
+      const event = args[0] as TopicActivateEvent | undefined;
+      if (!event) return;
+      callback(event);
     });
   },
 };

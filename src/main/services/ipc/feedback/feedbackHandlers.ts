@@ -15,8 +15,7 @@ export function registerFeedbackHandlers() {
       if (!win) return;
 
       const template: (
-        | Electron.MenuItemConstructorOptions
-        | Electron.MenuItem
+        Electron.MenuItemConstructorOptions | Electron.MenuItem
       )[] = [
         {
           label: 'Inspect Element',

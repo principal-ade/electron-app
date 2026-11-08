@@ -86,7 +86,9 @@ class PostUpdateDetector {
    * Mark that an update is pending (called before quitAndInstall)
    */
   public markPendingUpdate(version: string): void {
-    log.info(`[PostUpdateDetector] Marking pending update to version ${version}`);
+    log.info(
+      `[PostUpdateDetector] Marking pending update to version ${version}`,
+    );
     store.set('pendingUpdateVersion', version);
   }
 

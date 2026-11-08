@@ -460,12 +460,7 @@ export class GitRepositoryService {
    */
   async getUncommittedChanges(directory: string): Promise<string[]> {
     const status = await this.getGitStatus(directory);
-    return [
-      ...new Set([
-        ...status.stagedFiles,
-        ...status.modifiedFiles,
-      ]),
-    ];
+    return [...new Set([...status.stagedFiles, ...status.modifiedFiles])];
   }
 
   /**
@@ -671,14 +666,49 @@ export class GitRepositoryService {
 
   // Binary file extensions to skip when counting lines
   private static readonly BINARY_EXTENSIONS = new Set([
-    'png', 'jpg', 'jpeg', 'gif', 'bmp', 'ico', 'webp', 'svg',
-    'mp3', 'mp4', 'wav', 'avi', 'mov', 'webm', 'ogg',
-    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-    'zip', 'tar', 'gz', 'rar', '7z', 'bz2',
-    'exe', 'dll', 'so', 'dylib', 'bin',
-    'ttf', 'otf', 'woff', 'woff2', 'eot',
-    'db', 'sqlite', 'sqlite3',
-    'lock', 'lockb',
+    'png',
+    'jpg',
+    'jpeg',
+    'gif',
+    'bmp',
+    'ico',
+    'webp',
+    'svg',
+    'mp3',
+    'mp4',
+    'wav',
+    'avi',
+    'mov',
+    'webm',
+    'ogg',
+    'pdf',
+    'doc',
+    'docx',
+    'xls',
+    'xlsx',
+    'ppt',
+    'pptx',
+    'zip',
+    'tar',
+    'gz',
+    'rar',
+    '7z',
+    'bz2',
+    'exe',
+    'dll',
+    'so',
+    'dylib',
+    'bin',
+    'ttf',
+    'otf',
+    'woff',
+    'woff2',
+    'eot',
+    'db',
+    'sqlite',
+    'sqlite3',
+    'lock',
+    'lockb',
   ]);
 
   /**
@@ -702,10 +732,12 @@ export class GitRepositoryService {
    * Count lines in all tracked files in a repository
    * Returns a map of file paths (with repo prefix) to line counts
    */
-  async countLinesInRepository(repoPath: string): Promise<Record<string, number>> {
+  async countLinesInRepository(
+    repoPath: string,
+  ): Promise<Record<string, number>> {
     const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('git_repository.count_lines', {
-      attributes: { 'repo_path': repoPath },
+      attributes: { repo_path: repoPath },
     });
     const startTime = Date.now();
 
@@ -723,13 +755,16 @@ export class GitRepositoryService {
         files = output.split('\n').filter(Boolean);
       } catch (gitError) {
         console.error('[GitRepositoryService] git ls-files failed:', gitError);
-        span.setStatus({ code: SpanStatusCode.ERROR, message: 'git ls-files failed' });
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: 'git ls-files failed',
+        });
         return lineCounts;
       }
 
       span.addEvent('git_repository.count_lines.files_listed', {
-        'repo_path': repoPath,
-        'file_count': files.length,
+        repo_path: repoPath,
+        file_count: files.length,
       });
 
       // Count lines for each non-binary file
@@ -765,13 +800,15 @@ export class GitRepositoryService {
       }
 
       const duration = Date.now() - startTime;
-      console.log(`[GitRepositoryService] Counted lines in ${processedCount} files (skipped ${skippedCount}) in ${duration}ms`);
+      console.log(
+        `[GitRepositoryService] Counted lines in ${processedCount} files (skipped ${skippedCount}) in ${duration}ms`,
+      );
 
       span.addEvent('git_repository.count_lines.complete', {
-        'repo_path': repoPath,
-        'processed_count': processedCount,
-        'skipped_count': skippedCount,
-        'duration_ms': duration,
+        repo_path: repoPath,
+        processed_count: processedCount,
+        skipped_count: skippedCount,
+        duration_ms: duration,
       });
       span.setStatus({ code: SpanStatusCode.OK });
 
@@ -780,7 +817,8 @@ export class GitRepositoryService {
       console.error('[GitRepositoryService] Error counting lines:', error);
       span.setStatus({
         code: SpanStatusCode.ERROR,
-        message: error instanceof Error ? error.message : 'Line counting failed',
+        message:
+          error instanceof Error ? error.message : 'Line counting failed',
       });
       return {};
     } finally {

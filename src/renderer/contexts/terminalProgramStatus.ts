@@ -42,5 +42,8 @@ export function toPanelProgramStatus(
  */
 export function usePanelProgramStatus(): Record<string, ProgramStatusRecord> {
   const recordsBySession = useTerminalProgramStatus();
-  return useMemo(() => toPanelProgramStatus(recordsBySession), [recordsBySession]);
+  return useMemo(
+    () => toPanelProgramStatus(recordsBySession),
+    [recordsBySession],
+  );
 }

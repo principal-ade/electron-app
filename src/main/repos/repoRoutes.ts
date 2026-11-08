@@ -162,8 +162,8 @@ export function registerRepoRoutes(
   const getBaseDefaultDirectory =
     deps.getBaseDefaultDirectory ??
     (async () => {
-      const preferences = await UserPreferencesHandler.getInstance()
-        .getUserPreferences();
+      const preferences =
+        await UserPreferencesHandler.getInstance().getUserPreferences();
       return preferences.baseDefaultDirectory;
     });
   // Same side effects as the in-app register (window reload, monitoring); a
@@ -357,9 +357,10 @@ export function registerRepoRoutes(
         : undefined;
 
     if (!repoPath) {
-      res
-        .status(400)
-        .json({ success: false, error: 'body.path is required (non-empty string)' });
+      res.status(400).json({
+        success: false,
+        error: 'body.path is required (non-empty string)',
+      });
       return;
     }
     // The registry keys repos by absolute path; a relative path would register
@@ -413,8 +414,7 @@ export function registerRepoRoutes(
     const repoPath = fromQuery || fromBody;
 
     const rawDeleteLocal = req.query.deleteLocal ?? body?.deleteLocal;
-    const deleteLocal =
-      rawDeleteLocal === true || rawDeleteLocal === 'true';
+    const deleteLocal = rawDeleteLocal === true || rawDeleteLocal === 'true';
 
     if (!repoPath) {
       res.status(400).json({
@@ -428,11 +428,14 @@ export function registerRepoRoutes(
       if (!path.isAbsolute(repoPath)) {
         res.status(400).json({
           success: false,
-          error: 'deleteLocal=true requires body.path/query path to be absolute',
+          error:
+            'deleteLocal=true requires body.path/query path to be absolute',
         });
         return;
       }
-      const baseDirectory = await getBaseDefaultDirectory().catch(() => undefined);
+      const baseDirectory = await getBaseDefaultDirectory().catch(
+        () => undefined,
+      );
       if (
         repoPath === '/' ||
         repoPath === path.sep ||

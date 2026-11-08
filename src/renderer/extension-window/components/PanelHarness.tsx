@@ -10,7 +10,6 @@ import * as ReactJSXRuntime from 'react/jsx-runtime';
 import { ExtensionService } from '../../main-process-api/ExtensionService';
 import type { PanelMetadata } from '../../../shared/main-process-api-interfaces/ExtensionAPI';
 
-
 interface PanelHarnessProps {
   /** The package name of the extension */
   packageName: string;
@@ -205,8 +204,7 @@ export const PanelHarness: React.FC<PanelHarnessProps> = ({
 
     try {
       // Fetch the bundle content from main process
-      const bundleContent =
-        await ExtensionService.fetchBundle(packageName);
+      const bundleContent = await ExtensionService.fetchBundle(packageName);
 
       if (!bundleContent) {
         setError(`Failed to fetch bundle for: ${packageName}`);
@@ -230,7 +228,7 @@ export const PanelHarness: React.FC<PanelHarnessProps> = ({
           p !== null &&
           'metadata' in p &&
           typeof (p as UnvalidatedPanelDef).metadata === 'object' &&
-          (p as UnvalidatedPanelDef).metadata?.id === panel.id
+          (p as UnvalidatedPanelDef).metadata?.id === panel.id,
       ) as UnvalidatedPanelDef | undefined;
 
       if (!panelDef || !panelDef.component) {

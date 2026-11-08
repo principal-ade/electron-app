@@ -153,41 +153,41 @@ export default class AppVersionManager {
     const PERIODIC_CHECK_INTERVAL_MS = 60 * 60 * 1000;
     const PERIODIC_CHECK_TIMEOUT_MS = 30 * 1000; // 30 second timeout
 
-    setInterval(
-      () => {
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-          log.info('[AppUpdater] Periodic update check triggered');
+    setInterval(() => {
+      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+        log.info('[AppUpdater] Periodic update check triggered');
 
-          // Start check workflow span for periodic check
-          this.activeCheckSpan = tracer.startSpan('app_updates.check');
-          this.activeCheckSpan.addEvent('app_updates.check.periodic', {
-            'interval_ms': PERIODIC_CHECK_INTERVAL_MS,
-            'timeout_ms': PERIODIC_CHECK_TIMEOUT_MS,
-          });
-          this.activeCheckSpan.addEvent('app_updates.check.started', {
-            'trigger': 'periodic',
-            'current_version': app.getVersion(),
-          });
+        // Start check workflow span for periodic check
+        this.activeCheckSpan = tracer.startSpan('app_updates.check');
+        this.activeCheckSpan.addEvent('app_updates.check.periodic', {
+          interval_ms: PERIODIC_CHECK_INTERVAL_MS,
+          timeout_ms: PERIODIC_CHECK_TIMEOUT_MS,
+        });
+        this.activeCheckSpan.addEvent('app_updates.check.started', {
+          trigger: 'periodic',
+          current_version: app.getVersion(),
+        });
 
-          // Create a timeout promise to catch hangs
-          const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => {
-              reject(new Error(`Update check timed out after ${PERIODIC_CHECK_TIMEOUT_MS}ms`));
-            }, PERIODIC_CHECK_TIMEOUT_MS);
-          });
+        // Create a timeout promise to catch hangs
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(
+              new Error(
+                `Update check timed out after ${PERIODIC_CHECK_TIMEOUT_MS}ms`,
+              ),
+            );
+          }, PERIODIC_CHECK_TIMEOUT_MS);
+        });
 
-          // Race the check against the timeout
-          Promise.race([
-            autoUpdater.checkForUpdates(),
-            timeoutPromise,
-          ]).catch((err) => {
+        // Race the check against the timeout
+        Promise.race([autoUpdater.checkForUpdates(), timeoutPromise]).catch(
+          (err) => {
             log.error('[AppUpdater] Periodic update check failed:', err);
             this.emitErrorEvent('check', err);
-          });
-        }
-      },
-      PERIODIC_CHECK_INTERVAL_MS,
-    );
+          },
+        );
+      }
+    }, PERIODIC_CHECK_INTERVAL_MS);
 
     initSpan.setStatus({ code: SpanStatusCode.OK });
     initSpan.end();
@@ -221,9 +221,10 @@ export default class AppVersionManager {
 
     autoUpdater.on('update-available', (info: UpdateInfo) => {
       // Calculate request duration and emit completion event
-      const duration_ms = this.githubRequestStartTime > 0
-        ? Date.now() - this.githubRequestStartTime
-        : 0;
+      const duration_ms =
+        this.githubRequestStartTime > 0
+          ? Date.now() - this.githubRequestStartTime
+          : 0;
       this.activeCheckSpan?.addEvent('app_updates.github.request_completed', {
         duration_ms,
         result: 'update_available',
@@ -250,9 +251,10 @@ export default class AppVersionManager {
       log.info('Update not available:', JSON.stringify(info, null, 2));
 
       // Calculate request duration and emit completion event
-      const duration_ms = this.githubRequestStartTime > 0
-        ? Date.now() - this.githubRequestStartTime
-        : 0;
+      const duration_ms =
+        this.githubRequestStartTime > 0
+          ? Date.now() - this.githubRequestStartTime
+          : 0;
       this.activeCheckSpan?.addEvent('app_updates.github.request_completed', {
         duration_ms,
         result: 'update_not_available',
@@ -327,7 +329,10 @@ export default class AppVersionManager {
     });
   }
 
-  private emitErrorEvent(phase: 'check' | 'download' | 'install', err: unknown) {
+  private emitErrorEvent(
+    phase: 'check' | 'download' | 'install',
+    err: unknown,
+  ) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     const errorType = this.classifyError(errorMessage);
 
@@ -338,31 +343,61 @@ export default class AppVersionManager {
     };
 
     if (phase === 'check' && this.activeCheckSpan) {
-      this.activeCheckSpan.addEvent('app_updates.error.occurred', errorAttributes);
+      this.activeCheckSpan.addEvent(
+        'app_updates.error.occurred',
+        errorAttributes,
+      );
       this.endCheckSpan(SpanStatusCode.ERROR, errorMessage);
     } else if (phase === 'download' && this.activeDownloadSpan) {
-      this.activeDownloadSpan.addEvent('app_updates.error.occurred', errorAttributes);
+      this.activeDownloadSpan.addEvent(
+        'app_updates.error.occurred',
+        errorAttributes,
+      );
       this.endDownloadSpan(SpanStatusCode.ERROR, errorMessage);
     } else if (phase === 'install' && this.activeInstallSpan) {
-      this.activeInstallSpan.addEvent('app_updates.error.occurred', errorAttributes);
+      this.activeInstallSpan.addEvent(
+        'app_updates.error.occurred',
+        errorAttributes,
+      );
       this.endInstallSpan(SpanStatusCode.ERROR, errorMessage);
     }
   }
 
   private classifyError(errorMessage: string): string {
-    if (errorMessage.includes('ENOENT') || errorMessage.includes('no such file')) {
+    if (
+      errorMessage.includes('ENOENT') ||
+      errorMessage.includes('no such file')
+    ) {
       return 'file_not_found';
-    } else if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('connect')) {
+    } else if (
+      errorMessage.includes('ECONNREFUSED') ||
+      errorMessage.includes('connect')
+    ) {
       return 'connection_refused';
-    } else if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('timed out')) {
+    } else if (
+      errorMessage.includes('ETIMEDOUT') ||
+      errorMessage.includes('timed out')
+    ) {
       return 'timeout';
-    } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+    } else if (
+      errorMessage.includes('403') ||
+      errorMessage.includes('Forbidden')
+    ) {
       return 'forbidden';
-    } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+    } else if (
+      errorMessage.includes('404') ||
+      errorMessage.includes('Not Found')
+    ) {
       return 'not_found';
-    } else if (errorMessage.includes('CERT') || errorMessage.includes('certificate')) {
+    } else if (
+      errorMessage.includes('CERT') ||
+      errorMessage.includes('certificate')
+    ) {
       return 'certificate';
-    } else if (errorMessage.includes('sha512') || errorMessage.includes('checksum')) {
+    } else if (
+      errorMessage.includes('sha512') ||
+      errorMessage.includes('checksum')
+    ) {
       return 'checksum';
     }
     return 'unknown';
@@ -429,11 +464,11 @@ export default class AppVersionManager {
     this.activeCheckSpan = tracer.startSpan('app_updates.check');
     // Add manual/silent trigger event to distinguish from periodic checks
     this.activeCheckSpan.addEvent('app_updates.check.user_triggered', {
-      'trigger': trigger,
+      trigger: trigger,
     });
     this.activeCheckSpan.addEvent('app_updates.check.started', {
-      'trigger': trigger,
-      'current_version': app.getVersion(),
+      trigger: trigger,
+      current_version: app.getVersion(),
     });
 
     // In dev mode, temporarily set allowDowngrade to ensure we can test
@@ -562,7 +597,9 @@ export default class AppVersionManager {
    */
   testGoodbyeScreen(): void {
     log.info('[AppUpdater] Test goodbye screen requested');
-    console.log('[AppUpdater] Test mode: showing goodbye screen without update');
+    console.log(
+      '[AppUpdater] Test mode: showing goodbye screen without update',
+    );
 
     // Show goodbye screen with a fake version
     goodbyeScreen.show('X.X.X-test');
@@ -571,7 +608,13 @@ export default class AppVersionManager {
   /**
    * Get current version info
    */
-  getVersionInfo(): { version: string; isDevMode: boolean; isPackaged: boolean; platform: string; arch: string } {
+  getVersionInfo(): {
+    version: string;
+    isDevMode: boolean;
+    isPackaged: boolean;
+    platform: string;
+    arch: string;
+  } {
     return {
       version: app.getVersion(),
       isDevMode: !app.isPackaged,

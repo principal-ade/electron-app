@@ -231,9 +231,10 @@ export class GitExecutor extends BaseExecutor {
         ['rev-parse', '--abbrev-ref', 'HEAD'],
         { cwd: directory },
       );
-      const branch = branchResult.success && branchResult.stdout
-        ? branchResult.stdout.trim()
-        : 'main';
+      const branch =
+        branchResult.success && branchResult.stdout
+          ? branchResult.stdout.trim()
+          : 'main';
 
       // Get ahead/behind counts
       const aheadResult = await this.execute(
@@ -241,18 +242,20 @@ export class GitExecutor extends BaseExecutor {
         ['rev-list', '--count', '@{u}..HEAD'],
         { cwd: directory },
       );
-      const ahead = aheadResult.success && aheadResult.stdout
-        ? parseInt(aheadResult.stdout.trim(), 10) || 0
-        : 0;
+      const ahead =
+        aheadResult.success && aheadResult.stdout
+          ? parseInt(aheadResult.stdout.trim(), 10) || 0
+          : 0;
 
       const behindResult = await this.execute(
         'git',
         ['rev-list', '--count', 'HEAD..@{u}'],
         { cwd: directory },
       );
-      const behind = behindResult.success && behindResult.stdout
-        ? parseInt(behindResult.stdout.trim(), 10) || 0
-        : 0;
+      const behind =
+        behindResult.success && behindResult.stdout
+          ? parseInt(behindResult.stdout.trim(), 10) || 0
+          : 0;
 
       // Generate stable hash for React memoization
       const contentForHash = JSON.stringify({
@@ -328,7 +331,9 @@ export class GitExecutor extends BaseExecutor {
             const remote: GitRemote = { name, url };
 
             // Parse GitHub URLs
-            const githubMatch = url.match(/github\.com[:/]([^/]+)\/(.+?)(?:\.git)?$/);
+            const githubMatch = url.match(
+              /github\.com[:/]([^/]+)\/(.+?)(?:\.git)?$/,
+            );
             if (githubMatch) {
               remote.owner = githubMatch[1];
               remote.repo = githubMatch[2];

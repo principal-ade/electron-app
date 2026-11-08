@@ -37,8 +37,7 @@ interface MessagePortLike {
 function handleEventPort(repository: string, port: MessagePortLike): void {
   // Clean up existing port if any
   const existingPort = eventPorts.get(repository) as
-    | MessagePortLike
-    | undefined;
+    MessagePortLike | undefined;
   if (existingPort) {
     existingPort.close();
   }

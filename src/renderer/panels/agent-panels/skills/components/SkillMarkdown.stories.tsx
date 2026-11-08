@@ -1,4 +1,7 @@
-import { ThemeProvider, theme as defaultTheme } from '@principal-ade/industry-theme';
+import {
+  ThemeProvider,
+  theme as defaultTheme,
+} from '@principal-ade/industry-theme';
 import type { PartialParsedSkill } from '@principal-ade/markdown-utils';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import React, { useEffect, useRef, useState } from 'react';
@@ -310,7 +313,11 @@ export const Basic: Story = {
       hasScripts: false,
       hasReferences: false,
       hasAssets: false,
-      frontmatterValidation: { isValid: true, hasStructure: true, missingFields: [] },
+      frontmatterValidation: {
+        isValid: true,
+        hasStructure: true,
+        missingFields: [],
+      },
     },
   },
 };
@@ -349,7 +356,11 @@ export const FullFeatured: Story = {
       hasAssets: false,
       scriptFiles: ['query-builder.js', 'validator.js'],
       referenceFiles: ['postgresql-docs.md', 'mysql-reference.md'],
-      frontmatterValidation: { isValid: true, hasStructure: true, missingFields: [] },
+      frontmatterValidation: {
+        isValid: true,
+        hasStructure: true,
+        missingFields: [],
+      },
     },
   },
 };
@@ -613,14 +624,16 @@ const SkillMarkdownWithResizeObserver: React.FC<{
   onParsed?: (skill: PartialParsedSkill) => void;
 }> = ({ content, onParsed }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
+  const [containerWidth, setContainerWidth] = useState<number | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     if (!containerRef.current) {
       return;
     }
 
-    const resizeObserver = new ResizeObserver(entries => {
+    const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width } = entry.contentRect;
         setContainerWidth(width);
@@ -1124,7 +1137,11 @@ export const LongDocumentWithTableOfContents: Story = {
       hasReferences: true,
       hasAssets: false,
       referenceFiles: ['examples.md', 'troubleshooting.md'],
-      frontmatterValidation: { isValid: true, hasStructure: true, missingFields: [] },
+      frontmatterValidation: {
+        isValid: true,
+        hasStructure: true,
+        missingFields: [],
+      },
     },
   },
   parameters: {

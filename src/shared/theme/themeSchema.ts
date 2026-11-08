@@ -10,7 +10,8 @@ export interface ThemeSchemaProperty {
   type: 'string' | 'number' | 'array' | 'object';
   description: string;
   example?: string | number;
-  category: 'colors' | 'fonts' | 'fontWeights' | 'lineHeights' | 'spacing' | 'other';
+  category:
+    'colors' | 'fonts' | 'fontWeights' | 'lineHeights' | 'spacing' | 'other';
 }
 
 /**
@@ -49,7 +50,8 @@ export const THEME_SCHEMA: ThemeSchemaProperty[] = [
   {
     path: 'colors.backgroundSecondary',
     type: 'string',
-    description: 'Secondary background for cards, panels, and nested containers',
+    description:
+      'Secondary background for cards, panels, and nested containers',
     example: '#1a1a1a',
     category: 'colors',
   },
@@ -281,27 +283,31 @@ export const THEME_SCHEMA: ThemeSchemaProperty[] = [
 /**
  * Get schema properties by category
  */
-export function getSchemaByCategory(category: ThemeSchemaProperty['category']): ThemeSchemaProperty[] {
-  return THEME_SCHEMA.filter(prop => prop.category === category);
+export function getSchemaByCategory(
+  category: ThemeSchemaProperty['category'],
+): ThemeSchemaProperty[] {
+  return THEME_SCHEMA.filter((prop) => prop.category === category);
 }
 
 /**
  * Get all unique categories
  */
 export function getSchemaCategories(): ThemeSchemaProperty['category'][] {
-  return [...new Set(THEME_SCHEMA.map(prop => prop.category))];
+  return [...new Set(THEME_SCHEMA.map((prop) => prop.category))];
 }
 
 /**
  * Find a schema property by path
  */
-export function getSchemaProperty(path: string): ThemeSchemaProperty | undefined {
-  return THEME_SCHEMA.find(prop => prop.path === path);
+export function getSchemaProperty(
+  path: string,
+): ThemeSchemaProperty | undefined {
+  return THEME_SCHEMA.find((prop) => prop.path === path);
 }
 
 /**
  * Validate that a property path exists in the schema
  */
 export function isValidPropertyPath(path: string): boolean {
-  return THEME_SCHEMA.some(prop => prop.path === path);
+  return THEME_SCHEMA.some((prop) => prop.path === path);
 }

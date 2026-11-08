@@ -21,12 +21,7 @@
 // =============================================================================
 
 export type ProgramStatusState =
-  | 'idle'
-  | 'working'
-  | 'done'
-  | 'blocked'
-  | 'error'
-  | 'clear';
+  'idle' | 'working' | 'done' | 'blocked' | 'error' | 'clear';
 
 export type ProgramStatusKind = 'permission' | 'question' | 'auth';
 
@@ -182,10 +177,7 @@ export interface ProgramStatusClear {
 
 /** `?` means feature detection; a record/directive means a report; null means ignore. */
 export type ParsedProgramStatus =
-  | ProgramStatusRecord
-  | ProgramStatusClear
-  | 'query'
-  | null;
+  ProgramStatusRecord | ProgramStatusClear | 'query' | null;
 
 const VALUE_RE = /^[A-Za-z0-9_.,+/=-]*$/;
 const KEY_RE = /^[a-z]+$/;
@@ -232,7 +224,7 @@ function decodeText(
   if (bytes === null) return null;
 
   let out = '';
-  for (let i = 0; i < bytes.length; ) {
+  for (let i = 0; i < bytes.length;) {
     const b0 = bytes[i];
     let cp: number;
     let size: number;

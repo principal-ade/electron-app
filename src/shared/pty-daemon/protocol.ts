@@ -189,7 +189,7 @@ export function serializeMessage(msg: ClientMessage | DaemonMessage): string {
  * Returns null if parsing fails.
  */
 export function parseMessage<T extends ClientMessage | DaemonMessage>(
-  data: string
+  data: string,
 ): T | null {
   try {
     return JSON.parse(data) as T;
@@ -204,9 +204,16 @@ export function parseMessage<T extends ClientMessage | DaemonMessage>(
 export function isClientMessage(msg: unknown): msg is ClientMessage {
   if (!msg || typeof msg !== 'object') return false;
   const m = msg as { type?: string };
-  return ['create', 'write', 'resize', 'destroy', 'list', 'attach', 'ping', 'status'].includes(
-    m.type ?? ''
-  );
+  return [
+    'create',
+    'write',
+    'resize',
+    'destroy',
+    'list',
+    'attach',
+    'ping',
+    'status',
+  ].includes(m.type ?? '');
 }
 
 /**
@@ -215,7 +222,14 @@ export function isClientMessage(msg: unknown): msg is ClientMessage {
 export function isDaemonMessage(msg: unknown): msg is DaemonMessage {
   if (!msg || typeof msg !== 'object') return false;
   const m = msg as { type?: string };
-  return ['created', 'data', 'exit', 'error', 'sessions', 'scrollback', 'pong', 'status'].includes(
-    m.type ?? ''
-  );
+  return [
+    'created',
+    'data',
+    'exit',
+    'error',
+    'sessions',
+    'scrollback',
+    'pong',
+    'status',
+  ].includes(m.type ?? '');
 }

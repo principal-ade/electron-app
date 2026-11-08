@@ -38,7 +38,13 @@ export const terminalRouter = {
   // ============================================
 
   createTerminalSession: t.procedure
-    .input<{ cwd?: string; command?: string; context?: string; metadata?: import('../../../shared/tipc/terminalRouterTypes').TerminalSessionMetadata; traceparent?: string }>()
+    .input<{
+      cwd?: string;
+      command?: string;
+      context?: string;
+      metadata?: import('../../../shared/tipc/terminalRouterTypes').TerminalSessionMetadata;
+      traceparent?: string;
+    }>()
     .action(async ({ input, context }) => {
       const window = BrowserWindow.fromWebContents(context.sender);
       if (!window) {
@@ -83,7 +89,8 @@ export const terminalRouter = {
 
         // Broadcast session list change to all windows
         try {
-          const { sessionsCount, windowsCount } = broadcastTerminalSessionsChanged();
+          const { sessionsCount, windowsCount } =
+            broadcastTerminalSessionsChanged();
           span.addEvent('terminal.sessions.broadcast', {
             'sessions.count': sessionsCount,
             'windows.count': windowsCount,
@@ -94,7 +101,9 @@ export const terminalRouter = {
 
         span.setStatus({ code: SpanStatusCode.OK });
       } catch (error) {
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error)),
+        );
         span.setStatus({ code: SpanStatusCode.ERROR });
         throw error;
       } finally {
@@ -115,28 +124,28 @@ export const terminalRouter = {
         action: 'list',
       });
 
-      const sessions = Array.from(sessionManager.getAllSessions().entries()).map(
-        ([id, session]) => {
-          const owner = ownershipManager.getOwner(id);
-          // Convert owner to windowId for backwards compatibility
-          const ownerWindowId =
-            owner && owner.type === 'local' ? parseInt(owner.id, 10) : undefined;
-          return {
-            id,
-            cwd: session.directory,
-            directory: session.directory,
-            context: session.context,
-            agentSessionId: session.agentSessionId,
-            createdAt: session.createdAt,
-            lastActivity: session.lastActivity,
-            cols: session.cols,
-            rows: session.rows,
-            status: 'active' as const,
-            ownedByWindowId: ownerWindowId,
-            metadata: session.metadata,
-          };
-        },
-      );
+      const sessions = Array.from(
+        sessionManager.getAllSessions().entries(),
+      ).map(([id, session]) => {
+        const owner = ownershipManager.getOwner(id);
+        // Convert owner to windowId for backwards compatibility
+        const ownerWindowId =
+          owner && owner.type === 'local' ? parseInt(owner.id, 10) : undefined;
+        return {
+          id,
+          cwd: session.directory,
+          directory: session.directory,
+          context: session.context,
+          agentSessionId: session.agentSessionId,
+          createdAt: session.createdAt,
+          lastActivity: session.lastActivity,
+          cols: session.cols,
+          rows: session.rows,
+          status: 'active' as const,
+          ownedByWindowId: ownerWindowId,
+          metadata: session.metadata,
+        };
+      });
 
       // Event: Manager action - list
       span.addEvent('terminal.session.manager_action', {
@@ -147,7 +156,9 @@ export const terminalRouter = {
       span.setStatus({ code: SpanStatusCode.OK });
       return sessions;
     } catch (error) {
-      span.recordException(error instanceof Error ? error : new Error(String(error)));
+      span.recordException(
+        error instanceof Error ? error : new Error(String(error)),
+      );
       span.setStatus({ code: SpanStatusCode.ERROR });
       throw error;
     } finally {
@@ -283,7 +294,10 @@ export const terminalRouter = {
         span.addEvent('terminal.ownership.changed', {
           'session.id': input.sessionId,
           'new_owner.window_id': window.id,
-          'previous_owner.window_id': previousOwner?.type === 'local' ? parseInt(previousOwner.id, 10) : -1,
+          'previous_owner.window_id':
+            previousOwner?.type === 'local'
+              ? parseInt(previousOwner.id, 10)
+              : -1,
         });
         span.end();
       }
@@ -352,7 +366,7 @@ export const terminalRouter = {
       span.addEvent('terminal.port.requesting', {
         'session.id': input.sessionId,
         'window.id': window.id,
-        'isOwner': isOwner,
+        isOwner: isOwner,
         'scrollback.willSend': isOwner, // Worker sends scrollback when isOwner=true
       });
 
@@ -366,14 +380,16 @@ export const terminalRouter = {
 
       span.addEvent('terminal.port.created', {
         'session.id': input.sessionId,
-        'success': port.success,
+        success: port.success,
         // false means an existing channel was reused. After a reload that
         // should be impossible (the ports are dropped on navigation), so this
         // attribute is what makes a dead reconnect visible in a trace.
         'port.created': port.created,
-        'isOwner': isOwner,
+        isOwner: isOwner,
       });
-      span.setStatus({ code: port.success ? SpanStatusCode.OK : SpanStatusCode.ERROR });
+      span.setStatus({
+        code: port.success ? SpanStatusCode.OK : SpanStatusCode.ERROR,
+      });
       span.end();
 
       console.log(
@@ -382,7 +398,9 @@ export const terminalRouter = {
       return {
         success: port.success,
         created: port.created,
-        reason: port.success ? undefined : (port.reason ?? 'Failed to create port'),
+        reason: port.success
+          ? undefined
+          : (port.reason ?? 'Failed to create port'),
       };
     }),
 
@@ -397,7 +415,9 @@ export const terminalRouter = {
           'session.id': input.sessionId,
         });
 
-        const buffer = await sessionManager.getScrollbackBuffer(input.sessionId);
+        const buffer = await sessionManager.getScrollbackBuffer(
+          input.sessionId,
+        );
 
         span.addEvent('terminal.buffer.retrieved', {
           'session.id': input.sessionId,
@@ -413,7 +433,9 @@ export const terminalRouter = {
         };
       } catch (error) {
         console.error('[terminalRouter] getTerminalBuffer error:', error);
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error)),
+        );
         span.setStatus({ code: SpanStatusCode.ERROR });
         return {
           success: false,
@@ -453,7 +475,7 @@ export const terminalRouter = {
         span.addEvent('terminal.activity.router_handled', {
           'window.id': window.id,
           'session.id': input.sessionId,
-          'is_working': input.isWorking,
+          is_working: input.isWorking,
         });
 
         // Update activity in session manager (validates session exists)
@@ -548,7 +570,10 @@ export const terminalRouter = {
       return { success: true };
     } catch (error) {
       console.error('[Terminal] Failed to start daemon:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }),
 
@@ -558,7 +583,10 @@ export const terminalRouter = {
       return { success: true };
     } catch (error) {
       console.error('[Terminal] Failed to stop daemon:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }),
 };

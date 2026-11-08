@@ -70,7 +70,10 @@ export class FileCityImageService {
       await fs.mkdir(this.cacheDir, { recursive: true });
       this.initialized = true;
     } catch (error) {
-      console.error('[FileCityImageService] Failed to create cache directory:', error);
+      console.error(
+        '[FileCityImageService] Failed to create cache directory:',
+        error,
+      );
     }
   }
 
@@ -128,7 +131,13 @@ export class FileCityImageService {
 
     // Create draw context with scaling
     const padding = Math.min(IMAGE_WIDTH, IMAGE_HEIGHT) * 0.05;
-    const drawContext = createDrawContext(ctx, IMAGE_WIDTH, IMAGE_HEIGHT, cityData, padding);
+    const drawContext = createDrawContext(
+      ctx,
+      IMAGE_WIDTH,
+      IMAGE_HEIGHT,
+      cityData,
+      padding,
+    );
 
     // Draw districts first (background)
     drawDistricts(
@@ -146,7 +155,7 @@ export class FileCityImageService {
       undefined, // theme
       undefined, // customColorFn
       DEFAULT_DIRECTORY_COLOR, // defaultDirectoryColor
-      false // showDirectoryLabels
+      false, // showDirectoryLabels
     );
 
     // Draw buildings on top
@@ -163,7 +172,7 @@ export class FileCityImageService {
       undefined, // theme
       undefined, // customColorFn
       false, // showFileNames
-      true // fullSize
+      true, // fullSize
     );
 
     return canvas.toBuffer('image/png');
@@ -197,7 +206,13 @@ export class FileCityImageService {
 
     // Create draw context with scaling
     const padding = Math.min(IMAGE_WIDTH, IMAGE_HEIGHT) * 0.05;
-    const drawContext = createDrawContext(ctx, IMAGE_WIDTH, IMAGE_HEIGHT, cityData, padding);
+    const drawContext = createDrawContext(
+      ctx,
+      IMAGE_WIDTH,
+      IMAGE_HEIGHT,
+      cityData,
+      padding,
+    );
 
     // Draw districts first (background)
     drawDistricts(
@@ -215,7 +230,7 @@ export class FileCityImageService {
       undefined, // theme
       undefined, // customColorFn
       DEFAULT_DIRECTORY_COLOR, // defaultDirectoryColor
-      false // showDirectoryLabels
+      false, // showDirectoryLabels
     );
 
     // Draw buildings on top with changed files highlighted
@@ -233,7 +248,7 @@ export class FileCityImageService {
       undefined, // customColorFn
       false, // showFileNames
       true, // fullSize
-      changedFiles // changedFiles - passed to show highlight borders
+      changedFiles, // changedFiles - passed to show highlight borders
     );
 
     return canvas.toBuffer('image/png');
@@ -248,14 +263,14 @@ export class FileCityImageService {
 
     const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('file_city.image.generation', {
-      attributes: { 'repo_path': repoPath },
+      attributes: { repo_path: repoPath },
     });
     const startTime = Date.now();
 
     try {
       // Emit request event
       span.addEvent('file_city.image.requested', {
-        'repo_path': repoPath,
+        repo_path: repoPath,
       });
 
       // Get file tree from repository-monitoring cache
@@ -264,19 +279,22 @@ export class FileCityImageService {
 
       // Emit filetree fetched event
       span.addEvent('file_city.filetree.fetched', {
-        'repo_path': repoPath,
-        'has_tree': Boolean(fileTree && fileTree.allFiles.length > 0),
+        repo_path: repoPath,
+        has_tree: Boolean(fileTree && fileTree.allFiles.length > 0),
         ...(fileTree && {
-          'file_count': fileTree.allFiles.length,
-          'tree_sha': fileTree.sha || 'unknown',
+          file_count: fileTree.allFiles.length,
+          tree_sha: fileTree.sha || 'unknown',
         }),
       });
 
       if (!fileTree || fileTree.allFiles.length === 0) {
-        console.log('[FileCityImageService] No cached file tree for:', repoPath);
+        console.log(
+          '[FileCityImageService] No cached file tree for:',
+          repoPath,
+        );
         span.addEvent('file_city.image.skipped', {
-          'repo_path': repoPath,
-          'reason': 'no_file_tree',
+          repo_path: repoPath,
+          reason: 'no_file_tree',
         });
         span.setStatus({ code: SpanStatusCode.OK });
         return null;
@@ -288,16 +306,16 @@ export class FileCityImageService {
 
       // Emit cache check event
       span.addEvent('file_city.cache.checked', {
-        'repo_path': repoPath,
-        'cache_key': cacheKey,
-        'cache_hit': Boolean(cachedPath),
+        repo_path: repoPath,
+        cache_key: cacheKey,
+        cache_hit: Boolean(cachedPath),
       });
 
       if (cachedPath) {
         console.log('[FileCityImageService] Cache hit for:', repoPath);
         span.addEvent('file_city.image.cache_hit', {
-          'repo_path': repoPath,
-          'cache_path': cachedPath,
+          repo_path: repoPath,
+          cache_path: cachedPath,
         });
         span.setStatus({ code: SpanStatusCode.OK });
         // Return as data URL since renderer cannot load file:// URLs with webSecurity enabled
@@ -308,10 +326,10 @@ export class FileCityImageService {
       // Generate new image using the FileTree
       console.log('[FileCityImageService] Generating image for:', repoPath);
       span.addEvent('file_city.image.generation_started', {
-        'repo_path': repoPath,
-        'file_count': fileTree.allFiles.length,
-        'image_width': IMAGE_WIDTH,
-        'image_height': IMAGE_HEIGHT,
+        repo_path: repoPath,
+        file_count: fileTree.allFiles.length,
+        image_width: IMAGE_WIDTH,
+        image_height: IMAGE_HEIGHT,
       });
 
       const imageBuffer = await this.generateImage(fileTree);
@@ -326,32 +344,44 @@ export class FileCityImageService {
 
       // Emit generation complete event
       span.addEvent('file_city.image.generation_complete', {
-        'repo_path': repoPath,
-        'cache_path': cachePath,
-        'duration_ms': Date.now() - startTime,
-        'file_size_bytes': imageBuffer.length,
+        repo_path: repoPath,
+        cache_path: cachePath,
+        duration_ms: Date.now() - startTime,
+        file_size_bytes: imageBuffer.length,
       });
 
       // Broadcast to all windows that a new image was generated
       BrowserWindow.getAllWindows().forEach((window) => {
-        window.webContents.send(FileCityImageAPIEvent.IMAGE_GENERATED, repoPath, imageUrl);
+        window.webContents.send(
+          FileCityImageAPIEvent.IMAGE_GENERATED,
+          repoPath,
+          imageUrl,
+        );
       });
 
       span.setStatus({ code: SpanStatusCode.OK });
       return imageUrl;
     } catch (error) {
-      console.error('[FileCityImageService] Error generating image for', repoPath, error);
+      console.error(
+        '[FileCityImageService] Error generating image for',
+        repoPath,
+        error,
+      );
       span.addEvent('file_city.image.error', {
-        'repo_path': repoPath,
-        'error_type': error instanceof Error ? error.constructor.name : 'UnknownError',
-        'error_message': error instanceof Error ? error.message : String(error),
-        'phase': 'generation',
+        repo_path: repoPath,
+        error_type:
+          error instanceof Error ? error.constructor.name : 'UnknownError',
+        error_message: error instanceof Error ? error.message : String(error),
+        phase: 'generation',
       });
       span.setStatus({
         code: SpanStatusCode.ERROR,
-        message: error instanceof Error ? error.message : 'Image generation failed',
+        message:
+          error instanceof Error ? error.message : 'Image generation failed',
       });
-      span.recordException(error instanceof Error ? error : new Error(String(error)));
+      span.recordException(
+        error instanceof Error ? error : new Error(String(error)),
+      );
       return null;
     } finally {
       span.end();
@@ -384,7 +414,10 @@ export class FileCityImageService {
    * Build a FileTree structure from an array of file paths
    * Used for generating historical snapshots from git ls-tree output
    */
-  private buildFileTreeFromPaths(filePaths: string[], commitHash: string): FileTree {
+  private buildFileTreeFromPaths(
+    filePaths: string[],
+    commitHash: string,
+  ): FileTree {
     // FileInfo interface from @principal-ai/repository-abstraction
     interface FileInfo {
       path: string;
@@ -457,7 +490,9 @@ export class FileCityImageService {
       }
 
       // Create file info
-      const extension = fileName.includes('.') ? fileName.split('.').pop() || '' : '';
+      const extension = fileName.includes('.')
+        ? fileName.split('.').pop() || ''
+        : '';
       const fileInfo: FileInfo = {
         name: fileName,
         path: filePath,
@@ -477,7 +512,9 @@ export class FileCityImageService {
     }
 
     // Update directory stats (propagate counts up)
-    const updateDirStats = (dir: DirectoryInfo): { files: number; size: number } => {
+    const updateDirStats = (
+      dir: DirectoryInfo,
+    ): { files: number; size: number } => {
       let totalFiles = dir.fileCount;
       let totalSize = dir.totalSize;
 
@@ -496,9 +533,10 @@ export class FileCityImageService {
     updateDirStats(root);
 
     // Calculate max depth
-    const maxDepth = allFiles.length > 0
-      ? Math.max(...allFiles.map(f => f.path.split('/').length))
-      : 0;
+    const maxDepth =
+      allFiles.length > 0
+        ? Math.max(...allFiles.map((f) => f.path.split('/').length))
+        : 0;
 
     return {
       sha: commitHash,
@@ -528,20 +566,20 @@ export class FileCityImageService {
   async getImageForCommit(
     repoPath: string,
     commitHash: string,
-    filePaths: string[]
+    filePaths: string[],
   ): Promise<string | null> {
     await this.ensureInitialized();
 
     const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('file_city.image.historical_generation', {
-      attributes: { 'repo_path': repoPath, 'commit_hash': commitHash },
+      attributes: { repo_path: repoPath, commit_hash: commitHash },
     });
 
     try {
       if (filePaths.length === 0) {
         span.addEvent('file_city.image.skipped', {
-          'repo_path': repoPath,
-          'reason': 'no_files',
+          repo_path: repoPath,
+          reason: 'no_files',
         });
         span.setStatus({ code: SpanStatusCode.OK });
         return null;
@@ -552,7 +590,10 @@ export class FileCityImageService {
       const cachedPath = await this.getCachedImagePath(cacheKey);
 
       if (cachedPath) {
-        console.log('[FileCityImageService] Cache hit for historical:', commitHash);
+        console.log(
+          '[FileCityImageService] Cache hit for historical:',
+          commitHash,
+        );
         const cachedBuffer = await fs.readFile(cachedPath);
         span.setStatus({ code: SpanStatusCode.OK });
         return `data:image/png;base64,${cachedBuffer.toString('base64')}`;
@@ -561,11 +602,14 @@ export class FileCityImageService {
       // Build file tree from paths
       const fileTree = this.buildFileTreeFromPaths(filePaths, commitHash);
 
-      console.log('[FileCityImageService] Generating historical image for:', commitHash);
+      console.log(
+        '[FileCityImageService] Generating historical image for:',
+        commitHash,
+      );
       span.addEvent('file_city.image.generation_started', {
-        'repo_path': repoPath,
-        'commit_hash': commitHash,
-        'file_count': filePaths.length,
+        repo_path: repoPath,
+        commit_hash: commitHash,
+        file_count: filePaths.length,
       });
 
       const imageBuffer = await this.generateImage(fileTree);
@@ -575,17 +619,23 @@ export class FileCityImageService {
       await fs.writeFile(cachePath, imageBuffer);
 
       span.addEvent('file_city.image.generation_complete', {
-        'repo_path': repoPath,
-        'commit_hash': commitHash,
+        repo_path: repoPath,
+        commit_hash: commitHash,
       });
       span.setStatus({ code: SpanStatusCode.OK });
 
       return `data:image/png;base64,${imageBuffer.toString('base64')}`;
     } catch (error) {
-      console.error('[FileCityImageService] Error generating historical image:', error);
+      console.error(
+        '[FileCityImageService] Error generating historical image:',
+        error,
+      );
       span.setStatus({
         code: SpanStatusCode.ERROR,
-        message: error instanceof Error ? error.message : 'Historical image generation failed',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Historical image generation failed',
       });
       return null;
     } finally {
@@ -602,20 +652,31 @@ export class FileCityImageService {
     repoPath: string,
     commitHash: string,
     filePaths: string[],
-    changedFiles: Record<string, 'added' | 'modified' | 'deleted' | 'renamed' | { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>
+    changedFiles: Record<
+      string,
+      | 'added'
+      | 'modified'
+      | 'deleted'
+      | 'renamed'
+      | {
+          status: 'added' | 'modified' | 'deleted' | 'renamed';
+          additions: number;
+          deletions: number;
+        }
+    >,
   ): Promise<string | null> {
     await this.ensureInitialized();
 
     const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('file_city.image.historical_with_changes', {
-      attributes: { 'repo_path': repoPath, 'commit_hash': commitHash },
+      attributes: { repo_path: repoPath, commit_hash: commitHash },
     });
 
     try {
       if (filePaths.length === 0) {
         span.addEvent('file_city.image.skipped', {
-          'repo_path': repoPath,
-          'reason': 'no_files',
+          repo_path: repoPath,
+          reason: 'no_files',
         });
         span.setStatus({ code: SpanStatusCode.OK });
         return null;
@@ -625,19 +686,29 @@ export class FileCityImageService {
       // Sort keys to ensure consistent cache keys regardless of insertion order
       const sortedChangedFiles = Object.keys(changedFiles)
         .sort()
-        .reduce((acc, key) => {
-          acc[key] = changedFiles[key];
-          return acc;
-        }, {} as typeof changedFiles);
-      const changesHash = crypto.createHash('sha256')
+        .reduce(
+          (acc, key) => {
+            acc[key] = changedFiles[key];
+            return acc;
+          },
+          {} as typeof changedFiles,
+        );
+      const changesHash = crypto
+        .createHash('sha256')
         .update(JSON.stringify(sortedChangedFiles))
         .digest('hex')
         .slice(0, 8);
-      const cacheKey = this.getCacheKey(repoPath, `${commitHash}-changes-${changesHash}`);
+      const cacheKey = this.getCacheKey(
+        repoPath,
+        `${commitHash}-changes-${changesHash}`,
+      );
       const cachedPath = await this.getCachedImagePath(cacheKey);
 
       if (cachedPath) {
-        console.log('[FileCityImageService] Cache hit for historical with changes:', commitHash);
+        console.log(
+          '[FileCityImageService] Cache hit for historical with changes:',
+          commitHash,
+        );
         const cachedBuffer = await fs.readFile(cachedPath);
         span.setStatus({ code: SpanStatusCode.OK });
         return `data:image/png;base64,${cachedBuffer.toString('base64')}`;
@@ -648,39 +719,54 @@ export class FileCityImageService {
 
       // Convert plain object to Map, extracting just status for drawing functions
       // (line counts are stored but not yet used in visualization)
-      const changedFilesMap = new Map<string, 'added' | 'modified' | 'deleted' | 'renamed'>();
+      const changedFilesMap = new Map<
+        string,
+        'added' | 'modified' | 'deleted' | 'renamed'
+      >();
       for (const [path, info] of Object.entries(changedFiles)) {
         // Handle both simple status strings and full info objects
         const status = typeof info === 'string' ? info : info.status;
         changedFilesMap.set(path, status);
       }
 
-      console.log('[FileCityImageService] Generating historical image with changes for:', commitHash);
+      console.log(
+        '[FileCityImageService] Generating historical image with changes for:',
+        commitHash,
+      );
       span.addEvent('file_city.image.generation_started', {
-        'repo_path': repoPath,
-        'commit_hash': commitHash,
-        'file_count': filePaths.length,
-        'changed_files_count': changedFilesMap.size,
+        repo_path: repoPath,
+        commit_hash: commitHash,
+        file_count: filePaths.length,
+        changed_files_count: changedFilesMap.size,
       });
 
-      const imageBuffer = await this.generateImageWithChanges(fileTree, changedFilesMap);
+      const imageBuffer = await this.generateImageWithChanges(
+        fileTree,
+        changedFilesMap,
+      );
 
       // Save to cache
       const cachePath = this.getCachePath(cacheKey);
       await fs.writeFile(cachePath, imageBuffer);
 
       span.addEvent('file_city.image.generation_complete', {
-        'repo_path': repoPath,
-        'commit_hash': commitHash,
+        repo_path: repoPath,
+        commit_hash: commitHash,
       });
       span.setStatus({ code: SpanStatusCode.OK });
 
       return `data:image/png;base64,${imageBuffer.toString('base64')}`;
     } catch (error) {
-      console.error('[FileCityImageService] Error generating historical image with changes:', error);
+      console.error(
+        '[FileCityImageService] Error generating historical image with changes:',
+        error,
+      );
       span.setStatus({
         code: SpanStatusCode.ERROR,
-        message: error instanceof Error ? error.message : 'Historical image with changes generation failed',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Historical image with changes generation failed',
       });
       return null;
     } finally {
@@ -697,7 +783,10 @@ export class FileCityImageService {
     try {
       // We'd need to track which cache keys belong to which repo
       // For now, this is a no-op since cache keys include SHA
-      console.log('[FileCityImageService] Cache invalidation requested for:', repoPath);
+      console.log(
+        '[FileCityImageService] Cache invalidation requested for:',
+        repoPath,
+      );
     } catch (error) {
       console.error('[FileCityImageService] Error clearing cache:', error);
     }
@@ -720,9 +809,14 @@ export function registerFileCityImageHandlers(): void {
 
   ipcMain.handle(
     'file-city:get-image-for-commit',
-    async (_event, repoPath: string, commitHash: string, filePaths: string[]) => {
+    async (
+      _event,
+      repoPath: string,
+      commitHash: string,
+      filePaths: string[],
+    ) => {
       return service.getImageForCommit(repoPath, commitHash, filePaths);
-    }
+    },
   );
 
   ipcMain.handle(
@@ -732,17 +826,33 @@ export function registerFileCityImageHandlers(): void {
       repoPath: string,
       commitHash: string,
       filePaths: string[],
-      changedFiles: Record<string, 'added' | 'modified' | 'deleted' | 'renamed' | { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>
+      changedFiles: Record<
+        string,
+        | 'added'
+        | 'modified'
+        | 'deleted'
+        | 'renamed'
+        | {
+            status: 'added' | 'modified' | 'deleted' | 'renamed';
+            additions: number;
+            deletions: number;
+          }
+      >,
     ) => {
-      return service.getImageForCommitWithChanges(repoPath, commitHash, filePaths, changedFiles);
-    }
+      return service.getImageForCommitWithChanges(
+        repoPath,
+        commitHash,
+        filePaths,
+        changedFiles,
+      );
+    },
   );
 
   ipcMain.handle(
     FileCityImageAPIEvent.COUNT_LINES,
     async (_event, repoPath: string) => {
       return gitService.countLinesInRepository(repoPath);
-    }
+    },
   );
 
   console.log('[FileCityImageService] IPC handlers registered');

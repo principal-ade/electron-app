@@ -22,10 +22,15 @@ class MockEventEmitter implements PanelEventEmitter {
 
   emit<T>(event: PanelEvent<T>): void {
     console.info('[Mock Event]:', event);
-    (this.listeners.get(event.type) || []).forEach((l) => l(event as PanelEvent<unknown>));
+    (this.listeners.get(event.type) || []).forEach((l) =>
+      l(event as PanelEvent<unknown>),
+    );
   }
 
-  on<T>(eventType: string, handler: (event: PanelEvent<T>) => void): () => void {
+  on<T>(
+    eventType: string,
+    handler: (event: PanelEvent<T>) => void,
+  ): () => void {
     const listeners = this.listeners.get(eventType) || [];
     const wrapped = handler as EventHandler;
     listeners.push(wrapped);
@@ -44,22 +49,71 @@ class MockEventEmitter implements PanelEventEmitter {
   }
 }
 
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const filesByRepo: Record<string, InProgressChangedFile[]> = {
   'my-awesome-project': [
-    { path: 'src/components/Button.tsx', status: 'modified', additions: 24, deletions: 8, staged: true },
-    { path: 'src/components/Button.test.tsx', status: 'modified', additions: 12, deletions: 3, staged: true },
-    { path: 'src/hooks/useAuth.ts', status: 'modified', additions: 5, deletions: 5, staged: false },
-    { path: 'src/utils/format.ts', status: 'added', additions: 42, deletions: 0, staged: false },
-    { path: '.env.local', status: 'untracked', additions: 4, deletions: 0, staged: false },
+    {
+      path: 'src/components/Button.tsx',
+      status: 'modified',
+      additions: 24,
+      deletions: 8,
+      staged: true,
+    },
+    {
+      path: 'src/components/Button.test.tsx',
+      status: 'modified',
+      additions: 12,
+      deletions: 3,
+      staged: true,
+    },
+    {
+      path: 'src/hooks/useAuth.ts',
+      status: 'modified',
+      additions: 5,
+      deletions: 5,
+      staged: false,
+    },
+    {
+      path: 'src/utils/format.ts',
+      status: 'added',
+      additions: 42,
+      deletions: 0,
+      staged: false,
+    },
+    {
+      path: '.env.local',
+      status: 'untracked',
+      additions: 4,
+      deletions: 0,
+      staged: false,
+    },
   ],
   scheduler: [
-    { path: 'src/scheduler/perf.ts', status: 'modified', additions: 18, deletions: 4, staged: false },
+    {
+      path: 'src/scheduler/perf.ts',
+      status: 'modified',
+      additions: 18,
+      deletions: 4,
+      staged: false,
+    },
   ],
   'docs-site': [
-    { path: 'docs/getting-started.md', status: 'modified', additions: 6, deletions: 2, staged: true },
-    { path: 'docs/api/overview.md', status: 'modified', additions: 2, deletions: 2, staged: true },
+    {
+      path: 'docs/getting-started.md',
+      status: 'modified',
+      additions: 6,
+      deletions: 2,
+      staged: true,
+    },
+    {
+      path: 'docs/api/overview.md',
+      status: 'modified',
+      additions: 2,
+      deletions: 2,
+      staged: true,
+    },
   ],
 };
 
@@ -76,10 +130,14 @@ const mockActions: InProgressRepoCardActions = {
   explainWorkingChanges: async (input) => {
     await delay(900);
     if (input.repoName === 'scheduler') {
-      return { text: 'Batches low-priority updates in the scheduler commit phase; not yet staged.' };
+      return {
+        text: 'Batches low-priority updates in the scheduler commit phase; not yet staged.',
+      };
     }
     if (input.repoName === 'docs-site') {
-      return { text: 'Fixes typos in the getting-started and API overview docs, staged and ready to commit.' };
+      return {
+        text: 'Fixes typos in the getting-started and API overview docs, staged and ready to commit.',
+      };
     }
     return {
       text: 'Tightens Button styling, adds a shared text formatter, and drops an environment file locally. Mixed staged/unstaged — review before committing.',
@@ -113,14 +171,16 @@ const createMockEntry = (name: string): AlexandriaEntry => ({
   },
 });
 
-const Wrapper: React.FC<{ children: React.ReactNode; width?: number; height?: number }> = ({
-  children,
-  width = 900,
-  height = 900,
-}) => (
+const Wrapper: React.FC<{
+  children: React.ReactNode;
+  width?: number;
+  height?: number;
+}> = ({ children, width = 900, height = 900 }) => (
   <ThemeProvider>
     <div style={{ padding: 0, backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
-      <div style={{ maxWidth: width, height, margin: '0 auto' }}>{children}</div>
+      <div style={{ maxWidth: width, height, margin: '0 auto' }}>
+        {children}
+      </div>
     </div>
   </ThemeProvider>
 );

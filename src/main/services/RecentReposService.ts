@@ -74,7 +74,9 @@ export class RecentReposService {
 
     this.store.set('recentRepos', trimmedRepos);
 
-    console.log(`[RecentReposService] Added/updated repo: ${repo.owner}/${repo.repo}`);
+    console.log(
+      `[RecentReposService] Added/updated repo: ${repo.owner}/${repo.repo}`,
+    );
   }
 
   /**

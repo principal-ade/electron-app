@@ -10,7 +10,10 @@ interface StorybookWindow extends Window {
   __STORYBOOK_GIT_USER_EMAIL__?: string;
   mainProcess?: {
     git?: {
-      execCommand: (directory: string, args: string[]) => Promise<{ stdout: string; stderr: string }>;
+      execCommand: (
+        directory: string,
+        args: string[],
+      ) => Promise<{ stdout: string; stderr: string }>;
     };
   };
 }
@@ -21,7 +24,7 @@ declare const window: StorybookWindow;
 const mockGitService = {
   execCommand: async (_directory: string, args: string[]) => {
     // Simulate delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     if (args[0] === '--version') {
       return {
@@ -30,7 +33,11 @@ const mockGitService = {
       };
     }
 
-    if (args[0] === 'config' && args[1] === '--global' && args[2] === '--list') {
+    if (
+      args[0] === 'config' &&
+      args[1] === '--global' &&
+      args[2] === '--list'
+    ) {
       // Return different configs based on story
       const scenario = window.__STORYBOOK_GIT_SCENARIO__ || 'complete';
 
@@ -55,7 +62,8 @@ core.editor=vim`,
 
       // Complete configuration (use saved values if available)
       const savedName = window.__STORYBOOK_GIT_USER_NAME__ || 'Jane Developer';
-      const savedEmail = window.__STORYBOOK_GIT_USER_EMAIL__ || 'jane.developer@example.com';
+      const savedEmail =
+        window.__STORYBOOK_GIT_USER_EMAIL__ || 'jane.developer@example.com';
 
       return {
         stdout: `user.name=${savedName}
@@ -69,13 +77,21 @@ core.excludesfile=/Users/jane/.gitignore_global`,
     }
 
     // Handle config set commands (for saving edits)
-    if (args[0] === 'config' && args[1] === '--global' && args[2] === 'user.name') {
+    if (
+      args[0] === 'config' &&
+      args[1] === '--global' &&
+      args[2] === 'user.name'
+    ) {
       window.__STORYBOOK_GIT_USER_NAME__ = args[3];
       console.info('[Storybook Mock] Saved user.name:', args[3]);
       return { stdout: '', stderr: '' };
     }
 
-    if (args[0] === 'config' && args[1] === '--global' && args[2] === 'user.email') {
+    if (
+      args[0] === 'config' &&
+      args[1] === '--global' &&
+      args[2] === 'user.email'
+    ) {
       window.__STORYBOOK_GIT_USER_EMAIL__ = args[3];
       console.info('[Storybook Mock] Saved user.email:', args[3]);
       return { stdout: '', stderr: '' };
@@ -101,7 +117,8 @@ const meta = {
     layout: 'centered',
     docs: {
       description: {
-        component: 'A modal that displays global git configuration including user identity, default branch, editor, and credential settings.',
+        component:
+          'A modal that displays global git configuration including user identity, default branch, editor, and credential settings.',
       },
     },
   },
@@ -163,7 +180,8 @@ export const Incomplete: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Missing user.email - shows alert and configuration instructions.',
+        story:
+          'Missing user.email - shows alert and configuration instructions.',
       },
     },
   },
@@ -178,7 +196,8 @@ export const Minimal: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'No git configuration found - shows all fields as "Not configured".',
+        story:
+          'No git configuration found - shows all fields as "Not configured".',
       },
     },
   },
@@ -208,7 +227,8 @@ export const Editable: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Click "Edit User Identity" button to modify name and email. Changes are saved with git config --global.',
+        story:
+          'Click "Edit User Identity" button to modify name and email. Changes are saved with git config --global.',
       },
     },
   },
@@ -241,7 +261,8 @@ export const InitiallyOpen: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Modal that stays open for easier inspection. Automatically reopens when closed.',
+        story:
+          'Modal that stays open for easier inspection. Automatically reopens when closed.',
       },
     },
   },

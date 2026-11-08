@@ -22,11 +22,7 @@ import { UserPreferencesService } from '../../../main-process-api/UserPreference
 const SHOW_AI_ASSISTANTS_SETTINGS = false;
 
 export type SettingsCategory =
-  | 'general'
-  | 'security'
-  | 'ai-assistants'
-  | 'telemetry'
-  | 'updates';
+  'general' | 'security' | 'ai-assistants' | 'telemetry' | 'updates';
 
 export interface SettingsProps {
   initialCategory?: SettingsCategory;
@@ -34,8 +30,9 @@ export interface SettingsProps {
 
 export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
   const { theme } = useTheme();
-  const [activeCategory, setActiveCategory] =
-    useState<SettingsCategory>(initialCategory ?? 'general');
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>(
+    initialCategory ?? 'general',
+  );
   const [updateAvailable] = useState(false); // This will be connected to UpdatesSettings state later if needed
   const [showExtensionsButton, setShowExtensionsButton] = useState(false);
 

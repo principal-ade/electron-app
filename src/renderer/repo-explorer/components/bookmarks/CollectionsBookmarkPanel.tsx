@@ -2,7 +2,16 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Layers, Globe, Lock, Plus, Check, Loader2, X, FolderPlus } from 'lucide-react';
+import {
+  Layers,
+  Globe,
+  Lock,
+  Plus,
+  Check,
+  Loader2,
+  X,
+  FolderPlus,
+} from 'lucide-react';
 import type { BookmarkRepo } from './types';
 import type { Collection } from '../../lib/starred-collections/types';
 
@@ -19,12 +28,14 @@ export function CollectionsBookmarkPanel({
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Create collection state
   const [isCreating, setIsCreating] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [newCollectionDesc, setNewCollectionDesc] = useState('');
-  const [newCollectionVis, setNewCollectionVis] = useState<'public' | 'private'>('private');
+  const [newCollectionVis, setNewCollectionVis] = useState<
+    'public' | 'private'
+  >('private');
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -38,7 +49,9 @@ export function CollectionsBookmarkPanel({
       // TODO: starred-collections is hosted-only; no native source yet.
       setCollections([]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load collections');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load collections',
+      );
     } finally {
       setLoading(false);
     }
@@ -52,7 +65,7 @@ export function CollectionsBookmarkPanel({
     const isSaved = collection.repos.some(
       (r) =>
         r.owner.toLowerCase() === currentRepo.owner.login.toLowerCase() &&
-        r.repo.toLowerCase() === currentRepo.name.toLowerCase()
+        r.repo.toLowerCase() === currentRepo.name.toLowerCase(),
     );
 
     setTogglingIds((prev) => ({ ...prev, [collection.id]: true }));
@@ -87,7 +100,9 @@ export function CollectionsBookmarkPanel({
       setIsCreating(false);
       await fetchCollections();
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Failed to create collection');
+      setCreateError(
+        err instanceof Error ? err.message : 'Failed to create collection',
+      );
     } finally {
       setCreateLoading(false);
     }
@@ -185,13 +200,19 @@ export function CollectionsBookmarkPanel({
             <div className="min-w-0 flex-1">
               <div
                 className="truncate font-semibold"
-                style={{ fontSize: theme.fontSizes[2], color: theme.colors.text }}
+                style={{
+                  fontSize: theme.fontSizes[2],
+                  color: theme.colors.text,
+                }}
               >
                 {currentRepo.name}
               </div>
               <div
                 className="truncate"
-                style={{ fontSize: theme.fontSizes[1], color: theme.colors.textMuted }}
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.textMuted,
+                }}
               >
                 {currentRepo.owner.login}
               </div>
@@ -201,18 +222,30 @@ export function CollectionsBookmarkPanel({
 
         {/* Collections List */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-2 text-sm" style={{ color: theme.colors.textMuted }}>
+          <div
+            className="flex flex-col items-center justify-center py-12 gap-2 text-sm"
+            style={{ color: theme.colors.textMuted }}
+          >
             <Loader2 className="w-5 h-5 animate-spin" />
             Loading collections...
           </div>
         ) : error ? (
-          <div className="py-4 text-center text-sm" style={{ color: theme.colors.error }}>
+          <div
+            className="py-4 text-center text-sm"
+            style={{ color: theme.colors.error }}
+          >
             {error}
           </div>
         ) : (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary, fontWeight: 500 }}>
+              <span
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.textSecondary,
+                  fontWeight: 500,
+                }}
+              >
                 Select Collections
               </span>
               {!isCreating && (
@@ -239,7 +272,10 @@ export function CollectionsBookmarkPanel({
                 }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.colors.textMuted }}>
+                  <span
+                    className="text-xs font-bold uppercase tracking-wider"
+                    style={{ color: theme.colors.textMuted }}
+                  >
                     New Starred Collection
                   </span>
                   <button
@@ -256,7 +292,11 @@ export function CollectionsBookmarkPanel({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="col-name" className="text-xs font-medium" style={{ color: theme.colors.textSecondary }}>
+                  <label
+                    htmlFor="col-name"
+                    className="text-xs font-medium"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
                     Name *
                   </label>
                   <input
@@ -277,7 +317,11 @@ export function CollectionsBookmarkPanel({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="col-desc" className="text-xs font-medium" style={{ color: theme.colors.textSecondary }}>
+                  <label
+                    htmlFor="col-desc"
+                    className="text-xs font-medium"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
                     Description
                   </label>
                   <textarea
@@ -297,7 +341,12 @@ export function CollectionsBookmarkPanel({
                 </div>
 
                 <div className="flex items-center gap-4 py-0.5">
-                  <span className="text-xs font-medium" style={{ color: theme.colors.textSecondary }}>Visibility:</span>
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
+                    Visibility:
+                  </span>
                   <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
                     <input
                       type="radio"
@@ -306,7 +355,8 @@ export function CollectionsBookmarkPanel({
                       onChange={() => setNewCollectionVis('private')}
                       className="cursor-pointer"
                     />
-                    <Lock size={12} style={{ color: theme.colors.textMuted }} /> Private
+                    <Lock size={12} style={{ color: theme.colors.textMuted }} />{' '}
+                    Private
                   </label>
                   <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
                     <input
@@ -316,12 +366,19 @@ export function CollectionsBookmarkPanel({
                       onChange={() => setNewCollectionVis('public')}
                       className="cursor-pointer"
                     />
-                    <Globe size={12} style={{ color: theme.colors.textMuted }} /> Public
+                    <Globe
+                      size={12}
+                      style={{ color: theme.colors.textMuted }}
+                    />{' '}
+                    Public
                   </label>
                 </div>
 
                 {createError && (
-                  <div className="text-xs" style={{ color: theme.colors.error }}>
+                  <div
+                    className="text-xs"
+                    style={{ color: theme.colors.error }}
+                  >
                     {createError}
                   </div>
                 )}
@@ -346,7 +403,10 @@ export function CollectionsBookmarkPanel({
             )}
 
             {collections.length === 0 ? (
-              <div className="py-8 text-center text-sm" style={{ color: theme.colors.textMuted }}>
+              <div
+                className="py-8 text-center text-sm"
+                style={{ color: theme.colors.textMuted }}
+              >
                 No starred collections yet. Create one above!
               </div>
             ) : (
@@ -354,8 +414,9 @@ export function CollectionsBookmarkPanel({
                 {collections.map((col) => {
                   const isSaved = col.repos.some(
                     (r) =>
-                      r.owner.toLowerCase() === currentRepo.owner.login.toLowerCase() &&
-                      r.repo.toLowerCase() === currentRepo.name.toLowerCase()
+                      r.owner.toLowerCase() ===
+                        currentRepo.owner.login.toLowerCase() &&
+                      r.repo.toLowerCase() === currentRepo.name.toLowerCase(),
                   );
                   const isToggling = togglingIds[col.id];
 
@@ -368,7 +429,9 @@ export function CollectionsBookmarkPanel({
                       className="w-full flex items-center justify-between p-3.5 rounded-lg border text-left hover:scale-[1.01] active:scale-[0.99] transition-all"
                       style={{
                         background: theme.colors.surface,
-                        borderColor: isSaved ? theme.colors.primary : theme.colors.border,
+                        borderColor: isSaved
+                          ? theme.colors.primary
+                          : theme.colors.border,
                       }}
                     >
                       <div className="min-w-0 flex-1 flex items-start gap-2.5">
@@ -378,22 +441,37 @@ export function CollectionsBookmarkPanel({
                             background: isSaved
                               ? `color-mix(in srgb, ${theme.colors.primary} 15%, transparent)`
                               : theme.colors.backgroundSecondary,
-                            color: isSaved ? theme.colors.primary : theme.colors.textMuted,
+                            color: isSaved
+                              ? theme.colors.primary
+                              : theme.colors.textMuted,
                           }}
                         >
                           <Layers size={16} />
                         </div>
                         <div className="min-w-0">
-                          <div className="font-semibold truncate text-sm" style={{ color: theme.colors.text }}>
+                          <div
+                            className="font-semibold truncate text-sm"
+                            style={{ color: theme.colors.text }}
+                          >
                             {col.name}
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: theme.colors.textMuted }}>
+                          <div
+                            className="flex items-center gap-2 mt-0.5 text-xs"
+                            style={{ color: theme.colors.textMuted }}
+                          >
                             <span className="flex items-center gap-0.5">
-                              {col.visibility === 'public' ? <Globe size={10} /> : <Lock size={10} />}
+                              {col.visibility === 'public' ? (
+                                <Globe size={10} />
+                              ) : (
+                                <Lock size={10} />
+                              )}
                               {col.visibility}
                             </span>
                             <span>•</span>
-                            <span>{col.repos.length} {col.repos.length === 1 ? 'repo' : 'repos'}</span>
+                            <span>
+                              {col.repos.length}{' '}
+                              {col.repos.length === 1 ? 'repo' : 'repos'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -401,13 +479,25 @@ export function CollectionsBookmarkPanel({
                       <div
                         className="flex items-center justify-center w-5 h-5 rounded-md border transition-all"
                         style={{
-                          borderColor: isSaved ? theme.colors.primary : theme.colors.border,
-                          background: isSaved ? theme.colors.primary : 'transparent',
+                          borderColor: isSaved
+                            ? theme.colors.primary
+                            : theme.colors.border,
+                          background: isSaved
+                            ? theme.colors.primary
+                            : 'transparent',
                           color: theme.colors.background,
                         }}
                       >
                         {isToggling ? (
-                          <Loader2 size={12} className="animate-spin" style={{ color: isSaved ? theme.colors.background : theme.colors.textMuted }} />
+                          <Loader2
+                            size={12}
+                            className="animate-spin"
+                            style={{
+                              color: isSaved
+                                ? theme.colors.background
+                                : theme.colors.textMuted,
+                            }}
+                          />
                         ) : isSaved ? (
                           <Check size={12} strokeWidth={3} />
                         ) : null}

@@ -19,7 +19,9 @@ function projectRoot(): string {
   // In development app.getAppPath() is .erb/dll because webpack writes the
   // main bundle there; the project root is two levels up.
   const appPath = app.getAppPath();
-  return appPath.includes('.erb/dll') ? path.resolve(appPath, '..', '..') : appPath;
+  return appPath.includes('.erb/dll')
+    ? path.resolve(appPath, '..', '..')
+    : appPath;
 }
 
 /** Daemon bundle path: unpacked from asar in production, node_modules in development. */
@@ -35,9 +37,7 @@ export function resolveRepoMonitorDaemonEntryPath(): string {
   }
   const staged = path.join(projectRoot(), 'dist', 'main', DAEMON_FILE);
   if (fs.existsSync(staged)) return staged;
-  return require.resolve(
-    '@principal-ai/repository-monitoring-server/dist/daemon/repository-monitoring-daemon.js',
-  );
+  return require.resolve('@principal-ai/repository-monitoring-server/dist/daemon/repository-monitoring-daemon.js');
 }
 
 function isExecutable(candidate: string): boolean {

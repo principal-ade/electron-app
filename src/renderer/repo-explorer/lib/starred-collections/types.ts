@@ -178,7 +178,7 @@ export class CollectionError extends Error {
   constructor(
     message: string,
     public statusCode: number,
-    public code: string
+    public code: string,
   ) {
     super(message);
     this.name = 'CollectionError';

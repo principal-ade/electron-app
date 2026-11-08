@@ -46,7 +46,11 @@ export class GithubService {
     return result;
   }
 
-  static async checkAuthStatus(): Promise<{ isAuthenticated: boolean; method: string; username?: string }> {
+  static async checkAuthStatus(): Promise<{
+    isAuthenticated: boolean;
+    method: string;
+    username?: string;
+  }> {
     return window.mainProcess.github.checkAuthStatus();
   }
 
@@ -66,7 +70,10 @@ export class GithubService {
     return result || [];
   }
 
-  static async isRepositoryStarred(owner: string, repo: string): Promise<boolean> {
+  static async isRepositoryStarred(
+    owner: string,
+    repo: string,
+  ): Promise<boolean> {
     return githubClient.isRepositoryStarred({ owner, repo });
   }
 
@@ -134,7 +141,9 @@ export class GithubService {
   static async getRepositoryContributors(
     owner: string,
     repo: string,
-  ): Promise<Array<{ login: string; contributions: number; avatar_url: string }>> {
+  ): Promise<
+    Array<{ login: string; contributions: number; avatar_url: string }>
+  > {
     try {
       const result = await window.mainProcess.github.getRepositoryContributors(
         owner,
@@ -153,9 +162,17 @@ export class GithubService {
   static async getIssues(
     owner: string,
     repo: string,
-    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+    options?: {
+      state?: 'open' | 'closed' | 'all';
+      perPage?: number;
+      page?: number;
+    },
   ): Promise<unknown[]> {
-    const result = await window.mainProcess.github.getIssues(owner, repo, options);
+    const result = await window.mainProcess.github.getIssues(
+      owner,
+      repo,
+      options,
+    );
     return result || [];
   }
 
@@ -173,7 +190,11 @@ export class GithubService {
   static async getPullRequests(
     owner: string,
     repo: string,
-    options?: { state?: 'open' | 'closed' | 'all'; perPage?: number; page?: number },
+    options?: {
+      state?: 'open' | 'closed' | 'all';
+      perPage?: number;
+      page?: number;
+    },
   ): Promise<unknown[]> {
     const result = await window.mainProcess.github.getPullRequests(
       owner,
@@ -263,7 +284,10 @@ export class GithubService {
     options?: { perPage?: number },
   ): Promise<{ users: GitHubUser[]; totalCount: number }> {
     // TIPC migration: using type-safe githubClient
-    const result = await githubClient.searchUsers({ query, perPage: options?.perPage });
+    const result = await githubClient.searchUsers({
+      query,
+      perPage: options?.perPage,
+    });
     return result;
   }
 
@@ -275,7 +299,10 @@ export class GithubService {
     options?: { perPage?: number },
   ): Promise<{ repos: GitHubRepository[]; totalCount: number }> {
     // TIPC migration: using type-safe githubClient
-    const result = await githubClient.searchRepos({ query, perPage: options?.perPage });
+    const result = await githubClient.searchRepos({
+      query,
+      perPage: options?.perPage,
+    });
     return result;
   }
 
@@ -429,7 +456,11 @@ export class GithubService {
    * Get changed files for a specific commit (for highlight layers)
    * Returns file info including status and line counts
    */
-  static async getOwnerActivity(login: string, type: 'User' | 'Organization', days?: number) {
+  static async getOwnerActivity(
+    login: string,
+    type: 'User' | 'Organization',
+    days?: number,
+  ) {
     return githubClient.getOwnerActivity({ login, type, days });
   }
 
@@ -441,7 +472,16 @@ export class GithubService {
     owner: string,
     repo: string,
     sha: string,
-  ): Promise<Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>> {
+  ): Promise<
+    Map<
+      string,
+      {
+        status: 'added' | 'modified' | 'deleted' | 'renamed';
+        additions: number;
+        deletions: number;
+      }
+    >
+  > {
     const result = await window.mainProcess.github.getChangedFilesForCommit(
       owner,
       repo,
@@ -450,11 +490,19 @@ export class GithubService {
     // Convert plain object back to Map
     return new Map(Object.entries(result || {})) as Map<
       string,
-      { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }
+      {
+        status: 'added' | 'modified' | 'deleted' | 'renamed';
+        additions: number;
+        deletions: number;
+      }
     >;
   }
 
-  static async getCommitDiff(owner: string, repo: string, sha: string): Promise<string> {
+  static async getCommitDiff(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<string> {
     return window.mainProcess.github.getCommitDiff(owner, repo, sha);
   }
 

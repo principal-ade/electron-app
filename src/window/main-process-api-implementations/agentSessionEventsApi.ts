@@ -7,10 +7,7 @@ import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/age
 
 // Event types for real-time updates
 export type SessionEventType =
-  | 'session-created'
-  | 'session-updated'
-  | 'session-stopped'
-  | 'event-processed';
+  'session-created' | 'session-updated' | 'session-stopped' | 'event-processed';
 
 export interface SessionEventUpdate {
   type: SessionEventType;

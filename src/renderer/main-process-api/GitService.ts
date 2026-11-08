@@ -233,8 +233,15 @@ export class GitService {
   static async getCommitForDate(
     directory: string,
     date: string,
-  ): Promise<{ hash: string; message: string; author: string; date: string } | null> {
-    console.info(`[GitService] Getting commit for date: ${directory} (${date})`);
+  ): Promise<{
+    hash: string;
+    message: string;
+    author: string;
+    date: string;
+  } | null> {
+    console.info(
+      `[GitService] Getting commit for date: ${directory} (${date})`,
+    );
     try {
       // Get the last commit on the given date with full info
       // Format: hash|subject|author|date
@@ -269,7 +276,15 @@ export class GitService {
     directory: string,
     startDate: string,
     endDate: string,
-  ): Promise<{ hash: string; message: string; author: string; authorEmail: string; date: string }[]> {
+  ): Promise<
+    {
+      hash: string;
+      message: string;
+      author: string;
+      authorEmail: string;
+      date: string;
+    }[]
+  > {
     try {
       // Get all commits in the date range, oldest first (--reverse)
       // Use ISO 8601 format for full timestamp
@@ -282,7 +297,7 @@ export class GitService {
       ]);
 
       const lines = result.stdout.trim().split('\n').filter(Boolean);
-      return lines.map(line => {
+      return lines.map((line) => {
         const cleanLine = line.replace(/^"|"$/g, '');
         const [hash, message, author, authorEmail, date] = cleanLine.split('|');
         return { hash, message, author, authorEmail, date };
@@ -294,7 +309,9 @@ export class GitService {
       // Check if it's a worker timeout error
       if (errorMsg.includes('Worker') && errorMsg.includes('timeout')) {
         console.error('[GitService] ⚠️  CLI Bridge worker not responding!');
-        console.error('[GitService] 💡 Try: Open System Monitor → CLI Bridge → Test Worker or Restart Worker');
+        console.error(
+          '[GitService] 💡 Try: Open System Monitor → CLI Bridge → Test Worker or Restart Worker',
+        );
       }
 
       return [];
@@ -312,7 +329,9 @@ export class GitService {
     directory: string,
     commitHash: string,
   ): Promise<string[]> {
-    console.info(`[GitService] Getting file tree at commit: ${directory} (${commitHash})`);
+    console.info(
+      `[GitService] Getting file tree at commit: ${directory} (${commitHash})`,
+    );
     try {
       // Get all files at the commit using ls-tree
       const result = await window.mainProcess.git.execCommand(directory, [
@@ -344,7 +363,9 @@ export class GitService {
     directory: string,
     commitHash: string,
   ): Promise<string> {
-    console.info(`[GitService] Getting commit diff: ${directory} (${commitHash})`);
+    console.info(
+      `[GitService] Getting commit diff: ${directory} (${commitHash})`,
+    );
     try {
       const result = await window.mainProcess.git.execCommand(directory, [
         'show',
@@ -383,7 +404,16 @@ export class GitService {
   static async getChangedFilesForCommit(
     directory: string,
     commitHash: string,
-  ): Promise<Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>> {
+  ): Promise<
+    Map<
+      string,
+      {
+        status: 'added' | 'modified' | 'deleted' | 'renamed';
+        additions: number;
+        deletions: number;
+      }
+    >
+  > {
     try {
       // Get file changes with status codes and line counts in one call
       // Format: --numstat gives "additions deletions path"
@@ -404,8 +434,14 @@ export class GitService {
       ]);
 
       // Parse line counts from numstat
-      const lineCounts = new Map<string, { additions: number; deletions: number }>();
-      for (const line of numstatResult.stdout.trim().split('\n').filter(Boolean)) {
+      const lineCounts = new Map<
+        string,
+        { additions: number; deletions: number }
+      >();
+      for (const line of numstatResult.stdout
+        .trim()
+        .split('\n')
+        .filter(Boolean)) {
         const parts = line.split('\t');
         if (parts.length >= 3) {
           // Binary files show "-" for additions/deletions
@@ -417,8 +453,18 @@ export class GitService {
       }
 
       // Parse status codes
-      const changedFiles = new Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>();
-      for (const line of nameStatusResult.stdout.trim().split('\n').filter(Boolean)) {
+      const changedFiles = new Map<
+        string,
+        {
+          status: 'added' | 'modified' | 'deleted' | 'renamed';
+          additions: number;
+          deletions: number;
+        }
+      >();
+      for (const line of nameStatusResult.stdout
+        .trim()
+        .split('\n')
+        .filter(Boolean)) {
         const parts = line.split('\t');
         if (parts.length < 2) continue;
 
@@ -440,7 +486,10 @@ export class GitService {
           status = 'modified'; // Default
         }
 
-        const counts = lineCounts.get(filePath) || { additions: 0, deletions: 0 };
+        const counts = lineCounts.get(filePath) || {
+          additions: 0,
+          deletions: 0,
+        };
         changedFiles.set(filePath, {
           status,
           additions: counts.additions,
@@ -450,7 +499,10 @@ export class GitService {
 
       return changedFiles;
     } catch (error) {
-      console.error('[GitService] Failed to get changed files for commit:', error);
+      console.error(
+        '[GitService] Failed to get changed files for commit:',
+        error,
+      );
       return new Map();
     }
   }
@@ -458,7 +510,9 @@ export class GitService {
   static async fastForwardMerge(
     directory: string,
   ): Promise<{ success: boolean; message: string }> {
-    console.info(`[GitService] Attempting fast-forward merge for: ${directory}`);
+    console.info(
+      `[GitService] Attempting fast-forward merge for: ${directory}`,
+    );
     try {
       // First, ensure we have the latest remote info
       await window.mainProcess.git.execCommand(directory, ['fetch', 'origin']);
@@ -730,14 +784,19 @@ export class GitService {
           const code = headerTokens[headerTokens.length - 1] ?? '';
           const head = code[0];
           if (
-            head !== 'A' && head !== 'M' && head !== 'D' &&
-            head !== 'R' && head !== 'C' && head !== 'T'
+            head !== 'A' &&
+            head !== 'M' &&
+            head !== 'D' &&
+            head !== 'R' &&
+            head !== 'C' &&
+            head !== 'T'
           ) {
             continue;
           }
-          const path = (head === 'R' || head === 'C') && parts.length >= 3
-            ? parts[2]
-            : parts[1];
+          const path =
+            (head === 'R' || head === 'C') && parts.length >= 3
+              ? parts[2]
+              : parts[1];
           if (!path) continue;
           files.push({ path, status: head });
         } else {
@@ -847,9 +906,7 @@ export class GitService {
    * Get the commits the current branch is ahead of its upstream by.
    * Returns an empty array if there is no upstream or no commits ahead.
    */
-  static async getAheadCommits(
-    directory: string,
-  ): Promise<GitCommitInfo[]> {
+  static async getAheadCommits(directory: string): Promise<GitCommitInfo[]> {
     try {
       const result = await window.mainProcess.git.execCommand(directory, [
         'log',
@@ -873,9 +930,7 @@ export class GitService {
    * commits on the remote that aren't local yet.
    * Returns an empty array if there is no upstream or nothing behind.
    */
-  static async getBehindCommits(
-    directory: string,
-  ): Promise<GitCommitInfo[]> {
+  static async getBehindCommits(directory: string): Promise<GitCommitInfo[]> {
     try {
       const result = await window.mainProcess.git.execCommand(directory, [
         'log',
@@ -1070,7 +1125,10 @@ export class GitService {
         '--pretty=tformat:__COMMIT__',
       ]);
 
-      const files = new Map<string, { commits: number; linesTouched: number; lastCommitMarker: number }>();
+      const files = new Map<
+        string,
+        { commits: number; linesTouched: number; lastCommitMarker: number }
+      >();
       let commitIdx = 0;
       const renamePattern = /\{.*? => (.*?)\}/;
 
@@ -1090,7 +1148,9 @@ export class GitService {
         // Handle rename notation "old/{a => b}/file" or "{old => new}"
         const renameMatch = filePath.match(renamePattern);
         if (renameMatch) {
-          filePath = filePath.replace(renamePattern, renameMatch[1]).replace(/\/\//g, '/');
+          filePath = filePath
+            .replace(renamePattern, renameMatch[1])
+            .replace(/\/\//g, '/');
         }
 
         const existing = files.get(filePath);
@@ -1101,17 +1161,27 @@ export class GitService {
             existing.lastCommitMarker = commitIdx;
           }
         } else {
-          files.set(filePath, { commits: 1, linesTouched: additions + deletions, lastCommitMarker: commitIdx });
+          files.set(filePath, {
+            commits: 1,
+            linesTouched: additions + deletions,
+            lastCommitMarker: commitIdx,
+          });
         }
       }
 
       const out = new Map<string, { commits: number; linesTouched: number }>();
       for (const [path, info] of files) {
-        out.set(path, { commits: info.commits, linesTouched: info.linesTouched });
+        out.set(path, {
+          commits: info.commits,
+          linesTouched: info.linesTouched,
+        });
       }
       return out;
     } catch (error) {
-      console.error('[GitService] Failed to get files touched by author:', error);
+      console.error(
+        '[GitService] Failed to get files touched by author:',
+        error,
+      );
       return new Map();
     }
   }
@@ -1183,7 +1253,8 @@ export class GitService {
       console.error('[GitService] Failed to set remote URL:', error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to set remote URL',
+        message:
+          error instanceof Error ? error.message : 'Failed to set remote URL',
       };
     }
   }
@@ -1206,12 +1277,16 @@ export class GitService {
       if (result.stdout) {
         const branch = result.stdout.trim().replace('refs/remotes/origin/', '');
         if (branch) {
-          console.info(`[GitService] Default branch from symbolic-ref: ${branch}`);
+          console.info(
+            `[GitService] Default branch from symbolic-ref: ${branch}`,
+          );
           return branch;
         }
       }
     } catch {
-      console.info('[GitService] symbolic-ref not set, trying remote detection...');
+      console.info(
+        '[GitService] symbolic-ref not set, trying remote detection...',
+      );
     }
 
     // Try remote set-head (needs network)
@@ -1247,15 +1322,17 @@ export class GitService {
       ]);
       const remoteBranches = result.stdout
         .split('\n')
-        .map(b => b.trim())
+        .map((b) => b.trim())
         .filter(Boolean);
 
       for (const common of ['origin/main', 'origin/master']) {
         if (
-          remoteBranches.some(b => b === common || b.startsWith(`${common} `))
+          remoteBranches.some((b) => b === common || b.startsWith(`${common} `))
         ) {
           const branchName = common.replace('origin/', '');
-          console.info(`[GitService] Default branch from fallback: ${branchName}`);
+          console.info(
+            `[GitService] Default branch from fallback: ${branchName}`,
+          );
           return branchName;
         }
       }
@@ -1266,5 +1343,4 @@ export class GitService {
     console.warn('[GitService] Could not determine default branch');
     return null;
   }
-
 }

@@ -5,7 +5,13 @@
  * the user has granted consent for secure credential storage.
  */
 
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  createContext,
+  useContext,
+} from 'react';
 import { AuthenticationService } from '../main-process-api/AuthenticationService';
 import type { KeychainConsentStatus } from '../../shared/types/userPreferences.types';
 
@@ -25,7 +31,9 @@ export interface UseKeychainConsentReturn extends KeychainConsentState {
 }
 
 // Context for sharing keychain consent state across components
-const KeychainConsentContext = createContext<UseKeychainConsentReturn | null>(null);
+const KeychainConsentContext = createContext<UseKeychainConsentReturn | null>(
+  null,
+);
 
 export const KeychainConsentProvider = KeychainConsentContext.Provider;
 
@@ -67,11 +75,15 @@ export function useKeychainConsent(): UseKeychainConsentReturn {
 
         // Credentials are stored as plaintext (0o600) for now — no keychain
         // consent prompt on startup. Consent UI may return later as an opt-in.
-
       } catch (err) {
         if (!mounted) return;
-        console.error('[useKeychainConsent] Failed to load consent status:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load consent status');
+        console.error(
+          '[useKeychainConsent] Failed to load consent status:',
+          err,
+        );
+        setError(
+          err instanceof Error ? err.message : 'Failed to load consent status',
+        );
         setIsLoading(false);
       }
     };
@@ -112,7 +124,9 @@ export function useKeychainConsent(): UseKeychainConsentReturn {
         // Don't throw - consent is still granted, auth just failed to initialize
         setError(initResult.error || 'Failed to initialize keychain auth');
       } else {
-        console.info('[useKeychainConsent] Keychain auth initialized successfully');
+        console.info(
+          '[useKeychainConsent] Keychain auth initialized successfully',
+        );
       }
     } catch (err) {
       console.error('[useKeychainConsent] Grant consent failed:', err);
@@ -139,7 +153,9 @@ export function useKeychainConsent(): UseKeychainConsentReturn {
       console.info('[useKeychainConsent] Consent declined');
     } catch (err) {
       console.error('[useKeychainConsent] Decline consent failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to decline consent');
+      setError(
+        err instanceof Error ? err.message : 'Failed to decline consent',
+      );
       throw err;
     }
   }, []);
@@ -158,7 +174,9 @@ export function useKeychainConsent(): UseKeychainConsentReturn {
       }
 
       setStatus('declined');
-      console.info('[useKeychainConsent] Consent revoked (credentials preserved)');
+      console.info(
+        '[useKeychainConsent] Consent revoked (credentials preserved)',
+      );
     } catch (err) {
       console.error('[useKeychainConsent] Revoke consent failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to revoke consent');

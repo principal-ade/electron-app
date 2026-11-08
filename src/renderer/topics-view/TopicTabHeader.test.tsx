@@ -22,9 +22,9 @@ jest.mock('./topic-description/TopicDescriptionBody', () => ({
     onCloseToc: () => void;
   }) => {
     const { theme } = jest
-      .requireActual<
-        typeof import('@principal-ade/industry-theme')
-      >('@principal-ade/industry-theme')
+      .requireActual<typeof import('@principal-ade/industry-theme')>(
+        '@principal-ade/industry-theme',
+      )
       .useTheme();
     jest.requireActual<typeof React>('react').useEffect(() => {
       onTocAvailableChange(mockHasToc);

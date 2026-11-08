@@ -158,7 +158,11 @@ const resolveExistence = async (
   const exists = tree.data.tree.some(
     (t) => t.type === 'blob' && t.path === safe,
   );
-  return { status: exists ? 'exists' : 'missing', via: 'remote', ref: checkRef };
+  return {
+    status: exists ? 'exists' : 'missing',
+    via: 'remote',
+    ref: checkRef,
+  };
 };
 
 /** A purl is pinned if it carries a version (`@sha`/`@tag`) or `?commit=`. */
@@ -187,12 +191,11 @@ export const validateTopicLinks = async (
 ): Promise<ValidationReport> => {
   let deps = opts.deps;
   if (!deps) {
-    const [{ AlexandriaRegistryService }, { GitHubAdapter }] = await Promise.all(
-      [
+    const [{ AlexandriaRegistryService }, { GitHubAdapter }] =
+      await Promise.all([
         import('../stores/AlexandriaRegistryService'),
         import('../version-control-providers/githubHandlers'),
-      ],
-    );
+      ]);
     deps = {
       registry: AlexandriaRegistryService.getInstance(),
       github: new GitHubAdapter(),

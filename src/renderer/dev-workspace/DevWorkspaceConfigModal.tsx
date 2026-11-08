@@ -122,7 +122,10 @@ export const DevWorkspaceConfigModal: React.FC<
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('[DevWorkspaceConfigModal] Failed to copy enabled list:', error);
+      console.error(
+        '[DevWorkspaceConfigModal] Failed to copy enabled list:',
+        error,
+      );
     }
   };
 
@@ -319,7 +322,9 @@ export const DevWorkspaceConfigModal: React.FC<
               {repositoryPath && (
                 <button
                   onClick={handleCopyPath}
-                  title={pathCopied ? 'Copied!' : `Copy path: ${repositoryPath}`}
+                  title={
+                    pathCopied ? 'Copied!' : `Copy path: ${repositoryPath}`
+                  }
                   style={{
                     background: pathCopied
                       ? theme.colors.success

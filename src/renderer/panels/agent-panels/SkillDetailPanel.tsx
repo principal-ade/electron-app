@@ -6,13 +6,22 @@ import type {
 } from './types';
 import { useSkillsData } from './skills/hooks/useSkillsData';
 import type { Skill } from './skills/hooks/useSkillsData';
-import { SkillMarkdown, type SkillMarkdownProps } from './skills/components/SkillMarkdown';
-import type { PartialParsedSkill, ValidationWarning } from '@principal-ade/markdown-utils';
+import {
+  SkillMarkdown,
+  type SkillMarkdownProps,
+} from './skills/components/SkillMarkdown';
+import type {
+  PartialParsedSkill,
+  ValidationWarning,
+} from '@principal-ade/markdown-utils';
 import { useTheme } from '@principal-ade/industry-theme';
 import { usePanelFocusListener } from '@principal-ade/panel-layouts';
 import './SkillDetailPanel.css';
 
-export interface SkillDetailPanelProps extends PanelComponentProps<AgentPanelActions, SkillsPanelContext> {
+export interface SkillDetailPanelProps extends PanelComponentProps<
+  AgentPanelActions,
+  SkillsPanelContext
+> {
   /**
    * Optional skill ID to display.
    * If provided, this takes precedence over event-based selection.
@@ -46,21 +55,24 @@ export const SkillDetailPanel: React.FC<SkillDetailPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const { skills, isLoading, error } = useSkillsData({ context });
-  const [selectedSkillIdState, setSelectedSkillIdState] = useState<string | null>(null);
+  const [selectedSkillIdState, setSelectedSkillIdState] = useState<
+    string | null
+  >(null);
   const [skillState, setSkillState] = useState<Skill | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Determine the effective selected skill ID (prop takes precedence over state)
-  const selectedSkillId = selectedSkillIdProp !== undefined ? selectedSkillIdProp : selectedSkillIdState;
+  const selectedSkillId =
+    selectedSkillIdProp !== undefined
+      ? selectedSkillIdProp
+      : selectedSkillIdState;
 
   // Use skill from prop if provided, otherwise use state
   const skill = skillProp !== undefined ? skillProp : skillState;
 
   // Listen for panel focus events
-  usePanelFocusListener(
-    'skill-detail',
-    events,
-    () => panelRef.current?.focus()
+  usePanelFocusListener('skill-detail', events, () =>
+    panelRef.current?.focus(),
   );
 
   // Listen for skill selection events (only if not controlled by prop)
@@ -111,9 +123,7 @@ export const SkillDetailPanel: React.FC<SkillDetailPanelProps> = ({
           fontFamily: theme.fonts.body,
         }}
       >
-        <div style={{ textAlign: 'center' }}>
-          Error loading skills: {error}
-        </div>
+        <div style={{ textAlign: 'center' }}>Error loading skills: {error}</div>
       </div>
     );
   }
@@ -152,7 +162,6 @@ export const SkillDetailPanel: React.FC<SkillDetailPanelProps> = ({
           textAlign: 'center',
         }}
       >
-
         <h2
           style={{
             color: theme.colors.text,

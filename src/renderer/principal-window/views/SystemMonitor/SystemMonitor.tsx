@@ -17,10 +17,17 @@ import {
   XCircle,
 } from 'lucide-react';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
-import { CLIBridgeService, type CLIBridgeStatus, type CLIBridgeTestResult } from '../../../main-process-api/CLIBridgeService';
+import {
+  CLIBridgeService,
+  type CLIBridgeStatus,
+  type CLIBridgeTestResult,
+} from '../../../main-process-api/CLIBridgeService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { TerminalService } from '../../../main-process-api/TerminalService';
-import type { TerminalActivityState, DaemonStatusResponse } from '../../../main-process-api/TerminalService';
+import type {
+  TerminalActivityState,
+  DaemonStatusResponse,
+} from '../../../main-process-api/TerminalService';
 import type { TerminalSessionInfo } from '../../../../shared/tipc/terminalRouterTypes';
 import type {
   MonitoringStatus,
@@ -38,7 +45,6 @@ import {
 interface SystemMonitorProps {
   sidebarCollapsed?: boolean;
 }
-
 
 const MonitorNavButton: React.FC<{
   active: boolean;
@@ -119,17 +125,27 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   // second without re-fetching diagnostics.
   const [nowTick, setNowTick] = useState<number>(Date.now());
   const toggleRequestedAtRef = useRef<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'repository' | 'terminals' | 'clibridge'>('repository');
+  const [activeTab, setActiveTab] = useState<
+    'repository' | 'terminals' | 'clibridge'
+  >('repository');
   // CLI Bridge state
-  const [cliBridgeStatus, setCliBridgeStatus] = useState<CLIBridgeStatus | null>(null);
+  const [cliBridgeStatus, setCliBridgeStatus] =
+    useState<CLIBridgeStatus | null>(null);
   const [cliBridgeLoading, setCliBridgeLoading] = useState(true);
   const [isTestingWorker, setIsTestingWorker] = useState(false);
   const [isRestartingWorker, setIsRestartingWorker] = useState(false);
-  const [lastTestResult, setLastTestResult] = useState<CLIBridgeTestResult | null>(null);
-  const [terminalActivities, setTerminalActivities] = useState<TerminalActivityState[]>([]);
-  const [allTerminalSessions, setAllTerminalSessions] = useState<TerminalSessionInfo[]>([]);
+  const [lastTestResult, setLastTestResult] =
+    useState<CLIBridgeTestResult | null>(null);
+  const [terminalActivities, setTerminalActivities] = useState<
+    TerminalActivityState[]
+  >([]);
+  const [allTerminalSessions, setAllTerminalSessions] = useState<
+    TerminalSessionInfo[]
+  >([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
-  const [daemonStatus, setDaemonStatus] = useState<DaemonStatusResponse | null>(null);
+  const [daemonStatus, setDaemonStatus] = useState<DaemonStatusResponse | null>(
+    null,
+  );
   // Null until the first status probe answers; shown as "Checking" rather
   // than "Not Running" so a slow probe is not mistaken for a stopped daemon.
   const daemonChecking = daemonStatus === null;
@@ -624,1228 +640,475 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
 
         {/* Content Area */}
         <div style={{ flex: 1, padding: '32px', overflowY: 'auto' }}>
-        {/* Repository Monitoring Content */}
-        {activeTab === 'repository' && (
-          <>
-        {/* Section header: connection phase + start/stop */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            marginBottom: '24px',
-          }}
-        >
-          <div>
-            <h3
-              style={{
-                fontSize: '18px',
-                fontWeight: 600,
-                margin: 0,
-                fontFamily: theme.fonts.heading,
-              }}
-            >
-              Repository Monitoring
-            </h3>
-            <p
-              style={{
-                fontSize: '13px',
-                color: theme.colors.textSecondary,
-                margin: '4px 0 0',
-              }}
-            >
-              Shared daemon that watches repositories and caches file trees,
-              packages and git state.
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {/* Repository Monitoring Status (phase-aware). */}
-                {(() => {
-                  const phase: LifecyclePhase =
-                    diagnostics?.phase ?? (isRunning ? 'connected' : 'idle');
-                  const color = phaseAccentColor(phase, theme);
-                  const isTransitional =
-                    phase === 'connecting' ||
-                    phase === 'disconnecting' ||
-                    phase === 'reconnecting';
-                  return (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '6px 12px',
-                        backgroundColor: `${color}15`,
-                        borderRadius: '6px',
-                        fontSize: '13px',
-                        fontWeight: 500,
-                        color,
-                      }}
-                      title={phaseTooltip(phase, diagnostics)}
-                    >
-                      <div
-                        style={{
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          backgroundColor: color,
-                          animation:
-                            phase === 'connected'
-                              ? 'pulse 2s infinite'
-                              : isTransitional
-                                ? 'pulse 1s infinite'
-                                : 'none',
-                        }}
-                      />
-                      {phaseLabel(phase)}
-                      {diagnostics &&
-                        diagnostics.reconnectAttempts > 0 &&
-                        phase === 'reconnecting' && (
-                          <span style={{ opacity: 0.8, fontSize: '11px' }}>
-                            (attempt {diagnostics.reconnectAttempts})
-                          </span>
-                        )}
-                    </div>
-                  );
-                })()}
-
-                {/* Repository Power button */}
-                <button
-                  onClick={handleToggleMonitoring}
-                  disabled={isToggling}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    border: `1px solid ${isRunning ? theme.colors.error : theme.colors.success}`,
-                    backgroundColor: isRunning
-                      ? `${theme.colors.error}10`
-                      : `${theme.colors.success}10`,
-                    color: isRunning ? theme.colors.error : theme.colors.success,
-                    cursor: isToggling ? 'not-allowed' : 'pointer',
-                    opacity: isToggling ? 0.5 : 1,
-                    transition: 'all 0.2s ease',
-                  }}
-                  title={isRunning ? 'Disconnect from the daemon' : 'Connect to the daemon'}
-                >
-                  <Power size={20} />
-                </button>
-          </div>
-        </div>
-        {/* Memory Warning */}
-        {status && status.currentMemory > 500 * 1024 * 1024 && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px 16px',
-              marginBottom: '20px',
-              backgroundColor:
-                status.currentMemory > 800 * 1024 * 1024
-                  ? `${theme.colors.error}15`
-                  : `${theme.colors.warning}15`,
-              border: `1px solid ${
-                status.currentMemory > 800 * 1024 * 1024
-                  ? theme.colors.error
-                  : theme.colors.warning
-              }`,
-              borderRadius: '8px',
-              fontSize: '14px',
-              color:
-                status.currentMemory > 800 * 1024 * 1024
-                  ? theme.colors.error
-                  : theme.colors.warning,
-            }}
-          >
-            <AlertCircle size={18} />
-            <span>
-              High memory usage detected ({formatBytes(status.currentMemory)}).
-              {isRunning &&
-                ' Consider stopping and restarting the monitoring process to free up memory.'}
-            </span>
-          </div>
-        )}
-
-        {/* Resource Metrics Section */}
-        <section style={{ marginBottom: '32px' }}>
-          <h3
-            style={{
-              fontSize: '14px',
-              fontWeight: 600,
-              color: theme.colors.textSecondary,
-              marginBottom: '16px',
-              fontFamily: theme.fonts.heading,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}
-          >
-            RESOURCE USAGE
-          </h3>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: sidebarCollapsed ? '1fr 1fr' : '1fr 1fr',
-              gap: '16px',
-              marginBottom: '8px',
-            }}
-          >
-            {/* Memory Card */}
-            <div
-              style={{
-                backgroundColor: theme.colors.backgroundSecondary,
-                borderRadius: '12px',
-                padding: '20px',
-                border: `1px solid ${theme.colors.border}`,
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                transition: 'all 0.2s ease',
-              }}
-            >
+          {/* Repository Monitoring Content */}
+          {activeTab === 'repository' && (
+            <>
+              {/* Section header: connection phase + start/stop */}
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  marginBottom: '12px',
                   justifyContent: 'space-between',
-                }}
-              >
-                <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <HardDrive size={16} style={{ color: theme.colors.info }} />
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: theme.colors.textSecondary,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                    }}
-                  >
-                    MEMORY
-                  </span>
-                </div>
-              </div>
-              <div
-                style={{
-                  fontSize: '28px',
-                  fontWeight: 700,
-                  marginBottom: '16px',
-                  fontFamily: theme.fonts.monospace,
-                  color: theme.colors.text,
-                }}
-              >
-                {formatBytes(status.currentMemory)}
-              </div>
-              {status.daemon && (
-                <div
-                  style={{
-                    fontSize: '11px',
-                    color: theme.colors.textSecondary,
-                    marginTop: '-10px',
-                    marginBottom: '12px',
-                  }}
-                >
-                  shared daemon · {status.daemon.clients}{' '}
-                  {status.daemon.clients === 1 ? 'client' : 'clients'}
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <Sparkline
-                  data={status.history.map((h) => h.memory / 1024 / 1024)}
-                  max={
-                    Math.max(
-                      ...status.history.map((h) => h.memory / 1024 / 1024),
-                    ) * 1.1
-                  }
-                  color={theme.colors.info}
-                />
-              </div>
-            </div>
-
-            {/* CPU Card */}
-            <div
-              style={{
-                backgroundColor: theme.colors.backgroundSecondary,
-                borderRadius: '12px',
-                padding: '20px',
-                border: `1px solid ${theme.colors.border}`,
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  marginBottom: '12px',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <Activity size={16} style={{ color: theme.colors.success }} />
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: theme.colors.textSecondary,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                    }}
-                  >
-                    CPU
-                  </span>
-                </div>
-              </div>
-              <div
-                style={{
-                  fontSize: '28px',
-                  fontWeight: 700,
-                  marginBottom: '16px',
-                  fontFamily: theme.fonts.monospace,
-                  color: theme.colors.text,
-                }}
-              >
-                {status.currentCpu.toFixed(1)}%
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <Sparkline
-                  data={status.history.map((h) => h.cpu)}
-                  max={100}
-                  color={theme.colors.success}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* History note */}
-          <div
-            style={{
-              fontSize: '12px',
-              color: theme.colors.textSecondary,
-              textAlign: 'center',
-              marginTop: '8px',
-              fontStyle: 'italic',
-            }}
-          >
-            Showing last {status.history.length} data points (1 minute history)
-          </div>
-        </section>
-
-        <RepositoryMonitoringDiagnostics diagnostics={diagnostics} nowTick={nowTick} />
-          </>
-        )}
-
-        {/* Terminal Sessions Content */}
-        {activeTab === 'terminals' && (
-          <section style={{ marginBottom: '32px' }}>
-            {/* Daemon Status Card */}
-            <div
-              style={{
-                backgroundColor: theme.colors.backgroundSecondary,
-                borderRadius: '12px',
-                border: `1px solid ${theme.colors.border}`,
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                padding: '20px',
-                marginBottom: '24px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    backgroundColor: !usePtyDaemon || daemonChecking
-                      ? `${theme.colors.textSecondary}15`
-                      : daemonStatus?.isRunning
-                        ? `${theme.colors.success}15`
-                        : `${theme.colors.error}15`,
-                  }}
-                >
-                  <Server
-                    size={22}
-                    style={{
-                      color: !usePtyDaemon || daemonChecking
-                        ? theme.colors.textSecondary
-                        : daemonStatus?.isRunning
-                          ? theme.colors.success
-                          : theme.colors.error,
-                    }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h3
-                    style={{
-                      fontSize: '16px',
-                      fontWeight: 600,
-                      color: theme.colors.text,
-                      margin: 0,
-                      fontFamily: theme.fonts.heading,
-                    }}
-                  >
-                    PTY Daemon
-                  </h3>
-                  <div
-                    style={{
-                      fontSize: '12px',
-                      color: !usePtyDaemon || daemonChecking
-                        ? theme.colors.textSecondary
-                        : daemonStatus?.isRunning
-                          ? theme.colors.success
-                          : theme.colors.error,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        backgroundColor: !usePtyDaemon || daemonChecking
-                          ? theme.colors.textSecondary
-                          : daemonStatus?.isRunning
-                            ? theme.colors.success
-                            : theme.colors.error,
-                      }}
-                    />
-                    {!usePtyDaemon
-                      ? 'Disabled'
-                      : daemonChecking
-                        ? 'Checking...'
-                        : daemonStatus?.isRunning ? 'Running' : 'Not Running'
-                    }
-                  </div>
-                </div>
-                {usePtyDaemon && !daemonChecking && (
-                  <button
-                    onClick={async () => {
-                      setIsDaemonControlling(true);
-                      try {
-                        if (daemonStatus?.isRunning) {
-                          await TerminalService.stopDaemon();
-                        } else {
-                          await TerminalService.startDaemon();
-                        }
-                        // Refresh status after action
-                        const status = await TerminalService.getDaemonStatus();
-                        setDaemonStatus(status);
-                      } catch (error) {
-                        console.error('Failed to control daemon:', error);
-                      } finally {
-                        setIsDaemonControlling(false);
-                      }
-                    }}
-                    disabled={isDaemonControlling}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 16px',
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      borderRadius: '8px',
-                      border: 'none',
-                      cursor: isDaemonControlling ? 'not-allowed' : 'pointer',
-                      backgroundColor: daemonStatus?.isRunning
-                        ? `${theme.colors.error}15`
-                        : `${theme.colors.success}15`,
-                      color: daemonStatus?.isRunning
-                        ? theme.colors.error
-                        : theme.colors.success,
-                      transition: 'all 0.2s ease',
-                      opacity: isDaemonControlling ? 0.6 : 1,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isDaemonControlling) {
-                        e.currentTarget.style.backgroundColor = daemonStatus?.isRunning
-                          ? `${theme.colors.error}25`
-                          : `${theme.colors.success}25`;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = daemonStatus?.isRunning
-                        ? `${theme.colors.error}15`
-                        : `${theme.colors.success}15`;
-                    }}
-                  >
-                    {isDaemonControlling ? (
-                      <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                    ) : (
-                      <Power size={14} />
-                    )}
-                    {isDaemonControlling
-                      ? (daemonStatus?.isRunning ? 'Stopping...' : 'Starting...')
-                      : (daemonStatus?.isRunning ? 'Stop' : 'Start')
-                    }
-                  </button>
-                )}
-              </div>
-
-              {usePtyDaemon && daemonStatus?.isRunning && daemonStatus.status && (
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    gap: '16px',
-                  }}
-                >
-                  {/* PID */}
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      PID
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        color: theme.colors.text,
-                        fontFamily: theme.fonts.monospace,
-                      }}
-                    >
-                      {daemonStatus.status.pid}
-                    </div>
-                  </div>
-
-                  {/* Uptime */}
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        marginBottom: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Clock size={10} />
-                      Uptime
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        color: theme.colors.text,
-                      }}
-                    >
-                      {(() => {
-                        const uptime = daemonStatus.status.uptime;
-                        const hours = Math.floor(uptime / 3600000);
-                        const minutes = Math.floor((uptime % 3600000) / 60000);
-                        const seconds = Math.floor((uptime % 60000) / 1000);
-                        if (hours > 0) return `${hours}h ${minutes}m`;
-                        if (minutes > 0) return `${minutes}m ${seconds}s`;
-                        return `${seconds}s`;
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* Sessions */}
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        marginBottom: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Terminal size={10} />
-                      Sessions
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        color: theme.colors.text,
-                      }}
-                    >
-                      {daemonStatus.status.sessionCount}
-                    </div>
-                  </div>
-
-                  {/* Clients */}
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      Clients
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        color: theme.colors.text,
-                      }}
-                    >
-                      {daemonStatus.status.clientCount}
-                    </div>
-                  </div>
-
-                  {/* Memory */}
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        marginBottom: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Cpu size={10} />
-                      Memory (Heap)
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        color: theme.colors.text,
-                      }}
-                    >
-                      {(daemonStatus.status.memoryUsage.heapUsed / 1024 / 1024).toFixed(1)} MB
-                    </div>
-                  </div>
-
-                  {/* RSS */}
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      RSS
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        color: theme.colors.text,
-                      }}
-                    >
-                      {(daemonStatus.status.memoryUsage.rss / 1024 / 1024).toFixed(1)} MB
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!usePtyDaemon && (
-                <div
-                  style={{
-                    fontSize: '13px',
-                    color: theme.colors.textSecondary,
-                    padding: '12px 16px',
-                    backgroundColor: `${theme.colors.textSecondary}08`,
-                    borderRadius: '8px',
-                    border: `1px solid ${theme.colors.textSecondary}20`,
-                  }}
-                >
-                  PTY daemon is disabled. Terminals use legacy mode (node-pty directly in worker).
-                </div>
-              )}
-
-              {usePtyDaemon && !daemonChecking && !daemonStatus?.isRunning && (
-                <div
-                  style={{
-                    fontSize: '13px',
-                    color: theme.colors.textSecondary,
-                    padding: '12px 16px',
-                    backgroundColor: `${theme.colors.error}08`,
-                    borderRadius: '8px',
-                    border: `1px solid ${theme.colors.error}20`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '16px',
-                  }}
-                >
-                  <span>The PTY daemon is not running. Terminal sessions will start the daemon automatically.</span>
-                  <button
-                    onClick={async () => {
-                      setIsDaemonControlling(true);
-                      try {
-                        await TerminalService.startDaemon();
-                        const status = await TerminalService.getDaemonStatus();
-                        setDaemonStatus(status);
-                      } catch (error) {
-                        console.error('Failed to start daemon:', error);
-                      } finally {
-                        setIsDaemonControlling(false);
-                      }
-                    }}
-                    disabled={isDaemonControlling}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      borderRadius: '6px',
-                      border: 'none',
-                      cursor: isDaemonControlling ? 'not-allowed' : 'pointer',
-                      backgroundColor: theme.colors.success,
-                      color: 'white',
-                      transition: 'all 0.2s ease',
-                      opacity: isDaemonControlling ? 0.6 : 1,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {isDaemonControlling ? (
-                      <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                    ) : (
-                      <Power size={12} />
-                    )}
-                    {isDaemonControlling ? 'Starting...' : 'Start Now'}
-                  </button>
-                </div>
-              )}
-
-              {/* Daemon Mode Toggle */}
-              <div
-                style={{
-                  marginTop: '16px',
-                  paddingTop: '16px',
-                  borderTop: `1px solid ${theme.colors.border}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  gap: '12px',
+                  marginBottom: '24px',
                 }}
               >
                 <div>
-                  <div
-                    style={{
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      color: theme.colors.text,
-                      marginBottom: '2px',
-                    }}
-                  >
-                    Use PTY Daemon
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      color: theme.colors.textSecondary,
-                    }}
-                  >
-                    {usePtyDaemon ? 'Enabled' : 'Disabled'} · Requires app restart
-                  </div>
-                </div>
-                <button
-                  onClick={async () => {
-                    setIsDaemonModeChanging(true);
-                    try {
-                      const newValue = !usePtyDaemon;
-                      await UserPreferencesService.updatePreferences({
-                        usePtyDaemon: newValue,
-                      });
-                      setUsePtyDaemon(newValue);
-                    } catch (error) {
-                      console.error('Failed to update daemon mode preference:', error);
-                    } finally {
-                      setIsDaemonModeChanging(false);
-                    }
-                  }}
-                  disabled={isDaemonModeChanging}
-                  style={{
-                    position: 'relative',
-                    width: '44px',
-                    height: '24px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    cursor: isDaemonModeChanging ? 'not-allowed' : 'pointer',
-                    backgroundColor: usePtyDaemon
-                      ? theme.colors.success
-                      : theme.colors.textSecondary,
-                    transition: 'background-color 0.2s ease',
-                    opacity: isDaemonModeChanging ? 0.6 : 1,
-                  }}
-                >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '2px',
-                      left: usePtyDaemon ? '22px' : '2px',
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      backgroundColor: 'white',
-                      transition: 'left 0.2s ease',
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
-                    }}
-                  />
-                </button>
-              </div>
-            </div>
-
-            <h3
-              style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: theme.colors.textSecondary,
-                marginBottom: '16px',
-                fontFamily: theme.fonts.heading,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              TERMINAL SESSIONS ({allTerminalSessions.length})
-            </h3>
-
-            <div
-              style={{
-                backgroundColor: theme.colors.backgroundSecondary,
-                borderRadius: '12px',
-                border: `1px solid ${theme.colors.border}`,
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                overflow: 'hidden',
-              }}
-            >
-              {sessionsLoading ? (
-                <div
-                  style={{
-                    padding: '24px',
-                    textAlign: 'center',
-                    color: theme.colors.textSecondary,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <Loader2
-                    size={16}
-                    style={{ animation: 'spin 1s linear infinite' }}
-                  />
-                  Loading sessions...
-                </div>
-              ) : allTerminalSessions.length === 0 ? (
-                <div
-                  style={{
-                    padding: '40px 24px',
-                    textAlign: 'center',
-                    color: theme.colors.textSecondary,
-                  }}
-                >
-                  <Terminal
-                    size={40}
-                    style={{ marginBottom: '12px', opacity: 0.5 }}
-                  />
-                  <div style={{ fontSize: '14px' }}>
-                    No terminal sessions
-                  </div>
-                  <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>
-                    Terminal sessions will appear here when created
-                  </div>
-                </div>
-              ) : (
-                // Sort sessions: working first, then by lastActivity
-                [...allTerminalSessions]
-                  .sort((a, b) => {
-                    const aWorking = terminalActivities?.find(act => act.sessionId === a.id)?.isWorking ?? false;
-                    const bWorking = terminalActivities?.find(act => act.sessionId === b.id)?.isWorking ?? false;
-                    if (aWorking && !bWorking) return -1;
-                    if (!aWorking && bWorking) return 1;
-                    return b.lastActivity - a.lastActivity;
-                  })
-                  .map((session, index) => {
-                    const activity = terminalActivities?.find(a => a.sessionId === session.id);
-                    const isWorking = activity?.isWorking ?? false;
-                    const timeSinceActivity = Date.now() - session.lastActivity;
-                    const timeSinceCreated = Date.now() - session.createdAt;
-
-                    return (
-                      <div
-                        key={session.id}
-                        style={{
-                          padding: '16px 20px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '16px',
-                          borderBottom:
-                            index < allTerminalSessions.length - 1
-                              ? `1px solid ${theme.colors.border}`
-                              : 'none',
-                          transition: 'background-color 0.15s ease',
-                          backgroundColor: isWorking ? `${theme.colors.success}05` : 'transparent',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = isWorking
-                            ? `${theme.colors.success}10`
-                            : 'rgba(0, 0, 0, 0.02)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = isWorking
-                            ? `${theme.colors.success}05`
-                            : 'transparent';
-                        }}
-                      >
-                        {/* Status Icon */}
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '8px',
-                            backgroundColor: isWorking
-                              ? `${theme.colors.success}15`
-                              : `${theme.colors.textSecondary}10`,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {isWorking ? (
-                            <Loader2
-                              size={18}
-                              style={{
-                                color: theme.colors.success,
-                                animation: 'spin 1s linear infinite',
-                              }}
-                            />
-                          ) : (
-                            <Terminal
-                              size={18}
-                              style={{ color: theme.colors.textSecondary }}
-                            />
-                          )}
-                        </div>
-
-                        {/* Session Info */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              flexWrap: 'wrap',
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontFamily: theme.fonts.monospace,
-                                fontSize: '13px',
-                                color: theme.colors.text,
-                                fontWeight: 500,
-                              }}
-                            >
-                              {session.id.substring(0, 12)}...
-                            </span>
-                            {session.context && (
-                              <span
-                                style={{
-                                  fontSize: '11px',
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  backgroundColor: `${theme.colors.primary}15`,
-                                  color: theme.colors.primary,
-                                }}
-                              >
-                                {session.context}
-                              </span>
-                            )}
-                            {session.ownedByWindowId && (
-                              <span
-                                style={{
-                                  fontSize: '11px',
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  backgroundColor: `${theme.colors.info}15`,
-                                  color: theme.colors.info,
-                                }}
-                              >
-                                Window {session.ownedByWindowId}
-                              </span>
-                            )}
-                            {isWorking && (
-                              <span
-                                style={{
-                                  fontSize: '11px',
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  backgroundColor: `${theme.colors.success}15`,
-                                  color: theme.colors.success,
-                                  fontWeight: 500,
-                                }}
-                              >
-                                Working
-                              </span>
-                            )}
-                            {session.metadata?.serverType && (
-                              <span
-                                style={{
-                                  fontSize: '11px',
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  backgroundColor: `${theme.colors.warning}15`,
-                                  color: theme.colors.warning,
-                                }}
-                              >
-                                {session.metadata.serverType}
-                                {session.metadata.port && `:${session.metadata.port}`}
-                              </span>
-                            )}
-                          </div>
-                          {(session.cwd || session.directory) && (
-                            <div
-                              style={{
-                                fontSize: '12px',
-                                color: theme.colors.textSecondary,
-                                marginTop: '4px',
-                                fontFamily: theme.fonts.monospace,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {session.cwd || session.directory}
-                            </div>
-                          )}
-                          {activity?.workingMessage && (
-                            <div
-                              style={{
-                                fontSize: '12px',
-                                color: theme.colors.success,
-                                marginTop: '4px',
-                              }}
-                            >
-                              {activity.workingMessage}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Timestamps / Working Duration */}
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'flex-end',
-                            fontSize: '11px',
-                            color: theme.colors.textSecondary,
-                            fontFamily: theme.fonts.monospace,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {isWorking && activity ? (
-                            <div style={{ color: theme.colors.success, fontWeight: 500 }}>
-                              Working for {Math.floor((Date.now() - activity.timestamp) / 1000)}s
-                            </div>
-                          ) : (
-                            <div title="Time since last activity">
-                              Active {formatDuration(timeSinceActivity)}
-                            </div>
-                          )}
-                          <div
-                            style={{ marginTop: '2px', opacity: 0.7 }}
-                            title="Time since creation"
-                          >
-                            Created {formatDuration(timeSinceCreated)}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-              )}
-            </div>
-
-            {/* Summary Stats */}
-            {allTerminalSessions.length > 0 && (
-              <div
-                style={{
-                  marginTop: '16px',
-                  padding: '12px 16px',
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  borderRadius: '8px',
-                  border: `1px solid ${theme.colors.border}`,
-                  fontSize: '12px',
-                  color: theme.colors.textSecondary,
-                  display: 'flex',
-                  gap: '16px',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <span>Total: {allTerminalSessions.length}</span>
-                <span>•</span>
-                <span style={{ color: theme.colors.success }}>
-                  Working: {terminalActivities?.filter(a => a.isWorking).length ?? 0}
-                </span>
-                <span>•</span>
-                <span>
-                  Idle: {allTerminalSessions.length - (terminalActivities?.filter(a => a.isWorking).length ?? 0)}
-                </span>
-                {allTerminalSessions.some(s => s.ownedByWindowId) && (
-                  <>
-                    <span>•</span>
-                    <span>
-                      Windows: {new Set(allTerminalSessions.filter(s => s.ownedByWindowId).map(s => s.ownedByWindowId)).size}
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* CLI Bridge Content */}
-        {activeTab === 'clibridge' && (
-          <section style={{ marginBottom: '32px' }}>
-            <h3
-              style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: theme.colors.textSecondary,
-                marginBottom: '16px',
-                fontFamily: theme.fonts.heading,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              CLI BRIDGE DIAGNOSTICS
-            </h3>
-
-            {/* Status Card */}
-            <div
-              style={{
-                backgroundColor: theme.colors.backgroundSecondary,
-                borderRadius: '12px',
-                padding: '20px',
-                border: `1px solid ${theme.colors.border}`,
-                marginBottom: '16px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    backgroundColor: cliBridgeStatus?.initialized
-                      ? `${theme.colors.success}15`
-                      : cliBridgeStatus?.workers.some(w => w.isRunning)
-                        ? `${theme.colors.warning}15`
-                        : `${theme.colors.error}15`,
-                  }}
-                >
-                  <Wrench
-                    size={22}
-                    style={{
-                      color: cliBridgeStatus?.initialized
-                        ? theme.colors.success
-                        : cliBridgeStatus?.workers.some(w => w.isRunning)
-                          ? theme.colors.warning
-                          : theme.colors.error,
-                    }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
                   <h3
                     style={{
-                      fontSize: '16px',
+                      fontSize: '18px',
                       fontWeight: 600,
-                      color: theme.colors.text,
                       margin: 0,
                       fontFamily: theme.fonts.heading,
                     }}
                   >
-                    CLI Bridge Worker
+                    Repository Monitoring
                   </h3>
-                  <div
+                  <p
                     style={{
-                      fontSize: '12px',
-                      color: cliBridgeStatus?.initialized
-                        ? theme.colors.success
-                        : cliBridgeStatus?.workers.some(w => w.isRunning)
-                          ? theme.colors.warning
-                          : theme.colors.error,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
+                      fontSize: '13px',
+                      color: theme.colors.textSecondary,
+                      margin: '4px 0 0',
                     }}
                   >
-                    <span
+                    Shared daemon that watches repositories and caches file
+                    trees, packages and git state.
+                  </p>
+                </div>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
+                >
+                  {/* Repository Monitoring Status (phase-aware). */}
+                  {(() => {
+                    const phase: LifecyclePhase =
+                      diagnostics?.phase ?? (isRunning ? 'connected' : 'idle');
+                    const color = phaseAccentColor(phase, theme);
+                    const isTransitional =
+                      phase === 'connecting' ||
+                      phase === 'disconnecting' ||
+                      phase === 'reconnecting';
+                    return (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          backgroundColor: `${color}15`,
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          color,
+                        }}
+                        title={phaseTooltip(phase, diagnostics)}
+                      >
+                        <div
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: color,
+                            animation:
+                              phase === 'connected'
+                                ? 'pulse 2s infinite'
+                                : isTransitional
+                                  ? 'pulse 1s infinite'
+                                  : 'none',
+                          }}
+                        />
+                        {phaseLabel(phase)}
+                        {diagnostics &&
+                          diagnostics.reconnectAttempts > 0 &&
+                          phase === 'reconnecting' && (
+                            <span style={{ opacity: 0.8, fontSize: '11px' }}>
+                              (attempt {diagnostics.reconnectAttempts})
+                            </span>
+                          )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Repository Power button */}
+                  <button
+                    onClick={handleToggleMonitoring}
+                    disabled={isToggling}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '8px',
+                      border: `1px solid ${isRunning ? theme.colors.error : theme.colors.success}`,
+                      backgroundColor: isRunning
+                        ? `${theme.colors.error}10`
+                        : `${theme.colors.success}10`,
+                      color: isRunning
+                        ? theme.colors.error
+                        : theme.colors.success,
+                      cursor: isToggling ? 'not-allowed' : 'pointer',
+                      opacity: isToggling ? 0.5 : 1,
+                      transition: 'all 0.2s ease',
+                    }}
+                    title={
+                      isRunning
+                        ? 'Disconnect from the daemon'
+                        : 'Connect to the daemon'
+                    }
+                  >
+                    <Power size={20} />
+                  </button>
+                </div>
+              </div>
+              {/* Memory Warning */}
+              {status && status.currentMemory > 500 * 1024 * 1024 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 16px',
+                    marginBottom: '20px',
+                    backgroundColor:
+                      status.currentMemory > 800 * 1024 * 1024
+                        ? `${theme.colors.error}15`
+                        : `${theme.colors.warning}15`,
+                    border: `1px solid ${
+                      status.currentMemory > 800 * 1024 * 1024
+                        ? theme.colors.error
+                        : theme.colors.warning
+                    }`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    color:
+                      status.currentMemory > 800 * 1024 * 1024
+                        ? theme.colors.error
+                        : theme.colors.warning,
+                  }}
+                >
+                  <AlertCircle size={18} />
+                  <span>
+                    High memory usage detected (
+                    {formatBytes(status.currentMemory)}).
+                    {isRunning &&
+                      ' Consider stopping and restarting the monitoring process to free up memory.'}
+                  </span>
+                </div>
+              )}
+
+              {/* Resource Metrics Section */}
+              <section style={{ marginBottom: '32px' }}>
+                <h3
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: theme.colors.textSecondary,
+                    marginBottom: '16px',
+                    fontFamily: theme.fonts.heading,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  RESOURCE USAGE
+                </h3>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: sidebarCollapsed
+                      ? '1fr 1fr'
+                      : '1fr 1fr',
+                    gap: '16px',
+                    marginBottom: '8px',
+                  }}
+                >
+                  {/* Memory Card */}
+                  <div
+                    style={{
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      borderRadius: '12px',
+                      padding: '20px',
+                      border: `1px solid ${theme.colors.border}`,
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <div
                       style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        backgroundColor: cliBridgeStatus?.initialized
-                          ? theme.colors.success
-                          : cliBridgeStatus?.workers.some(w => w.isRunning)
-                            ? theme.colors.warning
-                            : theme.colors.error,
+                        display: 'flex',
+                        alignItems: 'center',
+                        marginBottom: '12px',
+                        justifyContent: 'space-between',
                       }}
-                    />
-                    {cliBridgeLoading
-                      ? 'Loading...'
-                      : cliBridgeStatus?.initialized
-                        ? 'Initialized'
-                        : cliBridgeStatus?.workers.some(w => w.isRunning)
-                          ? 'Worker Running (init timed out)'
-                          : 'Not Initialized'}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <HardDrive
+                          size={16}
+                          style={{ color: theme.colors.info }}
+                        />
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: theme.colors.textSecondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                          }}
+                        >
+                          MEMORY
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '28px',
+                        fontWeight: 700,
+                        marginBottom: '16px',
+                        fontFamily: theme.fonts.monospace,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {formatBytes(status.currentMemory)}
+                    </div>
+                    {status.daemon && (
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: theme.colors.textSecondary,
+                          marginTop: '-10px',
+                          marginBottom: '12px',
+                        }}
+                      >
+                        shared daemon · {status.daemon.clients}{' '}
+                        {status.daemon.clients === 1 ? 'client' : 'clients'}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                      <Sparkline
+                        data={status.history.map((h) => h.memory / 1024 / 1024)}
+                        max={
+                          Math.max(
+                            ...status.history.map(
+                              (h) => h.memory / 1024 / 1024,
+                            ),
+                          ) * 1.1
+                        }
+                        color={theme.colors.info}
+                      />
+                    </div>
+                  </div>
+
+                  {/* CPU Card */}
+                  <div
+                    style={{
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      borderRadius: '12px',
+                      padding: '20px',
+                      border: `1px solid ${theme.colors.border}`,
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        marginBottom: '12px',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <Activity
+                          size={16}
+                          style={{ color: theme.colors.success }}
+                        />
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: theme.colors.textSecondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                          }}
+                        >
+                          CPU
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '28px',
+                        fontWeight: 700,
+                        marginBottom: '16px',
+                        fontFamily: theme.fonts.monospace,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {status.currentCpu.toFixed(1)}%
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                      <Sparkline
+                        data={status.history.map((h) => h.cpu)}
+                        max={100}
+                        color={theme.colors.success}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {/* Initialize Button */}
-                  {!cliBridgeStatus?.initialized && (
+                {/* History note */}
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: theme.colors.textSecondary,
+                    textAlign: 'center',
+                    marginTop: '8px',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  Showing last {status.history.length} data points (1 minute
+                  history)
+                </div>
+              </section>
+
+              <RepositoryMonitoringDiagnostics
+                diagnostics={diagnostics}
+                nowTick={nowTick}
+              />
+            </>
+          )}
+
+          {/* Terminal Sessions Content */}
+          {activeTab === 'terminals' && (
+            <section style={{ marginBottom: '32px' }}>
+              {/* Daemon Status Card */}
+              <div
+                style={{
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  borderRadius: '12px',
+                  border: `1px solid ${theme.colors.border}`,
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  padding: '20px',
+                  marginBottom: '24px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      backgroundColor:
+                        !usePtyDaemon || daemonChecking
+                          ? `${theme.colors.textSecondary}15`
+                          : daemonStatus?.isRunning
+                            ? `${theme.colors.success}15`
+                            : `${theme.colors.error}15`,
+                    }}
+                  >
+                    <Server
+                      size={22}
+                      style={{
+                        color:
+                          !usePtyDaemon || daemonChecking
+                            ? theme.colors.textSecondary
+                            : daemonStatus?.isRunning
+                              ? theme.colors.success
+                              : theme.colors.error,
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3
+                      style={{
+                        fontSize: '16px',
+                        fontWeight: 600,
+                        color: theme.colors.text,
+                        margin: 0,
+                        fontFamily: theme.fonts.heading,
+                      }}
+                    >
+                      PTY Daemon
+                    </h3>
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color:
+                          !usePtyDaemon || daemonChecking
+                            ? theme.colors.textSecondary
+                            : daemonStatus?.isRunning
+                              ? theme.colors.success
+                              : theme.colors.error,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor:
+                            !usePtyDaemon || daemonChecking
+                              ? theme.colors.textSecondary
+                              : daemonStatus?.isRunning
+                                ? theme.colors.success
+                                : theme.colors.error,
+                        }}
+                      />
+                      {!usePtyDaemon
+                        ? 'Disabled'
+                        : daemonChecking
+                          ? 'Checking...'
+                          : daemonStatus?.isRunning
+                            ? 'Running'
+                            : 'Not Running'}
+                    </div>
+                  </div>
+                  {usePtyDaemon && !daemonChecking && (
                     <button
                       onClick={async () => {
-                        setCliBridgeLoading(true);
+                        setIsDaemonControlling(true);
                         try {
-                          await CLIBridgeService.initialize();
-                          const status = await CLIBridgeService.getStatus();
-                          setCliBridgeStatus(status);
+                          if (daemonStatus?.isRunning) {
+                            await TerminalService.stopDaemon();
+                          } else {
+                            await TerminalService.startDaemon();
+                          }
+                          // Refresh status after action
+                          const status =
+                            await TerminalService.getDaemonStatus();
+                          setDaemonStatus(status);
                         } catch (error) {
-                          console.error('Failed to initialize CLI Bridge:', error);
+                          console.error('Failed to control daemon:', error);
                         } finally {
-                          setCliBridgeLoading(false);
+                          setIsDaemonControlling(false);
                         }
                       }}
-                      disabled={cliBridgeLoading}
+                      disabled={isDaemonControlling}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -1855,123 +1118,1086 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                         fontWeight: 500,
                         borderRadius: '8px',
                         border: 'none',
-                        cursor: cliBridgeLoading ? 'not-allowed' : 'pointer',
-                        backgroundColor: theme.colors.success,
-                        color: 'white',
+                        cursor: isDaemonControlling ? 'not-allowed' : 'pointer',
+                        backgroundColor: daemonStatus?.isRunning
+                          ? `${theme.colors.error}15`
+                          : `${theme.colors.success}15`,
+                        color: daemonStatus?.isRunning
+                          ? theme.colors.error
+                          : theme.colors.success,
                         transition: 'all 0.2s ease',
-                        opacity: cliBridgeLoading ? 0.6 : 1,
+                        opacity: isDaemonControlling ? 0.6 : 1,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isDaemonControlling) {
+                          e.currentTarget.style.backgroundColor =
+                            daemonStatus?.isRunning
+                              ? `${theme.colors.error}25`
+                              : `${theme.colors.success}25`;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          daemonStatus?.isRunning
+                            ? `${theme.colors.error}15`
+                            : `${theme.colors.success}15`;
                       }}
                     >
-                      {cliBridgeLoading ? (
-                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                      {isDaemonControlling ? (
+                        <Loader2
+                          size={14}
+                          style={{ animation: 'spin 1s linear infinite' }}
+                        />
                       ) : (
-                        <Play size={14} />
+                        <Power size={14} />
                       )}
-                      Initialize
+                      {isDaemonControlling
+                        ? daemonStatus?.isRunning
+                          ? 'Stopping...'
+                          : 'Starting...'
+                        : daemonStatus?.isRunning
+                          ? 'Stop'
+                          : 'Start'}
                     </button>
                   )}
+                </div>
 
-                  {/* Test Worker Button */}
+                {usePtyDaemon &&
+                  daemonStatus?.isRunning &&
+                  daemonStatus.status && (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns:
+                          'repeat(auto-fit, minmax(140px, 1fr))',
+                        gap: '16px',
+                      }}
+                    >
+                      {/* PID */}
+                      <div>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          PID
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            color: theme.colors.text,
+                            fontFamily: theme.fonts.monospace,
+                          }}
+                        >
+                          {daemonStatus.status.pid}
+                        </div>
+                      </div>
+
+                      {/* Uptime */}
+                      <div>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            marginBottom: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <Clock size={10} />
+                          Uptime
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {(() => {
+                            const uptime = daemonStatus.status.uptime;
+                            const hours = Math.floor(uptime / 3600000);
+                            const minutes = Math.floor(
+                              (uptime % 3600000) / 60000,
+                            );
+                            const seconds = Math.floor((uptime % 60000) / 1000);
+                            if (hours > 0) return `${hours}h ${minutes}m`;
+                            if (minutes > 0) return `${minutes}m ${seconds}s`;
+                            return `${seconds}s`;
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* Sessions */}
+                      <div>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            marginBottom: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <Terminal size={10} />
+                          Sessions
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {daemonStatus.status.sessionCount}
+                        </div>
+                      </div>
+
+                      {/* Clients */}
+                      <div>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          Clients
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {daemonStatus.status.clientCount}
+                        </div>
+                      </div>
+
+                      {/* Memory */}
+                      <div>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            marginBottom: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <Cpu size={10} />
+                          Memory (Heap)
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {(
+                            daemonStatus.status.memoryUsage.heapUsed /
+                            1024 /
+                            1024
+                          ).toFixed(1)}{' '}
+                          MB
+                        </div>
+                      </div>
+
+                      {/* RSS */}
+                      <div>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          RSS
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {(
+                            daemonStatus.status.memoryUsage.rss /
+                            1024 /
+                            1024
+                          ).toFixed(1)}{' '}
+                          MB
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                {!usePtyDaemon && (
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      color: theme.colors.textSecondary,
+                      padding: '12px 16px',
+                      backgroundColor: `${theme.colors.textSecondary}08`,
+                      borderRadius: '8px',
+                      border: `1px solid ${theme.colors.textSecondary}20`,
+                    }}
+                  >
+                    PTY daemon is disabled. Terminals use legacy mode (node-pty
+                    directly in worker).
+                  </div>
+                )}
+
+                {usePtyDaemon &&
+                  !daemonChecking &&
+                  !daemonStatus?.isRunning && (
+                    <div
+                      style={{
+                        fontSize: '13px',
+                        color: theme.colors.textSecondary,
+                        padding: '12px 16px',
+                        backgroundColor: `${theme.colors.error}08`,
+                        borderRadius: '8px',
+                        border: `1px solid ${theme.colors.error}20`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '16px',
+                      }}
+                    >
+                      <span>
+                        The PTY daemon is not running. Terminal sessions will
+                        start the daemon automatically.
+                      </span>
+                      <button
+                        onClick={async () => {
+                          setIsDaemonControlling(true);
+                          try {
+                            await TerminalService.startDaemon();
+                            const status =
+                              await TerminalService.getDaemonStatus();
+                            setDaemonStatus(status);
+                          } catch (error) {
+                            console.error('Failed to start daemon:', error);
+                          } finally {
+                            setIsDaemonControlling(false);
+                          }
+                        }}
+                        disabled={isDaemonControlling}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          borderRadius: '6px',
+                          border: 'none',
+                          cursor: isDaemonControlling
+                            ? 'not-allowed'
+                            : 'pointer',
+                          backgroundColor: theme.colors.success,
+                          color: 'white',
+                          transition: 'all 0.2s ease',
+                          opacity: isDaemonControlling ? 0.6 : 1,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {isDaemonControlling ? (
+                          <Loader2
+                            size={12}
+                            style={{ animation: 'spin 1s linear infinite' }}
+                          />
+                        ) : (
+                          <Power size={12} />
+                        )}
+                        {isDaemonControlling ? 'Starting...' : 'Start Now'}
+                      </button>
+                    </div>
+                  )}
+
+                {/* Daemon Mode Toggle */}
+                <div
+                  style={{
+                    marginTop: '16px',
+                    paddingTop: '16px',
+                    borderTop: `1px solid ${theme.colors.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: theme.colors.text,
+                        marginBottom: '2px',
+                      }}
+                    >
+                      Use PTY Daemon
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      {usePtyDaemon ? 'Enabled' : 'Disabled'} · Requires app
+                      restart
+                    </div>
+                  </div>
                   <button
                     onClick={async () => {
-                      setIsTestingWorker(true);
-                      setLastTestResult(null);
+                      setIsDaemonModeChanging(true);
                       try {
-                        const result = await CLIBridgeService.testWorker();
-                        setLastTestResult(result);
-                        // Refresh status after test
-                        const status = await CLIBridgeService.getStatus();
-                        setCliBridgeStatus(status);
-                      } catch (error) {
-                        setLastTestResult({
-                          success: false,
-                          duration: 0,
-                          error: error instanceof Error ? error.message : String(error),
+                        const newValue = !usePtyDaemon;
+                        await UserPreferencesService.updatePreferences({
+                          usePtyDaemon: newValue,
                         });
-                      } finally {
-                        setIsTestingWorker(false);
-                      }
-                    }}
-                    disabled={isTestingWorker}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 16px',
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      borderRadius: '8px',
-                      border: `1px solid ${theme.colors.primary}`,
-                      cursor: isTestingWorker ? 'not-allowed' : 'pointer',
-                      backgroundColor: `${theme.colors.primary}15`,
-                      color: theme.colors.primary,
-                      transition: 'all 0.2s ease',
-                      opacity: isTestingWorker ? 0.6 : 1,
-                    }}
-                  >
-                    {isTestingWorker ? (
-                      <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                    ) : (
-                      <Play size={14} />
-                    )}
-                    Test Worker
-                  </button>
-
-                  {/* Restart Worker Button */}
-                  <button
-                    onClick={async () => {
-                      setIsRestartingWorker(true);
-                      try {
-                        await CLIBridgeService.restartWorker();
-                        const status = await CLIBridgeService.getStatus();
-                        setCliBridgeStatus(status);
+                        setUsePtyDaemon(newValue);
                       } catch (error) {
-                        console.error('Failed to restart worker:', error);
+                        console.error(
+                          'Failed to update daemon mode preference:',
+                          error,
+                        );
                       } finally {
-                        setIsRestartingWorker(false);
+                        setIsDaemonModeChanging(false);
                       }
                     }}
-                    disabled={isRestartingWorker}
+                    disabled={isDaemonModeChanging}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 16px',
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      borderRadius: '8px',
-                      border: `1px solid ${theme.colors.warning}`,
-                      cursor: isRestartingWorker ? 'not-allowed' : 'pointer',
-                      backgroundColor: `${theme.colors.warning}15`,
-                      color: theme.colors.warning,
-                      transition: 'all 0.2s ease',
-                      opacity: isRestartingWorker ? 0.6 : 1,
+                      position: 'relative',
+                      width: '44px',
+                      height: '24px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      cursor: isDaemonModeChanging ? 'not-allowed' : 'pointer',
+                      backgroundColor: usePtyDaemon
+                        ? theme.colors.success
+                        : theme.colors.textSecondary,
+                      transition: 'background-color 0.2s ease',
+                      opacity: isDaemonModeChanging ? 0.6 : 1,
                     }}
                   >
-                    {isRestartingWorker ? (
-                      <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                    ) : (
-                      <RefreshCw size={14} />
-                    )}
-                    Restart Worker
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: usePtyDaemon ? '22px' : '2px',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        backgroundColor: 'white',
+                        transition: 'left 0.2s ease',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
+                      }}
+                    />
                   </button>
                 </div>
               </div>
 
-              {/* Worker Details */}
-              {cliBridgeStatus && cliBridgeStatus.workers.length > 0 && (
+              <h3
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: theme.colors.textSecondary,
+                  marginBottom: '16px',
+                  fontFamily: theme.fonts.heading,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                TERMINAL SESSIONS ({allTerminalSessions.length})
+              </h3>
+
+              <div
+                style={{
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  borderRadius: '12px',
+                  border: `1px solid ${theme.colors.border}`,
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  overflow: 'hidden',
+                }}
+              >
+                {sessionsLoading ? (
+                  <div
+                    style={{
+                      padding: '24px',
+                      textAlign: 'center',
+                      color: theme.colors.textSecondary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Loader2
+                      size={16}
+                      style={{ animation: 'spin 1s linear infinite' }}
+                    />
+                    Loading sessions...
+                  </div>
+                ) : allTerminalSessions.length === 0 ? (
+                  <div
+                    style={{
+                      padding: '40px 24px',
+                      textAlign: 'center',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    <Terminal
+                      size={40}
+                      style={{ marginBottom: '12px', opacity: 0.5 }}
+                    />
+                    <div style={{ fontSize: '14px' }}>No terminal sessions</div>
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        marginTop: '4px',
+                        opacity: 0.7,
+                      }}
+                    >
+                      Terminal sessions will appear here when created
+                    </div>
+                  </div>
+                ) : (
+                  // Sort sessions: working first, then by lastActivity
+                  [...allTerminalSessions]
+                    .sort((a, b) => {
+                      const aWorking =
+                        terminalActivities?.find(
+                          (act) => act.sessionId === a.id,
+                        )?.isWorking ?? false;
+                      const bWorking =
+                        terminalActivities?.find(
+                          (act) => act.sessionId === b.id,
+                        )?.isWorking ?? false;
+                      if (aWorking && !bWorking) return -1;
+                      if (!aWorking && bWorking) return 1;
+                      return b.lastActivity - a.lastActivity;
+                    })
+                    .map((session, index) => {
+                      const activity = terminalActivities?.find(
+                        (a) => a.sessionId === session.id,
+                      );
+                      const isWorking = activity?.isWorking ?? false;
+                      const timeSinceActivity =
+                        Date.now() - session.lastActivity;
+                      const timeSinceCreated = Date.now() - session.createdAt;
+
+                      return (
+                        <div
+                          key={session.id}
+                          style={{
+                            padding: '16px 20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px',
+                            borderBottom:
+                              index < allTerminalSessions.length - 1
+                                ? `1px solid ${theme.colors.border}`
+                                : 'none',
+                            transition: 'background-color 0.15s ease',
+                            backgroundColor: isWorking
+                              ? `${theme.colors.success}05`
+                              : 'transparent',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = isWorking
+                              ? `${theme.colors.success}10`
+                              : 'rgba(0, 0, 0, 0.02)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = isWorking
+                              ? `${theme.colors.success}05`
+                              : 'transparent';
+                          }}
+                        >
+                          {/* Status Icon */}
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              backgroundColor: isWorking
+                                ? `${theme.colors.success}15`
+                                : `${theme.colors.textSecondary}10`,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isWorking ? (
+                              <Loader2
+                                size={18}
+                                style={{
+                                  color: theme.colors.success,
+                                  animation: 'spin 1s linear infinite',
+                                }}
+                              />
+                            ) : (
+                              <Terminal
+                                size={18}
+                                style={{ color: theme.colors.textSecondary }}
+                              />
+                            )}
+                          </div>
+
+                          {/* Session Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                flexWrap: 'wrap',
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontFamily: theme.fonts.monospace,
+                                  fontSize: '13px',
+                                  color: theme.colors.text,
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {session.id.substring(0, 12)}...
+                              </span>
+                              {session.context && (
+                                <span
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    backgroundColor: `${theme.colors.primary}15`,
+                                    color: theme.colors.primary,
+                                  }}
+                                >
+                                  {session.context}
+                                </span>
+                              )}
+                              {session.ownedByWindowId && (
+                                <span
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    backgroundColor: `${theme.colors.info}15`,
+                                    color: theme.colors.info,
+                                  }}
+                                >
+                                  Window {session.ownedByWindowId}
+                                </span>
+                              )}
+                              {isWorking && (
+                                <span
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    backgroundColor: `${theme.colors.success}15`,
+                                    color: theme.colors.success,
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  Working
+                                </span>
+                              )}
+                              {session.metadata?.serverType && (
+                                <span
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    backgroundColor: `${theme.colors.warning}15`,
+                                    color: theme.colors.warning,
+                                  }}
+                                >
+                                  {session.metadata.serverType}
+                                  {session.metadata.port &&
+                                    `:${session.metadata.port}`}
+                                </span>
+                              )}
+                            </div>
+                            {(session.cwd || session.directory) && (
+                              <div
+                                style={{
+                                  fontSize: '12px',
+                                  color: theme.colors.textSecondary,
+                                  marginTop: '4px',
+                                  fontFamily: theme.fonts.monospace,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {session.cwd || session.directory}
+                              </div>
+                            )}
+                            {activity?.workingMessage && (
+                              <div
+                                style={{
+                                  fontSize: '12px',
+                                  color: theme.colors.success,
+                                  marginTop: '4px',
+                                }}
+                              >
+                                {activity.workingMessage}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Timestamps / Working Duration */}
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-end',
+                              fontSize: '11px',
+                              color: theme.colors.textSecondary,
+                              fontFamily: theme.fonts.monospace,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isWorking && activity ? (
+                              <div
+                                style={{
+                                  color: theme.colors.success,
+                                  fontWeight: 500,
+                                }}
+                              >
+                                Working for{' '}
+                                {Math.floor(
+                                  (Date.now() - activity.timestamp) / 1000,
+                                )}
+                                s
+                              </div>
+                            ) : (
+                              <div title="Time since last activity">
+                                Active {formatDuration(timeSinceActivity)}
+                              </div>
+                            )}
+                            <div
+                              style={{ marginTop: '2px', opacity: 0.7 }}
+                              title="Time since creation"
+                            >
+                              Created {formatDuration(timeSinceCreated)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+
+              {/* Summary Stats */}
+              {allTerminalSessions.length > 0 && (
                 <div
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    gap: '16px',
                     marginTop: '16px',
-                    paddingTop: '16px',
-                    borderTop: `1px solid ${theme.colors.border}`,
+                    padding: '12px 16px',
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.colors.border}`,
+                    fontSize: '12px',
+                    color: theme.colors.textSecondary,
+                    display: 'flex',
+                    gap: '16px',
+                    flexWrap: 'wrap',
                   }}
                 >
-                  {cliBridgeStatus.workers.map((worker) => (
-                    <div key={worker.name}>
+                  <span>Total: {allTerminalSessions.length}</span>
+                  <span>•</span>
+                  <span style={{ color: theme.colors.success }}>
+                    Working:{' '}
+                    {terminalActivities?.filter((a) => a.isWorking).length ?? 0}
+                  </span>
+                  <span>•</span>
+                  <span>
+                    Idle:{' '}
+                    {allTerminalSessions.length -
+                      (terminalActivities?.filter((a) => a.isWorking).length ??
+                        0)}
+                  </span>
+                  {allTerminalSessions.some((s) => s.ownedByWindowId) && (
+                    <>
+                      <span>•</span>
+                      <span>
+                        Windows:{' '}
+                        {
+                          new Set(
+                            allTerminalSessions
+                              .filter((s) => s.ownedByWindowId)
+                              .map((s) => s.ownedByWindowId),
+                          ).size
+                        }
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* CLI Bridge Content */}
+          {activeTab === 'clibridge' && (
+            <section style={{ marginBottom: '32px' }}>
+              <h3
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: theme.colors.textSecondary,
+                  marginBottom: '16px',
+                  fontFamily: theme.fonts.heading,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                CLI BRIDGE DIAGNOSTICS
+              </h3>
+
+              {/* Status Card */}
+              <div
+                style={{
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: `1px solid ${theme.colors.border}`,
+                  marginBottom: '16px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      backgroundColor: cliBridgeStatus?.initialized
+                        ? `${theme.colors.success}15`
+                        : cliBridgeStatus?.workers.some((w) => w.isRunning)
+                          ? `${theme.colors.warning}15`
+                          : `${theme.colors.error}15`,
+                    }}
+                  >
+                    <Wrench
+                      size={22}
+                      style={{
+                        color: cliBridgeStatus?.initialized
+                          ? theme.colors.success
+                          : cliBridgeStatus?.workers.some((w) => w.isRunning)
+                            ? theme.colors.warning
+                            : theme.colors.error,
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3
+                      style={{
+                        fontSize: '16px',
+                        fontWeight: 600,
+                        color: theme.colors.text,
+                        margin: 0,
+                        fontFamily: theme.fonts.heading,
+                      }}
+                    >
+                      CLI Bridge Worker
+                    </h3>
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: cliBridgeStatus?.initialized
+                          ? theme.colors.success
+                          : cliBridgeStatus?.workers.some((w) => w.isRunning)
+                            ? theme.colors.warning
+                            : theme.colors.error,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor: cliBridgeStatus?.initialized
+                            ? theme.colors.success
+                            : cliBridgeStatus?.workers.some((w) => w.isRunning)
+                              ? theme.colors.warning
+                              : theme.colors.error,
+                        }}
+                      />
+                      {cliBridgeLoading
+                        ? 'Loading...'
+                        : cliBridgeStatus?.initialized
+                          ? 'Initialized'
+                          : cliBridgeStatus?.workers.some((w) => w.isRunning)
+                            ? 'Worker Running (init timed out)'
+                            : 'Not Initialized'}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {/* Initialize Button */}
+                    {!cliBridgeStatus?.initialized && (
+                      <button
+                        onClick={async () => {
+                          setCliBridgeLoading(true);
+                          try {
+                            await CLIBridgeService.initialize();
+                            const status = await CLIBridgeService.getStatus();
+                            setCliBridgeStatus(status);
+                          } catch (error) {
+                            console.error(
+                              'Failed to initialize CLI Bridge:',
+                              error,
+                            );
+                          } finally {
+                            setCliBridgeLoading(false);
+                          }
+                        }}
+                        disabled={cliBridgeLoading}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '8px 16px',
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          borderRadius: '8px',
+                          border: 'none',
+                          cursor: cliBridgeLoading ? 'not-allowed' : 'pointer',
+                          backgroundColor: theme.colors.success,
+                          color: 'white',
+                          transition: 'all 0.2s ease',
+                          opacity: cliBridgeLoading ? 0.6 : 1,
+                        }}
+                      >
+                        {cliBridgeLoading ? (
+                          <Loader2
+                            size={14}
+                            style={{ animation: 'spin 1s linear infinite' }}
+                          />
+                        ) : (
+                          <Play size={14} />
+                        )}
+                        Initialize
+                      </button>
+                    )}
+
+                    {/* Test Worker Button */}
+                    <button
+                      onClick={async () => {
+                        setIsTestingWorker(true);
+                        setLastTestResult(null);
+                        try {
+                          const result = await CLIBridgeService.testWorker();
+                          setLastTestResult(result);
+                          // Refresh status after test
+                          const status = await CLIBridgeService.getStatus();
+                          setCliBridgeStatus(status);
+                        } catch (error) {
+                          setLastTestResult({
+                            success: false,
+                            duration: 0,
+                            error:
+                              error instanceof Error
+                                ? error.message
+                                : String(error),
+                          });
+                        } finally {
+                          setIsTestingWorker(false);
+                        }
+                      }}
+                      disabled={isTestingWorker}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 16px',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        borderRadius: '8px',
+                        border: `1px solid ${theme.colors.primary}`,
+                        cursor: isTestingWorker ? 'not-allowed' : 'pointer',
+                        backgroundColor: `${theme.colors.primary}15`,
+                        color: theme.colors.primary,
+                        transition: 'all 0.2s ease',
+                        opacity: isTestingWorker ? 0.6 : 1,
+                      }}
+                    >
+                      {isTestingWorker ? (
+                        <Loader2
+                          size={14}
+                          style={{ animation: 'spin 1s linear infinite' }}
+                        />
+                      ) : (
+                        <Play size={14} />
+                      )}
+                      Test Worker
+                    </button>
+
+                    {/* Restart Worker Button */}
+                    <button
+                      onClick={async () => {
+                        setIsRestartingWorker(true);
+                        try {
+                          await CLIBridgeService.restartWorker();
+                          const status = await CLIBridgeService.getStatus();
+                          setCliBridgeStatus(status);
+                        } catch (error) {
+                          console.error('Failed to restart worker:', error);
+                        } finally {
+                          setIsRestartingWorker(false);
+                        }
+                      }}
+                      disabled={isRestartingWorker}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 16px',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        borderRadius: '8px',
+                        border: `1px solid ${theme.colors.warning}`,
+                        cursor: isRestartingWorker ? 'not-allowed' : 'pointer',
+                        backgroundColor: `${theme.colors.warning}15`,
+                        color: theme.colors.warning,
+                        transition: 'all 0.2s ease',
+                        opacity: isRestartingWorker ? 0.6 : 1,
+                      }}
+                    >
+                      {isRestartingWorker ? (
+                        <Loader2
+                          size={14}
+                          style={{ animation: 'spin 1s linear infinite' }}
+                        />
+                      ) : (
+                        <RefreshCw size={14} />
+                      )}
+                      Restart Worker
+                    </button>
+                  </div>
+                </div>
+
+                {/* Worker Details */}
+                {cliBridgeStatus && cliBridgeStatus.workers.length > 0 && (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns:
+                        'repeat(auto-fit, minmax(140px, 1fr))',
+                      gap: '16px',
+                      marginTop: '16px',
+                      paddingTop: '16px',
+                      borderTop: `1px solid ${theme.colors.border}`,
+                    }}
+                  >
+                    {cliBridgeStatus.workers.map((worker) => (
+                      <div key={worker.name}>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          {worker.name} Worker
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: worker.isRunning
+                                ? theme.colors.success
+                                : theme.colors.error,
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: '14px',
+                              fontWeight: 500,
+                              color: theme.colors.text,
+                            }}
+                          >
+                            {worker.isRunning ? 'Running' : 'Stopped'}
+                          </span>
+                        </div>
+                        {worker.pid && (
+                          <div
+                            style={{
+                              fontSize: '11px',
+                              color: theme.colors.textSecondary,
+                              fontFamily: theme.fonts.monospace,
+                              marginTop: '4px',
+                            }}
+                          >
+                            PID: {worker.pid}
+                          </div>
+                        )}
+                        {worker.startedAt && (
+                          <div
+                            style={{
+                              fontSize: '11px',
+                              color: theme.colors.textSecondary,
+                              marginTop: '2px',
+                            }}
+                          >
+                            Uptime:{' '}
+                            {Math.floor((Date.now() - worker.startedAt) / 1000)}
+                            s
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Pending Calls */}
+                    <div>
                       <div
                         style={{
                           fontSize: '11px',
@@ -1981,193 +2207,150 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                           marginBottom: '4px',
                         }}
                       >
-                        {worker.name} Worker
+                        Pending Calls
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span
-                          style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            backgroundColor: worker.isRunning
-                              ? theme.colors.success
-                              : theme.colors.error,
-                          }}
-                        />
-                        <span
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            color: theme.colors.text,
-                          }}
-                        >
-                          {worker.isRunning ? 'Running' : 'Stopped'}
-                        </span>
+                      <div
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          color: theme.colors.text,
+                        }}
+                      >
+                        {cliBridgeStatus.pendingCalls}
                       </div>
-                      {worker.pid && (
-                        <div
-                          style={{
-                            fontSize: '11px',
-                            color: theme.colors.textSecondary,
-                            fontFamily: theme.fonts.monospace,
-                            marginTop: '4px',
-                          }}
-                        >
-                          PID: {worker.pid}
-                        </div>
-                      )}
-                      {worker.startedAt && (
-                        <div
-                          style={{
-                            fontSize: '11px',
-                            color: theme.colors.textSecondary,
-                            marginTop: '2px',
-                          }}
-                        >
-                          Uptime: {Math.floor((Date.now() - worker.startedAt) / 1000)}s
-                        </div>
-                      )}
                     </div>
-                  ))}
-
-                  {/* Pending Calls */}
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      Pending Calls
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        color: theme.colors.text,
-                      }}
-                    >
-                      {cliBridgeStatus.pendingCalls}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Error Display */}
-              {cliBridgeStatus?.error && (
-                <div
-                  style={{
-                    marginTop: '16px',
-                    padding: '12px 16px',
-                    backgroundColor: `${theme.colors.error}08`,
-                    borderRadius: '8px',
-                    border: `1px solid ${theme.colors.error}20`,
-                    fontSize: '13px',
-                    color: theme.colors.error,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <XCircle size={16} />
-                  {cliBridgeStatus.error}
-                </div>
-              )}
-            </div>
-
-            {/* Test Result Card */}
-            {lastTestResult && (
-              <div
-                style={{
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  borderRadius: '12px',
-                  padding: '20px',
-                  border: `1px solid ${lastTestResult.success ? theme.colors.success : theme.colors.error}`,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  {lastTestResult.success ? (
-                    <CheckCircle size={20} style={{ color: theme.colors.success }} />
-                  ) : (
-                    <XCircle size={20} style={{ color: theme.colors.error }} />
-                  )}
-                  <h4
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: lastTestResult.success ? theme.colors.success : theme.colors.error,
-                      margin: 0,
-                    }}
-                  >
-                    Test {lastTestResult.success ? 'Passed' : 'Failed'}
-                  </h4>
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      color: theme.colors.textSecondary,
-                      fontFamily: theme.fonts.monospace,
-                    }}
-                  >
-                    {lastTestResult.duration}ms
-                  </span>
-                </div>
-
-                {lastTestResult.output && (
-                  <div
-                    style={{
-                      padding: '12px',
-                      backgroundColor: theme.colors.background,
-                      borderRadius: '6px',
-                      fontFamily: theme.fonts.monospace,
-                      fontSize: '12px',
-                      color: theme.colors.text,
-                    }}
-                  >
-                    Output: {lastTestResult.output}
                   </div>
                 )}
 
-                {lastTestResult.error && (
+                {/* Error Display */}
+                {cliBridgeStatus?.error && (
                   <div
                     style={{
-                      padding: '12px',
+                      marginTop: '16px',
+                      padding: '12px 16px',
                       backgroundColor: `${theme.colors.error}08`,
-                      borderRadius: '6px',
-                      fontSize: '12px',
+                      borderRadius: '8px',
+                      border: `1px solid ${theme.colors.error}20`,
+                      fontSize: '13px',
                       color: theme.colors.error,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
                   >
-                    Error: {lastTestResult.error}
+                    <XCircle size={16} />
+                    {cliBridgeStatus.error}
                   </div>
                 )}
               </div>
-            )}
 
-            {/* Info Box */}
-            <div
-              style={{
-                marginTop: '16px',
-                padding: '16px',
-                backgroundColor: `${theme.colors.info}08`,
-                borderRadius: '8px',
-                border: `1px solid ${theme.colors.info}20`,
-                fontSize: '13px',
-                color: theme.colors.textSecondary,
-              }}
-            >
-              <strong style={{ color: theme.colors.text }}>About CLI Bridge:</strong>
-              <p style={{ margin: '8px 0 0 0' }}>
-                The CLI Bridge runs git commands and other CLI operations in a separate worker process.
-                If you're seeing "Worker universal failed to start within timeout" errors, use this panel to diagnose and restart the worker.
-              </p>
-            </div>
-          </section>
-        )}
+              {/* Test Result Card */}
+              {lastTestResult && (
+                <div
+                  style={{
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    borderRadius: '12px',
+                    padding: '20px',
+                    border: `1px solid ${lastTestResult.success ? theme.colors.success : theme.colors.error}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    {lastTestResult.success ? (
+                      <CheckCircle
+                        size={20}
+                        style={{ color: theme.colors.success }}
+                      />
+                    ) : (
+                      <XCircle
+                        size={20}
+                        style={{ color: theme.colors.error }}
+                      />
+                    )}
+                    <h4
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: lastTestResult.success
+                          ? theme.colors.success
+                          : theme.colors.error,
+                        margin: 0,
+                      }}
+                    >
+                      Test {lastTestResult.success ? 'Passed' : 'Failed'}
+                    </h4>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        color: theme.colors.textSecondary,
+                        fontFamily: theme.fonts.monospace,
+                      }}
+                    >
+                      {lastTestResult.duration}ms
+                    </span>
+                  </div>
 
+                  {lastTestResult.output && (
+                    <div
+                      style={{
+                        padding: '12px',
+                        backgroundColor: theme.colors.background,
+                        borderRadius: '6px',
+                        fontFamily: theme.fonts.monospace,
+                        fontSize: '12px',
+                        color: theme.colors.text,
+                      }}
+                    >
+                      Output: {lastTestResult.output}
+                    </div>
+                  )}
 
+                  {lastTestResult.error && (
+                    <div
+                      style={{
+                        padding: '12px',
+                        backgroundColor: `${theme.colors.error}08`,
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        color: theme.colors.error,
+                      }}
+                    >
+                      Error: {lastTestResult.error}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Info Box */}
+              <div
+                style={{
+                  marginTop: '16px',
+                  padding: '16px',
+                  backgroundColor: `${theme.colors.info}08`,
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.colors.info}20`,
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                <strong style={{ color: theme.colors.text }}>
+                  About CLI Bridge:
+                </strong>
+                <p style={{ margin: '8px 0 0 0' }}>
+                  The CLI Bridge runs git commands and other CLI operations in a
+                  separate worker process. If you're seeing "Worker universal
+                  failed to start within timeout" errors, use this panel to
+                  diagnose and restart the worker.
+                </p>
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </div>

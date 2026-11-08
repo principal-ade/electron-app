@@ -5,10 +5,16 @@
  * Provides trace exporting to OTLP HTTP endpoint.
  */
 
-import { BasicTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import {
+  BasicTracerProvider,
+  BatchSpanProcessor,
+} from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+} from '@opentelemetry/semantic-conventions';
 import { trace, Tracer } from '@opentelemetry/api';
 import { resolveTelemetrySettings } from '../telemetry/config';
 
@@ -37,7 +43,11 @@ class UtilityProcessTelemetryProvider {
     // Check if collector is available
     const collectorAvailable = await this.checkCollectorHealth(endpoint);
     if (!collectorAvailable) {
-      console.warn('[UtilityTelemetry] Collector not available at', endpoint, '- telemetry disabled');
+      console.warn(
+        '[UtilityTelemetry] Collector not available at',
+        endpoint,
+        '- telemetry disabled',
+      );
       return;
     }
 

@@ -41,13 +41,13 @@ export const AddToScopeModal: React.FC<{
   const canSubmit = trimmedScope.length > 0;
 
   // Determine what the submit will do, for the action label.
-  const targetScope = scopes.find(s => s.name === trimmedScope);
+  const targetScope = scopes.find((s) => s.name === trimmedScope);
   const targetNs = trimmedNs
-    ? targetScope?.namespaces.find(n => n.name === trimmedNs) ?? null
+    ? (targetScope?.namespaces.find((n) => n.name === trimmedNs) ?? null)
     : null;
   const alreadyClaimed = trimmedNs
-    ? targetNs?.paths.includes(path) ?? false
-    : targetScope?.paths.includes(path) ?? false;
+    ? (targetNs?.paths.includes(path) ?? false)
+    : (targetScope?.paths.includes(path) ?? false);
 
   let actionLabel = 'Add';
   if (alreadyClaimed) actionLabel = 'Already added';
@@ -83,7 +83,7 @@ export const AddToScopeModal: React.FC<{
       }}
     >
       <div
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         style={{
           width: 520,
           maxHeight: 'min(80vh, 700px)',
@@ -155,14 +155,15 @@ export const AddToScopeModal: React.FC<{
               list="scope-id-options"
               autoFocus
               placeholder="e.g. principal-view.cli"
-              onChange={e => onScopeIdChange(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && canSubmit && !alreadyClaimed) onSubmit();
+              onChange={(e) => onScopeIdChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && canSubmit && !alreadyClaimed)
+                  onSubmit();
               }}
               style={inputStyle}
             />
             <datalist id="scope-id-options">
-              {scopes.map(s => (
+              {scopes.map((s) => (
                 <option key={s.name} value={s.name} />
               ))}
             </datalist>
@@ -174,15 +175,22 @@ export const AddToScopeModal: React.FC<{
               type="text"
               value={namespaceName}
               placeholder="leave blank to add to scope itself"
-              onChange={e => onNamespaceNameChange(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && canSubmit && !alreadyClaimed) onSubmit();
+              onChange={(e) => onNamespaceNameChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && canSubmit && !alreadyClaimed)
+                  onSubmit();
               }}
               style={inputStyle}
             />
           </label>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: theme.space[2] }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: theme.space[2],
+            }}
+          >
             <button
               onClick={onClose}
               style={{
@@ -202,15 +210,18 @@ export const AddToScopeModal: React.FC<{
               disabled={!canSubmit || alreadyClaimed}
               style={{
                 padding: '8px 14px',
-                background: !canSubmit || alreadyClaimed
-                  ? theme.colors.backgroundSecondary
-                  : theme.colors.primary,
-                color: !canSubmit || alreadyClaimed
-                  ? theme.colors.muted
-                  : theme.colors.textOnPrimary,
+                background:
+                  !canSubmit || alreadyClaimed
+                    ? theme.colors.backgroundSecondary
+                    : theme.colors.primary,
+                color:
+                  !canSubmit || alreadyClaimed
+                    ? theme.colors.muted
+                    : theme.colors.textOnPrimary,
                 border: `1px solid ${theme.colors.border}`,
                 borderRadius: theme.radii[2],
-                cursor: !canSubmit || alreadyClaimed ? 'not-allowed' : 'pointer',
+                cursor:
+                  !canSubmit || alreadyClaimed ? 'not-allowed' : 'pointer',
                 fontSize: theme.fontSizes[1],
                 fontWeight: theme.fontWeights.medium,
               }}
@@ -227,9 +238,18 @@ export const AddToScopeModal: React.FC<{
             flex: 1,
           }}
         >
-          <div style={sectionLabelStyle}>Existing scopes (click to prefill)</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: theme.space[3], marginTop: theme.space[2] }}>
-            {scopes.map(scope => (
+          <div style={sectionLabelStyle}>
+            Existing scopes (click to prefill)
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: theme.space[3],
+              marginTop: theme.space[2],
+            }}
+          >
+            {scopes.map((scope) => (
               <div key={scope.name}>
                 <div
                   style={{
@@ -241,7 +261,13 @@ export const AddToScopeModal: React.FC<{
                 >
                   {scope.name}
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.space[1] }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: theme.space[1],
+                  }}
+                >
                   <button
                     onClick={() => onPickExisting(scope.name, '')}
                     title={
@@ -270,23 +296,34 @@ export const AddToScopeModal: React.FC<{
                   >
                     (scope-level)
                     {scope.paths.includes(path) && (
-                      <span style={{ marginLeft: theme.space[1], fontSize: theme.fontSizes[0] }}>✓</span>
+                      <span
+                        style={{
+                          marginLeft: theme.space[1],
+                          fontSize: theme.fontSizes[0],
+                        }}
+                      >
+                        ✓
+                      </span>
                     )}
                   </button>
-                  {scope.namespaces.map(ns => {
+                  {scope.namespaces.map((ns) => {
                     const claims = ns.paths.includes(path);
                     return (
                       <button
                         key={ns.name}
                         onClick={() => onPickExisting(scope.name, ns.name)}
-                        title={claims ? 'Already claims this path' : 'Prefill inputs'}
+                        title={
+                          claims ? 'Already claims this path' : 'Prefill inputs'
+                        }
                         style={{
                           fontSize: theme.fontSizes[0],
                           padding: '3px 7px',
                           background: claims
                             ? theme.colors.background
                             : theme.colors.backgroundSecondary,
-                          color: claims ? theme.colors.muted : theme.colors.text,
+                          color: claims
+                            ? theme.colors.muted
+                            : theme.colors.text,
                           border: `1px solid ${theme.colors.border}`,
                           borderRadius: theme.radii[1],
                           cursor: 'pointer',
@@ -306,7 +343,16 @@ export const AddToScopeModal: React.FC<{
                           }}
                         />
                         {ns.name}
-                        {claims && <span style={{ marginLeft: theme.space[1], fontSize: theme.fontSizes[0] }}>✓</span>}
+                        {claims && (
+                          <span
+                            style={{
+                              marginLeft: theme.space[1],
+                              fontSize: theme.fontSizes[0],
+                            }}
+                          >
+                            ✓
+                          </span>
+                        )}
                       </button>
                     );
                   })}

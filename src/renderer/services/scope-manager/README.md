@@ -2,7 +2,7 @@
 
 Authoring layer for `.scopes.canvas` and `*.events.canvas` files.
 
-The upstream `principal-view-core-library` ships *validators* and *parsers* but
+The upstream `principal-view-core-library` ships _validators_ and _parsers_ but
 no manager that mutates and persists scope/namespace state. This module fills
 that gap so the dev-workspace UI has something to call into.
 

@@ -50,7 +50,10 @@ export const DEFAULT_TERMINAL_EMPTY_STATE_TIPS: TerminalEmptyStateTip[] = [
   { keys: ['⌘', '1–9'], label: 'Jump to a terminal by number' },
   { keys: ['⌘', '⇧', 'F'], label: 'Search files in this repository' },
   { keys: ['⌘', '⇧', 'O'], label: 'Open the project for this terminal' },
-  { keys: ['⌘', '⇧', 'E'], label: "Open the explorer for this terminal's project" },
+  {
+    keys: ['⌘', '⇧', 'E'],
+    label: "Open the explorer for this terminal's project",
+  },
 ];
 
 /** True when the user asks the OS to minimise non-essential motion. */
@@ -396,7 +399,9 @@ export const TerminalEmptyState: React.FC<TerminalEmptyStateProps> = ({
                 alignItems: 'center',
                 gap: '10px',
                 opacity: visible ? 1 : 0,
-                transition: animate ? `opacity ${fadeMs}ms ease-in-out` : 'none',
+                transition: animate
+                  ? `opacity ${fadeMs}ms ease-in-out`
+                  : 'none',
               }}
             >
               {current.keys && current.keys.length > 0 && (
@@ -429,11 +434,7 @@ export const TerminalEmptyState: React.FC<TerminalEmptyStateProps> = ({
           </div>
 
           {showProgressDots && tipList.length > 1 && (
-            <ProgressDots
-              count={tipList.length}
-              active={index}
-              theme={theme}
-            />
+            <ProgressDots count={tipList.length} active={index} theme={theme} />
           )}
         </div>
       )}

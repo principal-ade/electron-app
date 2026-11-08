@@ -85,16 +85,20 @@ export function registerDocumentRoutes(app: Application): void {
     if (body.range !== undefined && !isDocumentRange(body.range)) {
       res.status(400).json({
         success: false,
-        error: 'range must contain positive integer startLineNumber, startColumn, endLineNumber, and endColumn, with the end at or after the start',
+        error:
+          'range must contain positive integer startLineNumber, startColumn, endLineNumber, and endColumn, with the end at or after the start',
       });
       return;
     }
-    const range = body.range === undefined ? undefined : {
-      startLineNumber: body.range.startLineNumber,
-      startColumn: body.range.startColumn,
-      endLineNumber: body.range.endLineNumber,
-      endColumn: body.range.endColumn,
-    };
+    const range =
+      body.range === undefined
+        ? undefined
+        : {
+            startLineNumber: body.range.startLineNumber,
+            startColumn: body.range.startColumn,
+            endLineNumber: body.range.endLineNumber,
+            endColumn: body.range.endColumn,
+          };
 
     const repositoryPath =
       typeof body.repositoryPath === 'string' && body.repositoryPath.length > 0

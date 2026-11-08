@@ -69,7 +69,9 @@ export const OnboardingCardPanel: React.FC<OnboardingCardPanelProps> = ({
           <OnboardingCard
             key={card.id}
             card={card}
-            isCompleted={onboardingState.cardStates[card.id]?.completed ?? false}
+            isCompleted={
+              onboardingState.cardStates[card.id]?.completed ?? false
+            }
             onMarkCompleted={onMarkCompleted}
           />
         ))}

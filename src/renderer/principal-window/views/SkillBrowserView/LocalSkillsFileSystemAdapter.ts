@@ -7,7 +7,10 @@ import { FileSystemService } from '../../../main-process-api/FileSystemService';
  * (~/.claude/skills/skill-name/file.md) and reads the content.
  */
 export class LocalSkillsFileSystemAdapter {
-  private skillsMap: Map<string, { path: string; name: string; source: string }>;
+  private skillsMap: Map<
+    string,
+    { path: string; name: string; source: string }
+  >;
 
   constructor(skills: Array<{ path: string; name: string; source: string }>) {
     // Create a map for quick lookup: "source/name" -> skill info
@@ -69,7 +72,10 @@ export class LocalSkillsFileSystemAdapter {
 
       return result.content;
     } catch (error) {
-      console.error(`[LocalSkillsFileSystemAdapter] Failed to read ${path}:`, error);
+      console.error(
+        `[LocalSkillsFileSystemAdapter] Failed to read ${path}:`,
+        error,
+      );
       throw error;
     }
   }

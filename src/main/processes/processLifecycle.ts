@@ -8,7 +8,10 @@
 
 import { app, dialog } from 'electron';
 import { getProcessRegistry } from './ProcessRegistry';
-import type { ProcessEntry, ProcessStatus } from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
+import type {
+  ProcessEntry,
+  ProcessStatus,
+} from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 
 const ACTIVE_STATUSES: ProcessStatus[] = [
   'starting',
@@ -40,11 +43,7 @@ export function registerProcessQuitHandler(): void {
 
     const response = dialog.showMessageBoxSync({
       type: 'question',
-      buttons: [
-        'Stop processes & quit',
-        'Leave them running & quit',
-        'Cancel',
-      ],
+      buttons: ['Stop processes & quit', 'Leave them running & quit', 'Cancel'],
       defaultId: 0,
       cancelId: 2,
       title: 'Processes are still running',

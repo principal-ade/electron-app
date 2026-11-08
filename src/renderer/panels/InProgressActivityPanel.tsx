@@ -47,19 +47,21 @@ function statusToSummary(
     githubOwner: entry.github?.owner,
     githubRepoName: entry.github?.name ?? entry.name,
     isOwnerOrg,
-    lastEditAt: status.lastChangedAt ? new Date(status.lastChangedAt) : undefined,
+    lastEditAt: status.lastChangedAt
+      ? new Date(status.lastChangedAt)
+      : undefined,
   };
 }
 
-export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = ({
-  repositories,
-  events,
-  actions,
-}) => {
+export const InProgressActivityPanel: React.FC<
+  InProgressActivityPanelProps
+> = ({ repositories, events, actions }) => {
   const { theme } = useTheme();
   const spacing = { xs: 4, sm: 8, md: 16, lg: 24 };
 
-  const [statusMap, setStatusMap] = useState<Map<string, GitStatusWithFiles>>(new Map());
+  const [statusMap, setStatusMap] = useState<Map<string, GitStatusWithFiles>>(
+    new Map(),
+  );
   const [loaded, setLoaded] = useState(false);
   const [dismissedPaths, setDismissedPaths] = useState<Set<string>>(new Set());
 
@@ -82,7 +84,9 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
     return Array.from(owners);
   }, [repositories]);
 
-  const [ownerIsOrgMap, setOwnerIsOrgMap] = useState<Map<string, boolean>>(new Map());
+  const [ownerIsOrgMap, setOwnerIsOrgMap] = useState<Map<string, boolean>>(
+    new Map(),
+  );
 
   useEffect(() => {
     if (githubOwners.length === 0) return;
@@ -121,7 +125,10 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
         repositories
           .filter((r) => r.path)
           .map(async (r) => {
-            const status = await RepositoryMonitoringService.getGitStatusWithFiles(String(r.path));
+            const status =
+              await RepositoryMonitoringService.getGitStatusWithFiles(
+                String(r.path),
+              );
             return { path: String(r.path), status };
           }),
       );
@@ -135,7 +142,10 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
     };
 
     load().catch((err) => {
-      console.error('[InProgressActivityPanel] Failed to load git statuses:', err);
+      console.error(
+        '[InProgressActivityPanel] Failed to load git statuses:',
+        err,
+      );
       if (!cancelled) setLoaded(true);
     });
 
@@ -145,21 +155,23 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
   }, [repositories]);
 
   useEffect(() => {
-    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged((status) => {
-      const repoPath = String(status.repoPath);
-      if (!entryByPath.has(repoPath)) return;
-      setStatusMap((prev) => {
-        const next = new Map(prev);
-        next.set(repoPath, status);
-        return next;
-      });
-      setDismissedPaths((prev) => {
-        if (!prev.has(repoPath)) return prev;
-        const next = new Set(prev);
-        next.delete(repoPath);
-        return next;
-      });
-    });
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
+      (status) => {
+        const repoPath = String(status.repoPath);
+        if (!entryByPath.has(repoPath)) return;
+        setStatusMap((prev) => {
+          const next = new Map(prev);
+          next.set(repoPath, status);
+          return next;
+        });
+        setDismissedPaths((prev) => {
+          if (!prev.has(repoPath)) return prev;
+          const next = new Set(prev);
+          next.delete(repoPath);
+          return next;
+        });
+      },
+    );
     return () => {
       unsubscribe();
     };
@@ -195,7 +207,10 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
       return next;
     });
     RepositoryMonitoringService.refreshRepository(repoPath).catch((err) => {
-      console.warn('[InProgressActivityPanel] Failed to refresh after push:', err);
+      console.warn(
+        '[InProgressActivityPanel] Failed to refresh after push:',
+        err,
+      );
     });
   }, []);
 
@@ -210,7 +225,10 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
       return next;
     });
     RepositoryMonitoringService.refreshRepository(repoPath).catch((err) => {
-      console.warn('[InProgressActivityPanel] Failed to refresh after push:', err);
+      console.warn(
+        '[InProgressActivityPanel] Failed to refresh after push:',
+        err,
+      );
     });
   }, []);
 
@@ -241,7 +259,9 @@ export const InProgressActivityPanel: React.FC<InProgressActivityPanelProps> = (
             }}
           >
             <FolderCheck size={48} style={{ opacity: 0.5 }} />
-            <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>Nothing in progress</p>
+            <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>
+              Nothing in progress
+            </p>
             <span style={{ fontSize: theme.fontSizes[1] }}>
               All tracked repositories have a clean working tree.
             </span>

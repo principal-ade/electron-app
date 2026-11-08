@@ -130,7 +130,9 @@ export function BookmarksPanel({
               marginBottom: 6,
             }}
           >
-            {currentSaved ? 'Currently viewing — already saved' : 'Currently viewing'}
+            {currentSaved
+              ? 'Currently viewing — already saved'
+              : 'Currently viewing'}
           </div>
           <div
             draggable={!currentSaved}
@@ -180,13 +182,19 @@ export function BookmarksPanel({
               </div>
               <div
                 className="truncate"
-                style={{ fontSize: theme.fontSizes[1], color: theme.colors.textMuted }}
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.textMuted,
+                }}
               >
                 {currentRepo.owner.login}
               </div>
             </div>
             {currentSaved ? (
-              <Check size={16} style={{ color: theme.colors.success, flexShrink: 0 }} />
+              <Check
+                size={16}
+                style={{ color: theme.colors.success, flexShrink: 0 }}
+              />
             ) : (
               <button
                 type="button"
@@ -212,7 +220,12 @@ export function BookmarksPanel({
       {/* The passport column */}
       <div
         className="flex-1 overflow-y-auto"
-        style={{ padding: '4px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}
+        style={{
+          padding: '4px 16px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+        }}
       >
         {slots.map((repo, slotIndex) => {
           const isOver = dragOver === slotIndex;
@@ -237,7 +250,9 @@ export function BookmarksPanel({
                   ? { display: 'flex', flexDirection: 'column' }
                   : {
                       border: `2px dashed ${
-                        isOver ? ink : `color-mix(in srgb, ${ink} 26%, transparent)`
+                        isOver
+                          ? ink
+                          : `color-mix(in srgb, ${ink} 26%, transparent)`
                       }`,
                       background: isOver
                         ? `color-mix(in srgb, ${ink} 8%, transparent)`
@@ -339,7 +354,10 @@ function NoteEditor({
           fontFamily: theme.fonts.body,
         }}
       />
-      <div className="flex items-center justify-end gap-2" style={{ marginTop: 6 }}>
+      <div
+        className="flex items-center justify-end gap-2"
+        style={{ marginTop: 6 }}
+      >
         <button
           type="button"
           onClick={onCancel}

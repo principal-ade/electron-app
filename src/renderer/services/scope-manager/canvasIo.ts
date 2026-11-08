@@ -117,7 +117,9 @@ function scopeNodeToRecord(node: OtelScopeNode): ScopeRecord {
     name: otelScope ?? node.id,
     description,
     paths: Array.isArray(loose.paths)
-      ? (loose.paths as unknown[]).filter((p): p is string => typeof p === 'string')
+      ? (loose.paths as unknown[]).filter(
+          (p): p is string => typeof p === 'string',
+        )
       : [],
     color: typeof node.color === 'string' ? node.color : undefined,
     status:
@@ -190,13 +192,13 @@ export function serializeEventsCanvas(
 ): RawCanvas {
   const base: RawCanvas = existing
     ? { ...existing }
-    : (({
+    : ({
         name: `${scopeName} Events`,
         type: 'event-namespace',
         scope: scopeName,
         nodes: [],
         edges: [],
-      } as unknown) as RawCanvas);
+      } as unknown as RawCanvas);
 
   // Always force the scope tag to match — protects against drift.
   (base as Record<string, unknown>).scope = scopeName;
@@ -224,7 +226,8 @@ function scopeRecordToNode(
 ): OtelScopeNode {
   const id = scope.nodeId ?? slugifyId(`scope-${scope.name}`);
   const position =
-    scope.position ?? autoPosition(existingNodes, index, DEFAULT_SCOPE_NODE_SIZE);
+    scope.position ??
+    autoPosition(existingNodes, index, DEFAULT_SCOPE_NODE_SIZE);
   // OtelScopeNode in the installed core typings doesn't include `paths` or
   // `label` even though real canvases have them — assemble as a Record and
   // cast at the end.
@@ -254,7 +257,8 @@ function namespaceRecordToNode(
 ): RawEventNamespaceNode {
   const id = ns.nodeId ?? slugifyId(ns.name);
   const position =
-    ns.position ?? autoPosition(existingNodes, index, DEFAULT_NAMESPACE_NODE_SIZE);
+    ns.position ??
+    autoPosition(existingNodes, index, DEFAULT_NAMESPACE_NODE_SIZE);
   const node: RawEventNamespaceNode = {
     id,
     type: 'event-namespace',
@@ -286,14 +290,16 @@ function autoPosition(
       typeof (n as { y?: number }).y === 'number' &&
       typeof (n as { height?: number }).height === 'number'
     ) {
-      const bottom =
-        (n as { y: number }).y + (n as { height: number }).height;
+      const bottom = (n as { y: number }).y + (n as { height: number }).height;
       if (bottom > maxBottom) maxBottom = bottom;
     }
   }
   return {
     x: 100,
-    y: maxBottom + VERTICAL_LAYOUT_GAP + index * (size.height + VERTICAL_LAYOUT_GAP),
+    y:
+      maxBottom +
+      VERTICAL_LAYOUT_GAP +
+      index * (size.height + VERTICAL_LAYOUT_GAP),
     width: size.width,
     height: size.height,
   };

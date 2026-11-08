@@ -1,11 +1,17 @@
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { FileSystemAdapter } from '@principal-ade/panel-framework-core';
-import type { Skill, SkillSource, FrontmatterValidation } from '../hooks/useSkillsData';
+import type {
+  Skill,
+  SkillSource,
+  FrontmatterValidation,
+} from '../hooks/useSkillsData';
 
 /**
  * Helper function to determine skill source and priority from path
  */
-export const determineSkillSource = (path: string): { source: SkillSource; priority: 1 | 2 | 3 | 4 | 5 } => {
+export const determineSkillSource = (
+  path: string,
+): { source: SkillSource; priority: 1 | 2 | 3 | 4 | 5 } => {
   if (path.includes('.agent/skills/')) {
     return { source: 'project-universal', priority: 1 };
   } else if (path.includes('.claude/skills/')) {
@@ -23,14 +29,18 @@ export const determineSkillSource = (path: string): { source: SkillSource; prior
  * Looks for any .md files in .agent/skills/ or .claude/skills/ directories (local mode)
  * or SKILL.md files anywhere in the tree (browser mode for GitHub repositories)
  */
-export const findSkillFiles = (fileTree: FileTree, isBrowserMode: boolean = false): string[] => {
+export const findSkillFiles = (
+  fileTree: FileTree,
+  isBrowserMode: boolean = false,
+): string[] => {
   // Filter allFiles for .md files in skill directories
-  const skillFiles = fileTree.allFiles.filter(file => {
+  const skillFiles = fileTree.allFiles.filter((file) => {
     const path = file.relativePath;
     const isMarkdown = file.name.endsWith('.md');
 
     // Exclude metadata files
-    const isMetadata = file.name === '.metadata.json' || file.name.startsWith('.');
+    const isMetadata =
+      file.name === '.metadata.json' || file.name.startsWith('.');
 
     if (isMetadata) {
       return false;
@@ -42,18 +52,24 @@ export const findSkillFiles = (fileTree: FileTree, isBrowserMode: boolean = fals
     }
 
     // In local mode, look for .md files in .agent/skills/, .claude/skills/, or skills/
-    const isInSkillDir = path.includes('.agent/skills/') || path.includes('.claude/skills/') || path.includes('skills/');
+    const isInSkillDir =
+      path.includes('.agent/skills/') ||
+      path.includes('.claude/skills/') ||
+      path.includes('skills/');
     return isMarkdown && isInSkillDir;
   });
 
   // Return their relative paths
-  return skillFiles.map(file => file.relativePath);
+  return skillFiles.map((file) => file.relativePath);
 };
 
 /**
  * Helper function to analyze skill folder structure
  */
-export const analyzeSkillStructure = (fileTree: FileTree, skillPath: string) => {
+export const analyzeSkillStructure = (
+  fileTree: FileTree,
+  skillPath: string,
+) => {
   // Get skill directory path (parent of skill markdown file)
   const skillDir = skillPath.substring(0, skillPath.lastIndexOf('/'));
   const pathParts = skillPath.split('/');
@@ -77,22 +93,22 @@ export const analyzeSkillStructure = (fileTree: FileTree, skillPath: string) => 
 
   // For skills in subdirectories, analyze the folder structure
   // Find all files in the skill directory
-  const skillFiles = fileTree.allFiles.filter(file =>
-    file.relativePath.startsWith(`${skillDir}/`)
+  const skillFiles = fileTree.allFiles.filter((file) =>
+    file.relativePath.startsWith(`${skillDir}/`),
   );
 
   // Detect folder structure
   const scriptFiles = skillFiles
-    .filter(f => f.relativePath.startsWith(`${skillDir}/scripts/`))
-    .map(f => f.name);
+    .filter((f) => f.relativePath.startsWith(`${skillDir}/scripts/`))
+    .map((f) => f.name);
 
   const referenceFiles = skillFiles
-    .filter(f => f.relativePath.startsWith(`${skillDir}/references/`))
-    .map(f => f.name);
+    .filter((f) => f.relativePath.startsWith(`${skillDir}/references/`))
+    .map((f) => f.name);
 
   const assetFiles = skillFiles
-    .filter(f => f.relativePath.startsWith(`${skillDir}/assets/`))
-    .map(f => f.name);
+    .filter((f) => f.relativePath.startsWith(`${skillDir}/assets/`))
+    .map((f) => f.name);
 
   return {
     skillFolderPath: skillDir,
@@ -163,7 +179,7 @@ export const validateFrontmatter = (content: string): FrontmatterValidation => {
   // Construct warning message if there are missing fields
   let errorMessage: string | undefined;
   if (missingFields.length > 0) {
-    const fieldList = missingFields.map(f => `'${f}'`).join(', ');
+    const fieldList = missingFields.map((f) => `'${f}'`).join(', ');
     errorMessage = `Missing required field${missingFields.length > 1 ? 's' : ''}: ${fieldList}`;
   }
 
@@ -183,7 +199,7 @@ export const parseSkillContent = async (
   path: string,
   fileTree: FileTree,
   fileSystemAdapter?: Pick<FileSystemAdapter, 'readFile'>,
-  isBrowserMode: boolean = false
+  isBrowserMode: boolean = false,
 ): Promise<Skill> => {
   // Extract skill name from path
   const pathParts = path.split('/');

@@ -1,7 +1,8 @@
 import { isTerminalCwd, parseTerminalCwd } from './cwd';
 import { OscScanner } from './programStatus';
 
-const parse = (value: string) => parseTerminalCwd(value, 'my-mac.local', 'darwin');
+const parse = (value: string) =>
+  parseTerminalCwd(value, 'my-mac.local', 'darwin');
 
 describe('OSC 7 cwd reports', () => {
   it('decodes a local path and supports empty, localhost and local hostnames', () => {
@@ -35,26 +36,34 @@ describe('OSC 7 cwd reports', () => {
   });
 
   it('converts local Windows drive URIs without accepting network shares', () => {
-    expect(parseTerminalCwd('file:///C:/Users/a%20b', 'pc', 'win32'))
-      .toBe('C:\\Users\\a b');
+    expect(parseTerminalCwd('file:///C:/Users/a%20b', 'pc', 'win32')).toBe(
+      'C:\\Users\\a b',
+    );
     expect(parseTerminalCwd('file://other/share', 'pc', 'win32')).toBeNull();
     expect(parseTerminalCwd('file:///tmp', 'pc', 'win32')).toBeNull();
     expect(isTerminalCwd('relative', 'win32')).toBe(false);
     expect(isTerminalCwd('/tmp', 'darwin')).toBe(true);
   });
 
-  it.each(['\x07', '\x1b\\'])('reassembles chunked reports with terminator %j', (end) => {
-    const scanner = new OscScanner();
-    expect(scanner.push('output\x1b]7;file://my-mac.local/Users/')).toEqual([]);
-    expect(scanner.push('me/a%20b' + end)).toEqual([
-      { code: '7', payload: 'file://my-mac.local/Users/me/a%20b' },
-    ]);
-  });
+  it.each(['\x07', '\x1b\\'])(
+    'reassembles chunked reports with terminator %j',
+    (end) => {
+      const scanner = new OscScanner();
+      expect(scanner.push('output\x1b]7;file://my-mac.local/Users/')).toEqual(
+        [],
+      );
+      expect(scanner.push('me/a%20b' + end)).toEqual([
+        { code: '7', payload: 'file://my-mac.local/Users/me/a%20b' },
+      ]);
+    },
+  );
 
   it('shares one scanner with status and prompt reports', () => {
     const scanner = new OscScanner();
-    expect(scanner.push(
-      '\x1b]7;file:///tmp\x07\x1b]7501;state=working\x07\x1b]133;A\x07',
-    ).map((sequence) => sequence.code)).toEqual(['7', '7501', '133']);
+    expect(
+      scanner
+        .push('\x1b]7;file:///tmp\x07\x1b]7501;state=working\x07\x1b]133;A\x07')
+        .map((sequence) => sequence.code),
+    ).toEqual(['7', '7501', '133']);
   });
 });

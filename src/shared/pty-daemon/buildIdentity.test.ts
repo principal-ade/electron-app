@@ -8,7 +8,10 @@ import {
   type DaemonBuildInfo,
 } from './buildIdentity';
 
-const build = (bundleHash: string | null, version = '1.0.0'): DaemonBuildInfo => ({
+const build = (
+  bundleHash: string | null,
+  version = '1.0.0',
+): DaemonBuildInfo => ({
   version,
   bundleHash,
 });
@@ -17,7 +20,9 @@ describe('describeDaemonBuildMismatch', () => {
   const available = build('new');
 
   it('keeps a daemon running the same bundle', () => {
-    expect(describeDaemonBuildMismatch(build('new', '0.9.0'), available)).toBeNull();
+    expect(
+      describeDaemonBuildMismatch(build('new', '0.9.0'), available),
+    ).toBeNull();
   });
 
   it('replaces a daemon running a different bundle even at the same version', () => {
@@ -44,7 +49,9 @@ describe('describeDaemonBuildMismatch', () => {
 
   it('replaces the daemon when only one side could hash its bundle', () => {
     expect(describeDaemonBuildMismatch(build(null), available)).not.toBeNull();
-    expect(describeDaemonBuildMismatch(build('old'), build(null))).not.toBeNull();
+    expect(
+      describeDaemonBuildMismatch(build('old'), build(null)),
+    ).not.toBeNull();
   });
 });
 
@@ -70,6 +77,8 @@ describe('hashBundleFile', () => {
   });
 
   it('resolves null for a missing file', async () => {
-    await expect(hashBundleFile(path.join(dir, 'missing.cjs'))).resolves.toBeNull();
+    await expect(
+      hashBundleFile(path.join(dir, 'missing.cjs')),
+    ).resolves.toBeNull();
   });
 });

@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { GraduationCap, Terminal, Sparkles, MessageSquare, Check, RotateCcw, FolderOpen } from 'lucide-react';
+import {
+  GraduationCap,
+  Terminal,
+  Sparkles,
+  MessageSquare,
+  Check,
+  RotateCcw,
+  FolderOpen,
+} from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 
 interface WelcomePanelProps {
@@ -54,7 +62,8 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
     {
       id: 'terminal',
       title: 'Start a terminal',
-      description: 'Click the + button in the terminal panel to create a new session',
+      description:
+        'Click the + button in the terminal panel to create a new session',
       icon: <Terminal size={18} />,
       isComplete: hasTerminal,
       isCurrent: !hasTerminal,
@@ -62,7 +71,8 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
     {
       id: 'agent',
       title: 'Launch an agent',
-      description: 'Run claude or opencode in the terminal to start an AI agent',
+      description:
+        'Run claude or opencode in the terminal to start an AI agent',
       icon: <Sparkles size={18} />,
       isComplete: hasCompletedCard, // We assume they launched an agent if they completed a card
       isCurrent: hasTerminal && !hasCompletedCard,
@@ -264,7 +274,9 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
                 {step.isComplete ? (
                   <Check size={14} strokeWidth={3} />
                 ) : (
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>{index + 1}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>
+                    {index + 1}
+                  </span>
                 )}
               </div>
 
@@ -436,7 +448,8 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
                   lineHeight: 1.5,
                 }}
               >
-                This will reset your progress and start the onboarding from the beginning.
+                This will reset your progress and start the onboarding from the
+                beginning.
               </p>
               <div
                 style={{

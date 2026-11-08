@@ -33,7 +33,9 @@ export class SkillPermissionService {
   /**
    * Check if user can edit a skill based on push permission to source repo
    */
-  async checkSkillEditPermission(skillName: string): Promise<SkillEditPermissionResult> {
+  async checkSkillEditPermission(
+    skillName: string,
+  ): Promise<SkillEditPermissionResult> {
     try {
       const lockService = getSkillLockFileService();
       const skill = await lockService.getSkill(skillName);
@@ -82,7 +84,10 @@ export class SkillPermissionService {
         canEdit: true,
       };
     } catch (error) {
-      console.error('[SkillPermissionService] Error checking edit permission:', error);
+      console.error(
+        '[SkillPermissionService] Error checking edit permission:',
+        error,
+      );
       return {
         canEdit: false,
         reason: error instanceof Error ? error.message : 'Unknown error',
@@ -102,7 +107,9 @@ export class SkillPermissionService {
     // Check cache
     const cached = this.permissionCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      console.log(`[SkillPermissionService] Using cached permissions for ${cacheKey}`);
+      console.log(
+        `[SkillPermissionService] Using cached permissions for ${cacheKey}`,
+      );
       return {
         admin: false, // We only cache push permission
         push: cached.push,
@@ -115,7 +122,9 @@ export class SkillPermissionService {
       const repoInfo = await this.adapter.getRepository(owner, repo);
 
       if (!repoInfo || !repoInfo.permissions) {
-        console.warn(`[SkillPermissionService] No permissions found for ${cacheKey}`);
+        console.warn(
+          `[SkillPermissionService] No permissions found for ${cacheKey}`,
+        );
         return null;
       }
 
@@ -125,7 +134,10 @@ export class SkillPermissionService {
         timestamp: Date.now(),
       });
 
-      console.log(`[SkillPermissionService] Fetched permissions for ${cacheKey}:`, repoInfo.permissions);
+      console.log(
+        `[SkillPermissionService] Fetched permissions for ${cacheKey}:`,
+        repoInfo.permissions,
+      );
 
       return {
         admin: repoInfo.permissions.admin || false,
@@ -133,7 +145,10 @@ export class SkillPermissionService {
         pull: repoInfo.permissions.pull,
       };
     } catch (error) {
-      console.error(`[SkillPermissionService] Error fetching permissions for ${cacheKey}:`, error);
+      console.error(
+        `[SkillPermissionService] Error fetching permissions for ${cacheKey}:`,
+        error,
+      );
       return null;
     }
   }
@@ -163,12 +178,16 @@ let instance: SkillPermissionService | null = null;
 /**
  * Get the singleton instance of SkillPermissionService
  */
-export function getSkillPermissionService(adapter?: GitHubAdapter): SkillPermissionService {
+export function getSkillPermissionService(
+  adapter?: GitHubAdapter,
+): SkillPermissionService {
   if (!instance && adapter) {
     instance = new SkillPermissionService(adapter);
   }
   if (!instance) {
-    throw new Error('SkillPermissionService not initialized. Call with adapter first.');
+    throw new Error(
+      'SkillPermissionService not initialized. Call with adapter first.',
+    );
   }
   return instance;
 }
@@ -176,7 +195,9 @@ export function getSkillPermissionService(adapter?: GitHubAdapter): SkillPermiss
 /**
  * Initialize the service with a GitHub adapter
  */
-export function initializeSkillPermissionService(adapter: GitHubAdapter): SkillPermissionService {
+export function initializeSkillPermissionService(
+  adapter: GitHubAdapter,
+): SkillPermissionService {
   instance = new SkillPermissionService(adapter);
   console.log('[SkillPermissionService] Initialized');
   return instance;

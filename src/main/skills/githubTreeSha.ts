@@ -44,19 +44,19 @@ export interface SkillTreeResult {
  * blobs on disk against what the source currently has, rather than trusting the
  * (corruptible) recorded folder hash.
  */
-export async function fetchMultipleSkillTrees(
-  options: {
-    owner: string;
-    repo: string;
-    branch: string;
-    skillPaths: string[];
-    token?: string;
-  }
-): Promise<Map<string, SkillTreeResult>> {
+export async function fetchMultipleSkillTrees(options: {
+  owner: string;
+  repo: string;
+  branch: string;
+  skillPaths: string[];
+  token?: string;
+}): Promise<Map<string, SkillTreeResult>> {
   const { owner, repo, branch, skillPaths, token } = options;
   const results = new Map<string, SkillTreeResult>();
 
-  console.log(`[GitHubTreeSha] Batch fetching ${skillPaths.length} skill trees`);
+  console.log(
+    `[GitHubTreeSha] Batch fetching ${skillPaths.length} skill trees`,
+  );
 
   try {
     const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
@@ -86,7 +86,9 @@ export async function fetchMultipleSkillTrees(
     // omit blobs and let callers fall back to folder-SHA comparison.
     const truncated = data.truncated === true;
     if (truncated) {
-      console.warn('[GitHubTreeSha] Tree response truncated; blob-level check unavailable');
+      console.warn(
+        '[GitHubTreeSha] Tree response truncated; blob-level check unavailable',
+      );
     }
 
     const folderShaByPath = new Map<string, string>();
@@ -126,7 +128,8 @@ export async function fetchMultipleSkillTrees(
 
     return results;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
     for (const skillPath of skillPaths) {
       results.set(skillPath, { success: false, error: errorMessage });
     }

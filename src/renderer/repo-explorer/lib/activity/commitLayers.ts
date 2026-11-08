@@ -73,7 +73,9 @@ function parseHexColor(hex: string): [number, number, number] | null {
 /** Serialize an [r,g,b] triple back to `#rrggbb`. */
 function rgbToHex([r, g, b]: [number, number, number]): string {
   const clamp = (v: number) =>
-    Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+    Math.max(0, Math.min(255, Math.round(v)))
+      .toString(16)
+      .padStart(2, '0');
   return `#${clamp(r)}${clamp(g)}${clamp(b)}`;
 }
 
@@ -95,7 +97,10 @@ function lighten(
 export function buildAggregateChurnLayers(
   filesByCommit: Map<string, ChangedFile[]>,
   baseColor: string,
-  { buckets = 5, basePriority = 40 }: { buckets?: number; basePriority?: number } = {},
+  {
+    buckets = 5,
+    basePriority = 40,
+  }: { buckets?: number; basePriority?: number } = {},
 ): HighlightLayer[] {
   // Count how many commits touch each file across the window.
   const commitHits = new Map<string, number>();

@@ -1,14 +1,26 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { usePanelFocusListener } from '@principal-ade/panel-layouts';
-import { AlertCircle, Search, X, RefreshCw, FileCode, BookOpen, Bot, Wrench } from 'lucide-react';
+import {
+  AlertCircle,
+  Search,
+  X,
+  RefreshCw,
+  FileCode,
+  BookOpen,
+  Bot,
+  Wrench,
+} from 'lucide-react';
 import type {
   PanelComponentProps,
   AgentPanelActions,
   AgenticResourcesPanelContext,
 } from './types';
 import { useAgentsData, type Agent } from './agents/hooks/useAgentsData';
-import { useSubagentsData, type Subagent } from './agents/hooks/useSubagentsData';
+import {
+  useSubagentsData,
+  type Subagent,
+} from './agents/hooks/useSubagentsData';
 import { AgentCard } from './agents/components/AgentCard';
 import { SubagentCard } from './agents/components/SubagentCard';
 import { useSkillsData, type Skill } from './skills/hooks/useSkillsData';
@@ -19,8 +31,7 @@ type AgentFilter = 'documentation' | 'subagents';
 type SkillFilter = 'project' | 'global';
 
 type AgentItem =
-  | { type: 'agent'; data: Agent }
-  | { type: 'subagent'; data: Subagent };
+  { type: 'agent'; data: Agent } | { type: 'subagent'; data: Subagent };
 
 /**
  * AgenticResourcesPanel - A unified panel for displaying both Agents and Skills
@@ -33,10 +44,9 @@ type AgentItem =
  * - Mode toggle to switch between Agents and Skills views
  * - Click to select and emit events for detail views
  */
-export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActions, AgenticResourcesPanelContext>> = ({
-  context,
-  events,
-}) => {
+export const AgenticResourcesPanel: React.FC<
+  PanelComponentProps<AgentPanelActions, AgenticResourcesPanelContext>
+> = ({ context, events }) => {
   const { theme } = useTheme();
   const panelRef = useRef<HTMLDivElement>(null);
   const hasLoadedAgentsRef = useRef(false);
@@ -50,7 +60,7 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
     return allFiles.some(
       (f: { name: string; relativePath: string }) =>
         f.name?.toUpperCase() === 'AGENTS.MD' ||
-        f.relativePath?.startsWith('.claude/agents/')
+        f.relativePath?.startsWith('.claude/agents/'),
     );
   }, [context.fileTree?.data]);
 
@@ -58,8 +68,14 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
   const hasGlobalAgents = useMemo(() => {
     const globalAgents = context.globalAgents?.data?.agents;
     const globalSubagents = context.globalSubagents?.data?.subagents;
-    return (globalAgents && globalAgents.length > 0) || (globalSubagents && globalSubagents.length > 0);
-  }, [context.globalAgents?.data?.agents, context.globalSubagents?.data?.subagents]);
+    return (
+      (globalAgents && globalAgents.length > 0) ||
+      (globalSubagents && globalSubagents.length > 0)
+    );
+  }, [
+    context.globalAgents?.data?.agents,
+    context.globalSubagents?.data?.subagents,
+  ]);
 
   // Determine initial mode: if no agent files exist anywhere, start in skills mode
   const initialMode = useMemo((): PanelMode => {
@@ -79,7 +95,10 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
   // Sync mode with initialMode when it changes (e.g., fileTree loads)
   const prevInitialModeRef = useRef(initialMode);
   useEffect(() => {
-    if (prevInitialModeRef.current !== initialMode && initialMode === 'skills') {
+    if (
+      prevInitialModeRef.current !== initialMode &&
+      initialMode === 'skills'
+    ) {
       setMode('skills');
     }
     prevInitialModeRef.current = initialMode;
@@ -115,13 +134,16 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
   }
 
   // Only show loading on initial load, not on refreshes
-  const showAgentsLoading = (agentsLoading || subagentsLoading) && !hasLoadedAgentsRef.current;
+  const showAgentsLoading =
+    (agentsLoading || subagentsLoading) && !hasLoadedAgentsRef.current;
   const showSkillsLoading = skillsLoading && !hasLoadedSkillsRef.current;
   const isLoading = mode === 'agents' ? showAgentsLoading : showSkillsLoading;
-  const error = mode === 'agents' ? (agentsError || subagentsError) : skillsError;
+  const error = mode === 'agents' ? agentsError || subagentsError : skillsError;
 
   // Listen for panel focus events
-  usePanelFocusListener('agentic-resources', events, () => panelRef.current?.focus());
+  usePanelFocusListener('agentic-resources', events, () =>
+    panelRef.current?.focus(),
+  );
 
   // Listen for skill installation/uninstallation events to refresh the skills list
   useEffect(() => {
@@ -186,7 +208,8 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
           // Search in name, path, description, prompt
           if (subagent.name.toLowerCase().includes(query)) return true;
           if (subagent.path.toLowerCase().includes(query)) return true;
-          if (subagent.frontmatter.description.toLowerCase().includes(query)) return true;
+          if (subagent.frontmatter.description.toLowerCase().includes(query))
+            return true;
           if (subagent.prompt.toLowerCase().includes(query)) return true;
           return false;
         }
@@ -213,7 +236,7 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
             (loc) =>
               loc.source === 'project-universal' ||
               loc.source === 'project-claude' ||
-              loc.source === 'project-other'
+              loc.source === 'project-other',
           );
         }
         return (
@@ -226,10 +249,15 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
       filtered = filtered.filter((skill) => {
         if (skill.installedLocations && skill.installedLocations.length > 0) {
           return skill.installedLocations.some(
-            (loc) => loc.source === 'global-universal' || loc.source === 'global-claude'
+            (loc) =>
+              loc.source === 'global-universal' ||
+              loc.source === 'global-claude',
           );
         }
-        return skill.source === 'global-universal' || skill.source === 'global-claude';
+        return (
+          skill.source === 'global-universal' ||
+          skill.source === 'global-claude'
+        );
       });
     }
 
@@ -239,7 +267,10 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
       filtered = filtered.filter((skill) => {
         if (skill.name.toLowerCase().includes(query)) return true;
         if (skill.description?.toLowerCase().includes(query)) return true;
-        if (skill.capabilities?.some((cap) => cap.toLowerCase().includes(query))) return true;
+        if (
+          skill.capabilities?.some((cap) => cap.toLowerCase().includes(query))
+        )
+          return true;
         if (skill.path.toLowerCase().includes(query)) return true;
         return false;
       });
@@ -283,7 +314,7 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
     setIsRefreshing(true);
     try {
       // Minimum animation duration for visual feedback
-      const minDelay = new Promise(resolve => setTimeout(resolve, 600));
+      const minDelay = new Promise((resolve) => setTimeout(resolve, 600));
 
       // Emit refresh event so host refreshes the fileTree/globalSkills from disk
       if (events) {
@@ -311,7 +342,11 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
 
   // Check if there are any agents at all (for hiding agents mode toggle)
   // Use both loaded data AND fileTree check for robustness
-  const hasAnyAgents = agents.length > 0 || subagents.length > 0 || fileTreeHasAgentFiles || hasGlobalAgents;
+  const hasAnyAgents =
+    agents.length > 0 ||
+    subagents.length > 0 ||
+    fileTreeHasAgentFiles ||
+    hasGlobalAgents;
 
   // Check if there are any project skills (for hiding project filter)
   const hasProjectSkills = useMemo(() => {
@@ -321,7 +356,7 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
           (loc) =>
             loc.source === 'project-universal' ||
             loc.source === 'project-claude' ||
-            loc.source === 'project-other'
+            loc.source === 'project-other',
         );
       }
       return (
@@ -337,7 +372,12 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
   useEffect(() => {
     // Only switch if we have fileTree data (not still loading) and confirmed no agents
     const fileTreeLoaded = context.fileTree?.data != null;
-    if (mode === 'agents' && fileTreeLoaded && !fileTreeHasAgentFiles && !hasGlobalAgents) {
+    if (
+      mode === 'agents' &&
+      fileTreeLoaded &&
+      !fileTreeHasAgentFiles &&
+      !hasGlobalAgents
+    ) {
       setMode('skills');
     }
   }, [mode, context.fileTree?.data, fileTreeHasAgentFiles, hasGlobalAgents]);
@@ -352,9 +392,17 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
   // Auto-switch agent filter to available type when one is empty
   useEffect(() => {
     if (showAgentsLoading) return;
-    if (agentFilter === 'documentation' && agentsCount === 0 && subagentsCount > 0) {
+    if (
+      agentFilter === 'documentation' &&
+      agentsCount === 0 &&
+      subagentsCount > 0
+    ) {
       setAgentFilter('subagents');
-    } else if (agentFilter === 'subagents' && subagentsCount === 0 && agentsCount > 0) {
+    } else if (
+      agentFilter === 'subagents' &&
+      subagentsCount === 0 &&
+      agentsCount > 0
+    ) {
       setAgentFilter('documentation');
     }
   }, [agentFilter, agentsCount, subagentsCount, showAgentsLoading]);
@@ -388,7 +436,18 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
         }}
       >
         {/* Mode Toggle - only show toggle if there are agents */}
-        <div style={{ display: 'flex', gap: '4px', background: hasAnyAgents ? theme.colors.backgroundSecondary : 'transparent', padding: hasAnyAgents ? '4px' : 0, borderRadius: theme.radii[2], border: hasAnyAgents ? `1px solid ${theme.colors.border}` : 'none' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '4px',
+            background: hasAnyAgents
+              ? theme.colors.backgroundSecondary
+              : 'transparent',
+            padding: hasAnyAgents ? '4px' : 0,
+            borderRadius: theme.radii[2],
+            border: hasAnyAgents ? `1px solid ${theme.colors.border}` : 'none',
+          }}
+        >
           {hasAnyAgents && (
             <button
               onClick={() => handleModeChange('agents')}
@@ -398,15 +457,20 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
                 fontFamily: theme.fonts.body,
                 border: 'none',
                 borderRadius: theme.radii[1],
-                background: mode === 'agents' ? theme.colors.background : 'transparent',
-                color: mode === 'agents' ? theme.colors.text : theme.colors.textSecondary,
+                background:
+                  mode === 'agents' ? theme.colors.background : 'transparent',
+                color:
+                  mode === 'agents'
+                    ? theme.colors.text
+                    : theme.colors.textSecondary,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 fontWeight: mode === 'agents' ? 600 : 400,
                 transition: 'all 0.2s ease',
-                boxShadow: mode === 'agents' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                boxShadow:
+                  mode === 'agents' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               }}
             >
               <Bot size={14} />
@@ -422,15 +486,20 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
                 fontFamily: theme.fonts.body,
                 border: 'none',
                 borderRadius: theme.radii[1],
-                background: mode === 'skills' ? theme.colors.background : 'transparent',
-                color: mode === 'skills' ? theme.colors.text : theme.colors.textSecondary,
+                background:
+                  mode === 'skills' ? theme.colors.background : 'transparent',
+                color:
+                  mode === 'skills'
+                    ? theme.colors.text
+                    : theme.colors.textSecondary,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 fontWeight: mode === 'skills' ? 600 : 400,
                 transition: 'all 0.2s ease',
-                boxShadow: mode === 'skills' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                boxShadow:
+                  mode === 'skills' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               }}
             >
               <Wrench size={14} />
@@ -485,7 +554,8 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
       </div>
 
       {/* Search bar - separate row, only show if there are >= 5 items */}
-      {((mode === 'agents' && allItems.length >= 5) || (mode === 'skills' && skills.length >= 5)) && (
+      {((mode === 'agents' && allItems.length >= 5) ||
+        (mode === 'skills' && skills.length >= 5)) && (
         <div
           style={{
             flexShrink: 0,
@@ -505,7 +575,9 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
           />
           <input
             type="text"
-            placeholder={mode === 'agents' ? 'Search agents...' : 'Search skills...'}
+            placeholder={
+              mode === 'agents' ? 'Search agents...' : 'Search skills...'
+            }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -566,8 +638,14 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
                 fontFamily: theme.fonts.body,
                 border: `1px solid ${agentFilter === 'documentation' ? theme.colors.primary : theme.colors.border}`,
                 borderRadius: theme.radii[1],
-                background: agentFilter === 'documentation' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
-                color: agentFilter === 'documentation' ? theme.colors.primary : theme.colors.text,
+                background:
+                  agentFilter === 'documentation'
+                    ? `${theme.colors.primary}15`
+                    : theme.colors.backgroundSecondary,
+                color:
+                  agentFilter === 'documentation'
+                    ? theme.colors.primary
+                    : theme.colors.text,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -589,8 +667,14 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
                 fontFamily: theme.fonts.body,
                 border: `1px solid ${agentFilter === 'subagents' ? theme.colors.primary : theme.colors.border}`,
                 borderRadius: theme.radii[1],
-                background: agentFilter === 'subagents' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
-                color: agentFilter === 'subagents' ? theme.colors.primary : theme.colors.text,
+                background:
+                  agentFilter === 'subagents'
+                    ? `${theme.colors.primary}15`
+                    : theme.colors.backgroundSecondary,
+                color:
+                  agentFilter === 'subagents'
+                    ? theme.colors.primary
+                    : theme.colors.text,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -606,7 +690,8 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
           </div>
         ) : null
       ) : (
-        hasRepository && hasProjectSkills && (
+        hasRepository &&
+        hasProjectSkills && (
           <div
             style={{
               flexShrink: 0,
@@ -623,8 +708,14 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
                 fontFamily: theme.fonts.body,
                 border: `1px solid ${skillFilter === 'project' ? theme.colors.primary : theme.colors.border}`,
                 borderRadius: theme.radii[1],
-                background: skillFilter === 'project' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
-                color: skillFilter === 'project' ? theme.colors.primary : theme.colors.text,
+                background:
+                  skillFilter === 'project'
+                    ? `${theme.colors.primary}15`
+                    : theme.colors.backgroundSecondary,
+                color:
+                  skillFilter === 'project'
+                    ? theme.colors.primary
+                    : theme.colors.text,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -645,8 +736,14 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
                 fontFamily: theme.fonts.body,
                 border: `1px solid ${skillFilter === 'global' ? theme.colors.primary : theme.colors.border}`,
                 borderRadius: theme.radii[1],
-                background: skillFilter === 'global' ? `${theme.colors.primary}15` : theme.colors.backgroundSecondary,
-                color: skillFilter === 'global' ? theme.colors.primary : theme.colors.text,
+                background:
+                  skillFilter === 'global'
+                    ? `${theme.colors.primary}15`
+                    : theme.colors.backgroundSecondary,
+                color:
+                  skillFilter === 'global'
+                    ? theme.colors.primary
+                    : theme.colors.text,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -722,9 +819,13 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
               <FileCode size={48} color={theme.colors.border} />
               <div style={{ textAlign: 'center' }}>
                 <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>
-                  {searchQuery ? 'No agents match your search' : 'No agents found'}
+                  {searchQuery
+                    ? 'No agents match your search'
+                    : 'No agents found'}
                 </p>
-                <p style={{ margin: '8px 0 0 0', fontSize: theme.fontSizes[1] }}>
+                <p
+                  style={{ margin: '8px 0 0 0', fontSize: theme.fontSizes[1] }}
+                >
                   {searchQuery
                     ? 'Try a different search term'
                     : 'Add AGENTS.md or create subagents in .claude/agents/ to get started'}
@@ -763,66 +864,66 @@ export const AgenticResourcesPanel: React.FC<PanelComponentProps<AgentPanelActio
               })}
             </div>
           )
+        ) : // Skills view
+        isLoading ? (
+          <div
+            style={{
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: theme.colors.textSecondary,
+              fontSize: theme.fontSizes[2],
+            }}
+          >
+            Loading skills...
+          </div>
+        ) : filteredSkills.length === 0 ? (
+          <div
+            style={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px',
+              color: theme.colors.textSecondary,
+              padding: '24px',
+            }}
+          >
+            <FileCode size={48} color={theme.colors.border} />
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>
+                {searchQuery
+                  ? 'No skills match your search'
+                  : 'No skills found'}
+              </p>
+              <p style={{ margin: '8px 0 0 0', fontSize: theme.fontSizes[1] }}>
+                {searchQuery
+                  ? 'Try a different search term'
+                  : 'Add SKILL.md files to your repository to get started'}
+              </p>
+            </div>
+          </div>
         ) : (
-          // Skills view
-          isLoading ? (
-            <div
-              style={{
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: theme.colors.textSecondary,
-                fontSize: theme.fontSizes[2],
-              }}
-            >
-              Loading skills...
-            </div>
-          ) : filteredSkills.length === 0 ? (
-            <div
-              style={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '16px',
-                color: theme.colors.textSecondary,
-                padding: '24px',
-              }}
-            >
-              <FileCode size={48} color={theme.colors.border} />
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>
-                  {searchQuery ? 'No skills match your search' : 'No skills found'}
-                </p>
-                <p style={{ margin: '8px 0 0 0', fontSize: theme.fontSizes[1] }}>
-                  {searchQuery
-                    ? 'Try a different search term'
-                    : 'Add SKILL.md files to your repository to get started'}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                gap: '16px',
-                padding: '4px',
-              }}
-            >
-              {filteredSkills.map((skill) => (
-                <SkillCard
-                  key={skill.id}
-                  skill={skill}
-                  onClick={handleSkillClick}
-                  isSelected={selectedItemId === skill.id}
-                  filterContext={skillFilter}
-                />
-              ))}
-            </div>
-          )
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+              gap: '16px',
+              padding: '4px',
+            }}
+          >
+            {filteredSkills.map((skill) => (
+              <SkillCard
+                key={skill.id}
+                skill={skill}
+                onClick={handleSkillClick}
+                isSelected={selectedItemId === skill.id}
+                filterContext={skillFilter}
+              />
+            ))}
+          </div>
         )}
       </div>
 

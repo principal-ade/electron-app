@@ -89,7 +89,8 @@ export async function moveRepositoryToConventionalPath(
     throw new Error('Cannot move repository: no owner was provided.');
   }
 
-  const preferences = await UserPreferencesHandler.getInstance().getUserPreferences();
+  const preferences =
+    await UserPreferencesHandler.getInstance().getUserPreferences();
   if (!preferences.baseDefaultDirectory) {
     throw new Error(
       'No base directory configured. Please set a base directory in settings.',
@@ -122,10 +123,14 @@ export async function moveRepositoryToConventionalPath(
   const preservedMetadata: Partial<
     Omit<AlexandriaEntry, 'path' | 'registeredAt'>
   > = {};
-  if (repository.bookColor !== undefined) preservedMetadata.bookColor = repository.bookColor;
-  if (repository.theme !== undefined) preservedMetadata.theme = repository.theme;
-  if (repository.lastOpenedAt !== undefined) preservedMetadata.lastOpenedAt = repository.lastOpenedAt;
-  if (repository.lastChecked !== undefined) preservedMetadata.lastChecked = repository.lastChecked;
+  if (repository.bookColor !== undefined)
+    preservedMetadata.bookColor = repository.bookColor;
+  if (repository.theme !== undefined)
+    preservedMetadata.theme = repository.theme;
+  if (repository.lastOpenedAt !== undefined)
+    preservedMetadata.lastOpenedAt = repository.lastOpenedAt;
+  if (repository.lastChecked !== undefined)
+    preservedMetadata.lastChecked = repository.lastChecked;
 
   const wasGitWatching = await isGitWatchingEnabled(oldPath);
 

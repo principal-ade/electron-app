@@ -63,7 +63,10 @@ interface NPMPackageData {
 }
 
 // Simple in-memory cache
-const versionCache = new Map<string, { data: NPMPackageData; timestamp: number }>();
+const versionCache = new Map<
+  string,
+  { data: NPMPackageData; timestamp: number }
+>();
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 export class PackageManagerService {
@@ -258,7 +261,7 @@ export class PackageManagerService {
             (latestVersion ? packageInfo.versions?.[latestVersion] : undefined);
 
           const licenseString = String(
-            versionData?.license || packageInfo.license || 'Unknown'
+            versionData?.license || packageInfo.license || 'Unknown',
           );
           const licenseType = commonLicenseTypes[licenseString] || 'unknown';
 

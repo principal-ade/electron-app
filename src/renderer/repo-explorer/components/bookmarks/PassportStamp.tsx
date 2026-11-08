@@ -94,7 +94,9 @@ export function PassportStamp({
       {onEditNote && (
         <button
           type="button"
-          aria-label={note ? `Edit note for ${repo.name}` : `Add a note to ${repo.name}`}
+          aria-label={
+            note ? `Edit note for ${repo.name}` : `Add a note to ${repo.name}`
+          }
           title={note ? 'Edit note' : 'Add a note'}
           onClick={(e) => {
             e.stopPropagation();
@@ -147,7 +149,10 @@ export function PassportStamp({
           </div>
           <div
             className="truncate"
-            style={{ fontSize: theme.fontSizes[1], color: theme.colors.textMuted }}
+            style={{
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.textMuted,
+            }}
             title={repo.owner.login}
           >
             {repo.owner.login}
@@ -190,13 +195,20 @@ export function PassportStamp({
           </span>
         ) : (
           <span
-            style={{ fontSize: theme.fontSizes[0], color: theme.colors.accent, letterSpacing: '1px' }}
+            style={{
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.accent,
+              letterSpacing: '1px',
+            }}
           >
             ✦ ENTRY ✦
           </span>
         )}
         {typeof repo.stargazers_count === 'number' && (
-          <span className="flex items-center gap-1" style={{ fontSize: theme.fontSizes[1] }}>
+          <span
+            className="flex items-center gap-1"
+            style={{ fontSize: theme.fontSizes[1] }}
+          >
             <Star size={11} />
             {repo.stargazers_count.toLocaleString()}
           </span>

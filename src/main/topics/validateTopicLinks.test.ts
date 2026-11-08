@@ -6,7 +6,10 @@ import { validateTopicLinks, type ValidateDeps } from './validateTopicLinks';
 const REPO = 'pkg:github/owner/repo';
 
 /** Build injectable deps with no local clones and a scripted github tree. */
-const remoteOnlyDeps = (tree: string[], defaultBranch = 'main'): ValidateDeps => ({
+const remoteOnlyDeps = (
+  tree: string[],
+  defaultBranch = 'main',
+): ValidateDeps => ({
   registry: { getRepositories: async () => [] },
   github: {
     getRepoDefaultBranch: async () => defaultBranch,
@@ -74,7 +77,10 @@ describe('validateTopicLinks', () => {
       registry: { getRepositories: async () => [] },
       github: {
         getRepoDefaultBranch: async () => 'main',
-        getTree: async () => ({ success: false as const, error: 'rate limited' }),
+        getTree: async () => ({
+          success: false as const,
+          error: 'rate limited',
+        }),
       },
     };
     const report = await validateTopicLinks(`[a](${REPO}#a.ts)`, { deps });
@@ -93,14 +99,16 @@ describe('validateTopicLinks', () => {
     let remoteCalled = false;
     const deps: ValidateDeps = {
       registry: {
-        getRepositories: async () =>
-          [{ purl: REPO, path: dir }] as never,
+        getRepositories: async () => [{ purl: REPO, path: dir }] as never,
       },
       github: {
         getRepoDefaultBranch: async () => 'main',
         getTree: async () => {
           remoteCalled = true;
-          return { success: true as const, data: { sha: '', url: '', truncated: false, tree: [] } };
+          return {
+            success: true as const,
+            data: { sha: '', url: '', truncated: false, tree: [] },
+          };
         },
       },
     };
@@ -124,10 +132,10 @@ describe('validateTopicLinks', () => {
   });
 
   it('rejects path-traversal subpaths as unsafe (repo-unresolvable)', async () => {
-    const report = await validateTopicLinks(
-      `[a](${REPO}#../../etc/passwd)`,
-      { topicRepoPurls: [REPO], deps: remoteOnlyDeps([]) },
-    );
+    const report = await validateTopicLinks(`[a](${REPO}#../../etc/passwd)`, {
+      topicRepoPurls: [REPO],
+      deps: remoteOnlyDeps([]),
+    });
     // parsePurl may or may not retain the dotted subpath; if it surfaces as a
     // resolvable ref it must be rejected, never resolved.
     const bad = report.findings.find((x) => x.code === 'repo-unresolvable');

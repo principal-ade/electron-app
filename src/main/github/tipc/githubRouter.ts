@@ -101,11 +101,9 @@ export const githubRouter = {
   // User Profile (for other users)
   // ===========================================================================
 
-  getUser: t.procedure
-    .input<GetUserInput>()
-    .action(async ({ input }) => {
-      return githubAdapter.getUser(input.username);
-    }),
+  getUser: t.procedure.input<GetUserInput>().action(async ({ input }) => {
+    return githubAdapter.getUser(input.username);
+  }),
 
   searchUsers: t.procedure
     .input<SearchUsersInput>()
@@ -140,11 +138,9 @@ export const githubRouter = {
       return githubAdapter.isFollowingUser(input.username);
     }),
 
-  followUser: t.procedure
-    .input<FollowUserInput>()
-    .action(async ({ input }) => {
-      return githubAdapter.followUser(input.username);
-    }),
+  followUser: t.procedure.input<FollowUserInput>().action(async ({ input }) => {
+    return githubAdapter.followUser(input.username);
+  }),
 
   unfollowUser: t.procedure
     .input<UnfollowUserInput>()
@@ -155,7 +151,11 @@ export const githubRouter = {
   getOwnerActivity: t.procedure
     .input<GetOwnerActivityInput>()
     .action(async ({ input }) => {
-      return githubAdapter.getOwnerActivity(input.login, input.type, input.days);
+      return githubAdapter.getOwnerActivity(
+        input.login,
+        input.type,
+        input.days,
+      );
     }),
 
   getRepoActivity: t.procedure
@@ -187,14 +187,16 @@ export const githubRouter = {
   forkRepository: t.procedure
     .input<ForkRepositoryInput>()
     .action(async ({ input }) => {
-      return githubAdapter.forkRepository(input.owner, input.repo, input.options);
+      return githubAdapter.forkRepository(
+        input.owner,
+        input.repo,
+        input.options,
+      );
     }),
 
-  getTree: t.procedure
-    .input<GetTreeInput>()
-    .action(async ({ input }) => {
-      return githubAdapter.getTree(input.owner, input.repo, input.branch);
-    }),
+  getTree: t.procedure.input<GetTreeInput>().action(async ({ input }) => {
+    return githubAdapter.getTree(input.owner, input.repo, input.branch);
+  }),
 
   getFileContent: t.procedure
     .input<GetFileContentInput>()

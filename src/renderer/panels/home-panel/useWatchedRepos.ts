@@ -19,7 +19,9 @@ import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { REPO_WATCH_CHANGED_EVENT } from './useRepoWatch';
 
 export function useWatchedRepos(): Set<string> {
-  const [watchedPaths, setWatchedPaths] = useState<Set<string>>(() => new Set());
+  const [watchedPaths, setWatchedPaths] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -34,7 +36,10 @@ export function useWatchedRepos(): Set<string> {
           ),
         );
       } catch (err) {
-        console.warn('[useWatchedRepos] Failed to read monitoring status:', err);
+        console.warn(
+          '[useWatchedRepos] Failed to read monitoring status:',
+          err,
+        );
       }
     };
 

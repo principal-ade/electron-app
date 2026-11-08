@@ -17,7 +17,10 @@ export const repositoryMonitoringAPI: ExtendedRepositoryMonitoringAPI = {
     ipcRenderer.invoke(HOME_REPOSITORY_REFRESH_INTEREST, interest),
 
   refreshGitStatus: (repoPath) =>
-    ipcRenderer.invoke(RepositoryMonitoringAPIEvent.REFRESH_GIT_STATUS, repoPath),
+    ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.REFRESH_GIT_STATUS,
+      repoPath,
+    ),
 
   getFileTree: async (repoPath: string) => {
     return ipcRenderer.invoke(
@@ -154,7 +157,9 @@ export const repositoryMonitoringAPI: ExtendedRepositoryMonitoringAPI = {
     const recentEvents = new Map<string, number>();
     const DEDUPE_WINDOW_MS = 50; // Ignore duplicate events within 50ms
 
-    return (callback: (event: RepositoryCacheSyncEvent) => void): (() => void) => {
+    return (
+      callback: (event: RepositoryCacheSyncEvent) => void,
+    ): (() => void) => {
       const handler = (
         _event: Electron.IpcRendererEvent,
         payload: RepositoryCacheSyncEvent,
@@ -191,6 +196,23 @@ export const repositoryMonitoringAPI: ExtendedRepositoryMonitoringAPI = {
       };
     };
   })(),
+
+  onRepositoryUnregistered: (callback) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: { repoPath: string },
+    ) => callback(payload);
+    ipcRenderer.on(
+      RepositoryMonitoringAPIEvent.REPOSITORY_UNREGISTERED,
+      handler,
+    );
+    return () => {
+      ipcRenderer.removeListener(
+        RepositoryMonitoringAPIEvent.REPOSITORY_UNREGISTERED,
+        handler,
+      );
+    };
+  },
 
   onBuildArtifactsDetected: (
     callback: (payload: BuildArtifactsDetectedPayload) => void,

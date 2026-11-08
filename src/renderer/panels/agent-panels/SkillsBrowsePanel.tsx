@@ -11,7 +11,10 @@ import { useSkillsBrowseData } from './skills/hooks/useSkillsBrowseData';
 import type { Skill } from './skills/hooks/useSkillsData';
 import { SkillCard } from './skills/components/SkillCard';
 
-export interface SkillsBrowsePanelProps extends PanelComponentProps<AgentPanelActions, SkillsPanelContext> {
+export interface SkillsBrowsePanelProps extends PanelComponentProps<
+  AgentPanelActions,
+  SkillsPanelContext
+> {
   /**
    * When true, shows the refresh button and enables refresh functionality.
    * The host must support handling 'skills:refresh' events.
@@ -42,7 +45,9 @@ export const SkillsBrowsePanel: React.FC<SkillsBrowsePanelProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Load skills data (GitHub repo only, no global skills)
-  const { skills, isLoading, error, refreshSkills } = useSkillsBrowseData({ context });
+  const { skills, isLoading, error, refreshSkills } = useSkillsBrowseData({
+    context,
+  });
 
   // Get GitHub repository info from context - use typed properties directly
   const fileTreeSlice = context.fileTree;
@@ -61,7 +66,9 @@ export const SkillsBrowsePanel: React.FC<SkillsBrowsePanelProps> = ({
   }, [globalSkillsSlice?.data?.skills]);
 
   // Listen for panel focus events
-  usePanelFocusListener('skills-browse', events, () => panelRef.current?.focus());
+  usePanelFocusListener('skills-browse', events, () =>
+    panelRef.current?.focus(),
+  );
 
   // Listen for skill installation/uninstallation events to refresh the list
   useEffect(() => {
@@ -92,7 +99,9 @@ export const SkillsBrowsePanel: React.FC<SkillsBrowsePanelProps> = ({
         // Search in description
         if (skill.description?.toLowerCase().includes(query)) return true;
         // Search in capabilities
-        if (skill.capabilities?.some((cap) => cap.toLowerCase().includes(query)))
+        if (
+          skill.capabilities?.some((cap) => cap.toLowerCase().includes(query))
+        )
           return true;
         // Search in path
         if (skill.path.toLowerCase().includes(query)) return true;
@@ -188,8 +197,12 @@ export const SkillsBrowsePanel: React.FC<SkillsBrowsePanelProps> = ({
                   fontFamily: theme.fonts.monospace,
                   lineHeight: 1.2,
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-                onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.textDecoration = 'underline')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.textDecoration = 'none')
+                }
               >
                 {String(repo || '')}
               </h2>
@@ -199,8 +212,12 @@ export const SkillsBrowsePanel: React.FC<SkillsBrowsePanelProps> = ({
                   color: theme.colors.textSecondary,
                   fontFamily: theme.fonts.monospace,
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-                onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.textDecoration = 'underline')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.textDecoration = 'none')
+                }
               >
                 {String(owner || '')}
               </div>
@@ -221,8 +238,12 @@ export const SkillsBrowsePanel: React.FC<SkillsBrowsePanelProps> = ({
                   color: 'inherit',
                   textDecoration: 'none',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-                onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.textDecoration = 'underline')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.textDecoration = 'none')
+                }
               >
                 Browse Skills
               </a>
@@ -239,12 +260,21 @@ export const SkillsBrowsePanel: React.FC<SkillsBrowsePanelProps> = ({
                 borderRadius: theme.radii[1],
               }}
             >
-              {filteredSkills.length} {filteredSkills.length === 1 ? 'skill' : 'skills'}
+              {filteredSkills.length}{' '}
+              {filteredSkills.length === 1 ? 'skill' : 'skills'}
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 200px', maxWidth: '400px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            flex: '1 1 200px',
+            maxWidth: '400px',
+          }}
+        >
           {/* Search input */}
           <div
             style={{
@@ -394,7 +424,9 @@ export const SkillsBrowsePanel: React.FC<SkillsBrowsePanelProps> = ({
             <FileCode size={48} color={theme.colors.border} />
             <div style={{ textAlign: 'center' }}>
               <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>
-                {searchQuery ? 'No skills match your search' : 'No skills found in this repository'}
+                {searchQuery
+                  ? 'No skills match your search'
+                  : 'No skills found in this repository'}
               </p>
               <p style={{ margin: '8px 0 0 0', fontSize: theme.fontSizes[1] }}>
                 {searchQuery

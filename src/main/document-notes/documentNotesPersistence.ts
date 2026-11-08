@@ -141,7 +141,9 @@ export class DocumentNotesPersistence {
   /**
    * Walk all stored notes files. Optional filter by repositoryPath.
    */
-  async listAllFiles(repositoryPath?: string): Promise<DocumentNotesFileSummary[]> {
+  async listAllFiles(
+    repositoryPath?: string,
+  ): Promise<DocumentNotesFileSummary[]> {
     const out: DocumentNotesFileSummary[] = [];
     let subdirs: string[];
     try {
@@ -202,9 +204,7 @@ export class DocumentNotesPersistence {
   private async applyToFile<T>(
     repositoryPath: string | undefined,
     relativeFilePath: string,
-    mutator: (
-      existing: DocumentNote[],
-    ) => { notes: DocumentNote[]; result: T },
+    mutator: (existing: DocumentNote[]) => { notes: DocumentNote[]; result: T },
   ): Promise<T> {
     let outResult!: T;
     this.writeQueue = this.writeQueue

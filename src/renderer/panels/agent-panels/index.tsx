@@ -1,9 +1,18 @@
 import { SkillsBrowsePanel } from './SkillsBrowsePanel';
-import { GlobalSkillsPanel, type GlobalSkillsPanelProps } from './GlobalSkillsPanel';
-import { SkillDetailPanel, type SkillDetailPanelProps } from './SkillDetailPanel';
+import {
+  GlobalSkillsPanel,
+  type GlobalSkillsPanelProps,
+} from './GlobalSkillsPanel';
+import {
+  SkillDetailPanel,
+  type SkillDetailPanelProps,
+} from './SkillDetailPanel';
 import { AgentDetailPanel } from './AgentDetailPanel';
 import { AgenticResourcesPanel } from './AgenticResourcesPanel';
-import type { PanelDefinition, PanelContextValue } from '@principal-ade/panel-framework-core';
+import type {
+  PanelDefinition,
+  PanelContextValue,
+} from '@principal-ade/panel-framework-core';
 import type { Skill } from './skills/hooks/useSkillsData';
 
 // Export component props types for external use
@@ -34,7 +43,7 @@ export const panels: Array<PanelDefinition> = [
       // eslint-disable-next-line no-console
       console.log(
         'Skills Browse Panel mounted',
-        context.currentScope.repository?.path
+        context.currentScope.repository?.path,
       );
     },
 
@@ -61,7 +70,7 @@ export const panels: Array<PanelDefinition> = [
       // eslint-disable-next-line no-console
       console.log(
         'Global Skills Panel mounted',
-        context.currentScope.repository?.path
+        context.currentScope.repository?.path,
       );
     },
 
@@ -88,7 +97,7 @@ export const panels: Array<PanelDefinition> = [
       // eslint-disable-next-line no-console
       console.log(
         'Skill Detail Panel mounted',
-        context.currentScope.repository?.path
+        context.currentScope.repository?.path,
       );
     },
 
@@ -105,7 +114,8 @@ export const panels: Array<PanelDefinition> = [
       icon: '📄',
       version: '0.1.0',
       author: 'Principal ADE',
-      description: 'Display detailed information about a selected agent or subagent',
+      description:
+        'Display detailed information about a selected agent or subagent',
       slices: ['fileTree', 'globalAgents', 'globalSubagents'], // Data slices this panel depends on
     },
     component: AgentDetailPanel as unknown as PanelDefinition['component'],
@@ -115,7 +125,7 @@ export const panels: Array<PanelDefinition> = [
       // eslint-disable-next-line no-console
       console.log(
         'Agent Detail Panel mounted',
-        context.currentScope.repository?.path
+        context.currentScope.repository?.path,
       );
     },
 
@@ -142,7 +152,7 @@ export const panels: Array<PanelDefinition> = [
       // eslint-disable-next-line no-console
       console.log(
         'Agentic Resources Panel mounted',
-        context.currentScope.repository?.path
+        context.currentScope.repository?.path,
       );
     },
 
@@ -171,4 +181,3 @@ export const onPackageUnload = async () => {
   // eslint-disable-next-line no-console
   console.log('Panel package unloading - Agent Panels Extension');
 };
-

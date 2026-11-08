@@ -12,11 +12,7 @@ import type {
   PanelActions,
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
-import {
-  Building2,
-  Twitter,
-  Github,
-} from 'lucide-react';
+import { Building2, Twitter, Github } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import {
@@ -78,7 +74,10 @@ export interface OrgProfilePanelActions extends PanelActions {
   /**
    * Get file tree for a repository (optional)
    */
-  getRepositoryFileTree?: (owner: string, repoName: string) => Promise<FileTree | null>;
+  getRepositoryFileTree?: (
+    owner: string,
+    repoName: string,
+  ) => Promise<FileTree | null>;
 
   /**
    * Get organization's members (optional)
@@ -149,11 +148,15 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   const [_repositoriesLoading, setRepositoriesLoading] = useState(false);
 
   // File trees for repositories (lazy loaded)
-  const [fileTrees, setFileTrees] = useState<Map<string, FileTree | null>>(new Map());
+  const [fileTrees, setFileTrees] = useState<Map<string, FileTree | null>>(
+    new Map(),
+  );
 
   // Member avatars
   const [members, setMembers] = useState<GitHubOrgMember[]>([]);
-  const [hoveredMemberIndex, setHoveredMemberIndex] = useState<number | null>(null);
+  const [hoveredMemberIndex, setHoveredMemberIndex] = useState<number | null>(
+    null,
+  );
 
   // Pinned repos and responsive layout
   const PINNED_COLUMN_MIN_WIDTH = 900;
@@ -196,10 +199,15 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
       return;
     }
     let cancelled = false;
-    actions.getPinnedRepositories(org.orgName).then((names) => {
-      if (!cancelled) setPinnedRepoNames(names);
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    actions
+      .getPinnedRepositories(org.orgName)
+      .then((names) => {
+        if (!cancelled) setPinnedRepoNames(names);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [org, actions]);
 
   // Fetch profile when org changes
@@ -297,14 +305,14 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
             }
             const fileTree = await actions.getRepositoryFileTree(
               repo.githubOwner,
-              repo.repoName
+              repo.repoName,
             );
             newFileTrees.set(key, fileTree);
           } catch (err) {
             console.warn(`Failed to fetch file tree for ${key}:`, err);
             newFileTrees.set(key, null);
           }
-        })
+        }),
       );
 
       setFileTrees(newFileTrees);
@@ -322,7 +330,8 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
 
     let cancelled = false;
 
-    actions.getOrgMembers(org.orgName)
+    actions
+      .getOrgMembers(org.orgName)
       .then((result) => {
         if (!cancelled) setMembers(result.slice(0, 8));
       })
@@ -334,7 +343,10 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   }, [org, actions]);
 
   // Handle open in browser - emit event instead
-  const handleOpenUrl = (url: string, type: 'website' | 'twitter' | 'github' | 'email') => {
+  const handleOpenUrl = (
+    url: string,
+    type: 'website' | 'twitter' | 'github' | 'email',
+  ) => {
     events.emit({
       type: 'org-profile:open-link',
       source: 'OrgProfilePanel',
@@ -359,19 +371,26 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
           backgroundColor: theme.colors.background,
         }}
       >
-        <Building2 size={48} style={{ marginBottom: spacing.md, opacity: 0.5 }} />
-        <p style={{
-          margin: 0,
-          fontSize: theme.fontSizes[2],
-          fontFamily: theme.fonts?.body
-        }}>
+        <Building2
+          size={48}
+          style={{ marginBottom: spacing.md, opacity: 0.5 }}
+        />
+        <p
+          style={{
+            margin: 0,
+            fontSize: theme.fontSizes[2],
+            fontFamily: theme.fonts?.body,
+          }}
+        >
           No organization selected
         </p>
-        <p style={{
-          margin: `${spacing.xs}px 0 0`,
-          fontSize: theme.fontSizes[1],
-          fontFamily: theme.fonts?.body
-        }}>
+        <p
+          style={{
+            margin: `${spacing.xs}px 0 0`,
+            fontSize: theme.fontSizes[1],
+            fontFamily: theme.fonts?.body,
+          }}
+        >
           Select an organization to view its profile
         </p>
       </div>
@@ -408,291 +427,383 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
       }}
     >
       {/* Profile Header - Fixed, no scroll */}
-      <div style={{ padding: spacing.md, position: 'relative', flexShrink: 0, display: 'flex', gap: spacing.md, alignItems: 'stretch' }}>
+      <div
+        style={{
+          padding: spacing.md,
+          position: 'relative',
+          flexShrink: 0,
+          display: 'flex',
+          gap: spacing.md,
+          alignItems: 'stretch',
+        }}
+      >
         {/* Left column */}
         <div style={{ flexShrink: 0 }}>
-        {/* Avatar Section */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md, marginBottom: spacing.md }}>
-          {/* Avatar */}
-          <div
-            style={{
-              width: 120,
-              height: 120,
-              borderRadius: 16,
-              backgroundColor: theme.colors.backgroundSecondary,
-              border: `4px solid ${theme.colors.background}`,
-              overflow: 'hidden',
-              flexShrink: 0,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-            }}
-          >
-            {displayData.avatarUrl ? (
-              <img
-                src={displayData.avatarUrl}
-                alt={displayData.orgName}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: theme.fontSizes[6] ?? 40,
-                  fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  color: theme.colors.text,
-                  backgroundColor: theme.colors.primary + '20',
-                }}
-              >
-                {initials}
-              </div>
-            )}
-          </div>
-
-          {/* Stats - aligned with bottom of avatar */}
-          <div style={{ flex: 1, paddingBottom: spacing.xs }}>
-            <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '24px',
-                }}>
-                  {formatNumber(displayData.publicRepos)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  projects
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '24px',
-                }}>
-                  {formatNumber(displayData.members)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  members
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '24px',
-                }}>
-                  {formatNumber(displayData.totalCommits)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  commits
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Name and Organization Name */}
-        <div style={{ marginBottom: spacing.md }}>
-          {displayData.name && (
-            <h2
-              style={{
-                margin: 0,
-                fontSize: theme.fontSizes[4],
-                fontWeight: theme.fontWeights?.semibold ?? 600,
-                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
-                color: theme.colors.text,
-              }}
-            >
-              {displayData.name}
-            </h2>
-          )}
+          {/* Avatar Section */}
           <div
             style={{
               display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              marginTop: spacing.xs,
-              flexWrap: 'wrap',
+              alignItems: 'flex-end',
+              gap: spacing.md,
+              marginBottom: spacing.md,
             }}
           >
-            {/* GitHub handle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-              <Github size={14} color={theme.colors.textSecondary} />
-              <button
-                onClick={() => handleOpenUrl(`https://github.com/${displayData.orgName}`, 'github')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  fontSize: theme.fontSizes[2],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                  transition: 'color 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = theme.colors.primary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                }}
-              >
-                {displayData.orgName}
-              </button>
+            {/* Avatar */}
+            <div
+              style={{
+                width: 120,
+                height: 120,
+                borderRadius: 16,
+                backgroundColor: theme.colors.backgroundSecondary,
+                border: `4px solid ${theme.colors.background}`,
+                overflow: 'hidden',
+                flexShrink: 0,
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              }}
+            >
+              {displayData.avatarUrl ? (
+                <img
+                  src={displayData.avatarUrl}
+                  alt={displayData.orgName}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: theme.fontSizes[6] ?? 40,
+                    fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                    fontWeight: theme.fontWeights?.semibold ?? 600,
+                    color: theme.colors.text,
+                    backgroundColor: theme.colors.primary + '20',
+                  }}
+                >
+                  {initials}
+                </div>
+              )}
             </div>
 
-            {/* Twitter handle inline */}
-            {displayData.twitterHandle && (
-              <>
-                <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                  <Twitter size={14} color={theme.colors.textSecondary} />
-                  <button
-                    onClick={() => handleOpenUrl(`https://twitter.com/${displayData.twitterHandle}`, 'twitter')}
+            {/* Stats - aligned with bottom of avatar */}
+            <div style={{ flex: 1, paddingBottom: spacing.xs }}>
+              <div
+                style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}
+              >
+                <div style={{ textAlign: 'center' }}>
+                  <div
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      fontSize: theme.fontSizes[2],
+                      fontSize: theme.fontSizes[3],
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.text,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '24px',
+                    }}
+                  >
+                    {formatNumber(displayData.publicRepos)}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[0],
                       fontFamily: theme.fonts?.body,
                       color: theme.colors.textSecondary,
-                      cursor: 'pointer',
-                      textDecoration: 'none',
-                      transition: 'color 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = theme.colors.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = theme.colors.textSecondary;
                     }}
                   >
-                    {displayData.twitterHandle}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* Member avatars */}
-            {members.length > 0 && (
-              <>
-                <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                {members.map((member, i) => (
-                  <div
-                    key={member.id}
-                    style={{
-                      position: 'relative',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={() => setHoveredMemberIndex(i)}
-                    onMouseLeave={() => setHoveredMemberIndex(null)}
-                    onClick={() => events.emit({
-                      type: 'user:profile-selected',
-                      source: 'org-profile-panel',
-                      timestamp: Date.now(),
-                      payload: { username: member.login },
-                    })}
-                  >
-                    <img
-                      src={member.avatar_url}
-                      alt={member.login}
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: '50%',
-                        border: `2px solid ${theme.colors.background}`,
-                        objectFit: 'cover',
-                        display: 'block',
-                        transform: hoveredMemberIndex === i ? 'translateY(-3px)' : 'translateY(0)',
-                        transition: 'transform 0.15s ease',
-                      }}
-                    />
-                    {hoveredMemberIndex === i && (
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        marginBottom: 4,
-                        background: theme.colors.surface ?? theme.colors.background,
-                        border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary}`,
-                        borderRadius: 4,
-                        padding: '2px 6px',
-                        fontSize: theme.fontSizes[1],
-                        fontFamily: theme.fonts?.body,
-                        color: theme.colors.text,
-                        whiteSpace: 'nowrap',
-                        pointerEvents: 'none',
-                        zIndex: 100,
-                      }}>
-                        {member.login}
-                      </div>
-                    )}
+                    projects
                   </div>
-                ))}
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[3],
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.text,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '24px',
+                    }}
+                  >
+                    {formatNumber(displayData.members)}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    members
+                  </div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[3],
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.text,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '24px',
+                    }}
+                  >
+                    {formatNumber(displayData.totalCommits)}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    commits
+                  </div>
+                </div>
               </div>
-              </>
-            )}
+            </div>
           </div>
-        </div>
 
-        {/* Description */}
-        {displayData.description && (
-          <p
-            style={{
-              margin: `0 0 ${spacing.md}px`,
-              fontSize: theme.fontSizes[1],
-              fontFamily: theme.fonts?.body,
-              lineHeight: theme.lineHeights?.body ?? 1.5,
-              color: theme.colors.text,
-            }}
-          >
-            {displayData.description}
-          </p>
-        )}
+          {/* Name and Organization Name */}
+          <div style={{ marginBottom: spacing.md }}>
+            {displayData.name && (
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: theme.fontSizes[4],
+                  fontWeight: theme.fontWeights?.semibold ?? 600,
+                  fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                  color: theme.colors.text,
+                }}
+              >
+                {displayData.name}
+              </h2>
+            )}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.sm,
+                marginTop: spacing.xs,
+                flexWrap: 'wrap',
+              }}
+            >
+              {/* GitHub handle */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                }}
+              >
+                <Github size={14} color={theme.colors.textSecondary} />
+                <button
+                  onClick={() =>
+                    handleOpenUrl(
+                      `https://github.com/${displayData.orgName}`,
+                      'github',
+                    )
+                  }
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    fontSize: theme.fontSizes[2],
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.textSecondary,
+                    cursor: 'pointer',
+                    textDecoration: 'none',
+                    transition: 'color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = theme.colors.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = theme.colors.textSecondary;
+                  }}
+                >
+                  {displayData.orgName}
+                </button>
+              </div>
+
+              {/* Twitter handle inline */}
+              {displayData.twitterHandle && (
+                <>
+                  <span
+                    style={{
+                      color: theme.colors.textSecondary,
+                      fontSize: theme.fontSizes[2],
+                    }}
+                  >
+                    •
+                  </span>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.xs,
+                    }}
+                  >
+                    <Twitter size={14} color={theme.colors.textSecondary} />
+                    <button
+                      onClick={() =>
+                        handleOpenUrl(
+                          `https://twitter.com/${displayData.twitterHandle}`,
+                          'twitter',
+                        )
+                      }
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        fontSize: theme.fontSizes[2],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.textSecondary,
+                        cursor: 'pointer',
+                        textDecoration: 'none',
+                        transition: 'color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = theme.colors.primary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color =
+                          theme.colors.textSecondary;
+                      }}
+                    >
+                      {displayData.twitterHandle}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Member avatars */}
+              {members.length > 0 && (
+                <>
+                  <span
+                    style={{
+                      color: theme.colors.textSecondary,
+                      fontSize: theme.fontSizes[2],
+                    }}
+                  >
+                    •
+                  </span>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
+                    {members.map((member, i) => (
+                      <div
+                        key={member.id}
+                        style={{
+                          position: 'relative',
+                          cursor: 'pointer',
+                        }}
+                        onMouseEnter={() => setHoveredMemberIndex(i)}
+                        onMouseLeave={() => setHoveredMemberIndex(null)}
+                        onClick={() =>
+                          events.emit({
+                            type: 'user:profile-selected',
+                            source: 'org-profile-panel',
+                            timestamp: Date.now(),
+                            payload: { username: member.login },
+                          })
+                        }
+                      >
+                        <img
+                          src={member.avatar_url}
+                          alt={member.login}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: '50%',
+                            border: `2px solid ${theme.colors.background}`,
+                            objectFit: 'cover',
+                            display: 'block',
+                            transform:
+                              hoveredMemberIndex === i
+                                ? 'translateY(-3px)'
+                                : 'translateY(0)',
+                            transition: 'transform 0.15s ease',
+                          }}
+                        />
+                        {hoveredMemberIndex === i && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              bottom: '100%',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              marginBottom: 4,
+                              background:
+                                theme.colors.surface ?? theme.colors.background,
+                              border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary}`,
+                              borderRadius: 4,
+                              padding: '2px 6px',
+                              fontSize: theme.fontSizes[1],
+                              fontFamily: theme.fonts?.body,
+                              color: theme.colors.text,
+                              whiteSpace: 'nowrap',
+                              pointerEvents: 'none',
+                              zIndex: 100,
+                            }}
+                          >
+                            {member.login}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Description */}
+          {displayData.description && (
+            <p
+              style={{
+                margin: `0 0 ${spacing.md}px`,
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts?.body,
+                lineHeight: theme.lineHeights?.body ?? 1.5,
+                color: theme.colors.text,
+              }}
+            >
+              {displayData.description}
+            </p>
+          )}
         </div>
 
         {/* Right column: pinned repos (wide mode only) */}
         {!isNarrow && pinnedRepoNames.length > 0 && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: 60, minWidth: 0 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm, alignContent: 'flex-start' }}>
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              paddingTop: 60,
+              minWidth: 0,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: spacing.sm,
+                alignContent: 'flex-start',
+              }}
+            >
               {pinnedRepoNames.map((nameWithOwner) => {
                 const [owner, name] = nameWithOwner.split('/');
                 const repoData = repositories.find(
-                  (r) => r.repoName === name && r.githubOwner === owner
+                  (r) => r.repoName === name && r.githubOwner === owner,
                 );
                 return (
                   <div
@@ -704,7 +815,10 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                         timestamp: Date.now(),
                         payload: repoData
                           ? payloadFromRepoCard(repoData)
-                          : payloadFromGithub({ owner: owner ?? '', name: name ?? nameWithOwner }),
+                          : payloadFromGithub({
+                              owner: owner ?? '',
+                              name: name ?? nameWithOwner,
+                            }),
                       });
                     }}
                     style={{
@@ -713,7 +827,9 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                       padding: `${spacing.xs}px ${spacing.sm}px`,
                       borderRadius: 6,
                       border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`,
-                      backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
+                      backgroundColor:
+                        theme.colors.backgroundSecondary ??
+                        theme.colors.background,
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 2,
@@ -721,38 +837,44 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                       cursor: 'pointer',
                     }}
                   >
-                    <div style={{
-                      fontSize: theme.fontSizes[1],
-                      fontWeight: theme.fontWeights?.semibold ?? 600,
-                      fontFamily: theme.fonts?.body,
-                      color: theme.colors.primary,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: theme.fontWeights?.semibold ?? 600,
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.primary,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       {name ?? nameWithOwner}
                     </div>
                     {repoData?.description && (
-                      <div style={{
-                        fontSize: theme.fontSizes[0],
-                        fontFamily: theme.fonts?.body,
-                        color: theme.colors.textSecondary,
-                        overflow: 'hidden',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        lineHeight: 1.3,
-                      }}>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          fontFamily: theme.fonts?.body,
+                          color: theme.colors.textSecondary,
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          lineHeight: 1.3,
+                        }}
+                      >
                         {repoData.description}
                       </div>
                     )}
                     {repoData?.language && (
-                      <div style={{
-                        fontSize: theme.fontSizes[0],
-                        fontFamily: theme.fonts?.body,
-                        color: theme.colors.textSecondary,
-                        marginTop: 2,
-                      }}>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          fontFamily: theme.fonts?.body,
+                          color: theme.colors.textSecondary,
+                          marginTop: 2,
+                        }}
+                      >
                         {repoData.language}
                       </div>
                     )}
@@ -765,13 +887,15 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
       </div>
 
       {/* Tab bar */}
-      <div style={{
-        display: 'flex',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        padding: `0 ${spacing.md}px`,
-        gap: spacing.md,
-        flexShrink: 0,
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          padding: `0 ${spacing.md}px`,
+          gap: spacing.md,
+          flexShrink: 0,
+        }}
+      >
         <button
           style={{
             background: 'none',
@@ -780,15 +904,27 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
             fontSize: theme.fontSizes[2],
             fontFamily: theme.fonts?.body,
             fontWeight: theme.fontWeights?.semibold ?? 600,
-            color: activeTab === 'repositories' ? theme.colors.primary : theme.colors.textSecondary,
-            borderBottom: activeTab === 'repositories' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            color:
+              activeTab === 'repositories'
+                ? theme.colors.primary
+                : theme.colors.textSecondary,
+            borderBottom:
+              activeTab === 'repositories'
+                ? `2px solid ${theme.colors.primary}`
+                : '2px solid transparent',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             marginBottom: -1,
           }}
           onClick={() => setActiveTab('repositories')}
-          onMouseEnter={(e) => { if (activeTab !== 'repositories') e.currentTarget.style.color = theme.colors.text; }}
-          onMouseLeave={(e) => { if (activeTab !== 'repositories') e.currentTarget.style.color = theme.colors.textSecondary; }}
+          onMouseEnter={(e) => {
+            if (activeTab !== 'repositories')
+              e.currentTarget.style.color = theme.colors.text;
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== 'repositories')
+              e.currentTarget.style.color = theme.colors.textSecondary;
+          }}
         >
           Repositories
         </button>
@@ -801,15 +937,27 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
               fontSize: theme.fontSizes[2],
               fontFamily: theme.fonts?.body,
               fontWeight: theme.fontWeights?.semibold ?? 600,
-              color: activeTab === 'pinned' ? theme.colors.primary : theme.colors.textSecondary,
-              borderBottom: activeTab === 'pinned' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+              color:
+                activeTab === 'pinned'
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary,
+              borderBottom:
+                activeTab === 'pinned'
+                  ? `2px solid ${theme.colors.primary}`
+                  : '2px solid transparent',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               marginBottom: -1,
             }}
             onClick={() => setActiveTab('pinned')}
-            onMouseEnter={(e) => { if (activeTab !== 'pinned') e.currentTarget.style.color = theme.colors.text; }}
-            onMouseLeave={(e) => { if (activeTab !== 'pinned') e.currentTarget.style.color = theme.colors.textSecondary; }}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'pinned')
+                e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'pinned')
+                e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
           >
             Pinned
           </button>
@@ -818,12 +966,26 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
 
       {/* Pinned tab content (narrow only) */}
       {isNarrow && activeTab === 'pinned' && pinnedRepoNames.length > 0 && (
-        <div style={{ flex: 1, overflow: 'auto', padding: `0 ${spacing.md}px ${spacing.md}px` }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md, alignContent: 'flex-start' }}>
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            padding: `0 ${spacing.md}px ${spacing.md}px`,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: spacing.sm,
+              marginTop: spacing.md,
+              alignContent: 'flex-start',
+            }}
+          >
             {pinnedRepoNames.map((nameWithOwner) => {
               const [owner, name] = nameWithOwner.split('/');
               const repoData = repositories.find(
-                (r) => r.repoName === name && r.githubOwner === owner
+                (r) => r.repoName === name && r.githubOwner === owner,
               );
               return (
                 <div
@@ -835,7 +997,10 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                       timestamp: Date.now(),
                       payload: repoData
                         ? payloadFromRepoCard(repoData)
-                        : payloadFromGithub({ owner: owner ?? '', name: name ?? nameWithOwner }),
+                        : payloadFromGithub({
+                            owner: owner ?? '',
+                            name: name ?? nameWithOwner,
+                          }),
                     });
                   }}
                   style={{
@@ -844,7 +1009,9 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                     padding: `${spacing.xs}px ${spacing.sm}px`,
                     borderRadius: 6,
                     border: `1px solid ${theme.colors.border ?? theme.colors.textSecondary + '40'}`,
-                    backgroundColor: theme.colors.backgroundSecondary ?? theme.colors.background,
+                    backgroundColor:
+                      theme.colors.backgroundSecondary ??
+                      theme.colors.background,
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 2,
@@ -852,38 +1019,44 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                     cursor: 'pointer',
                   }}
                 >
-                  <div style={{
-                    fontSize: theme.fontSizes[1],
-                    fontWeight: theme.fontWeights?.semibold ?? 600,
-                    fontFamily: theme.fonts?.body,
-                    color: theme.colors.primary,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: theme.fontWeights?.semibold ?? 600,
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.primary,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {name ?? nameWithOwner}
                   </div>
                   {repoData?.description && (
-                    <div style={{
-                      fontSize: theme.fontSizes[0],
-                      fontFamily: theme.fonts?.body,
-                      color: theme.colors.textSecondary,
-                      overflow: 'hidden',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      lineHeight: 1.3,
-                    }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.textSecondary,
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        lineHeight: 1.3,
+                      }}
+                    >
                       {repoData.description}
                     </div>
                   )}
                   {repoData?.language && (
-                    <div style={{
-                      fontSize: theme.fontSizes[0],
-                      fontFamily: theme.fonts?.body,
-                      color: theme.colors.textSecondary,
-                      marginTop: 2,
-                    }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts?.body,
+                        color: theme.colors.textSecondary,
+                        marginTop: 2,
+                      }}
+                    >
                       {repoData.language}
                     </div>
                   )}

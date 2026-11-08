@@ -45,9 +45,9 @@ describe('Quick Open selection', () => {
       Awaited<ReturnType<typeof focusOrCreateMainWindow>>
     >);
     setupQuickOpenHandlers();
-    const registration = jest.mocked(ipcMain.on).mock.calls.find(
-      ([channel]) => channel === 'quick-open:select',
-    );
+    const registration = jest
+      .mocked(ipcMain.on)
+      .mock.calls.find(([channel]) => channel === 'quick-open:select');
     if (!registration) throw new Error('Quick Open selection handler missing');
     select = registration[1] as typeof select;
   });
@@ -72,8 +72,9 @@ describe('Quick Open selection', () => {
       stars: 42,
     });
     expect(openDevWorkspaceWindow).not.toHaveBeenCalled();
-    expect(jest.mocked(ipcMain.handle).mock.calls.map(([channel]) => channel))
-      .not.toContain('quick-open:clone-github');
+    expect(
+      jest.mocked(ipcMain.handle).mock.calls.map(([channel]) => channel),
+    ).not.toContain('quick-open:clone-github');
   });
 
   it('waits for a newly created principal window to load', async () => {
@@ -97,12 +98,15 @@ describe('Quick Open selection', () => {
   });
 
   it('opens owner directories in a terminal tab', async () => {
-    await select({}, {
-      type: 'ownerDirectory',
-      name: 'acme',
-      localPath: '/work/acme',
-      isOpen: false,
-    });
+    await select(
+      {},
+      {
+        type: 'ownerDirectory',
+        name: 'acme',
+        localPath: '/work/acme',
+        isOpen: false,
+      },
+    );
     expect(send).toHaveBeenCalledWith(WindowEvent.OPEN_TERMINAL_TAB, {
       directory: '/work/acme',
       label: 'acme',
@@ -113,14 +117,17 @@ describe('Quick Open selection', () => {
     'opens local repositories in a terminal tab (workspace already open: %s)',
     async (isOpen) => {
       const alexandriaEntry = { name: 'widgets', path: '/work/widgets' };
-      await select({}, {
-        type: 'repository',
-        name: 'widgets',
-        localPath: '/work/widgets',
-        alexandriaEntry,
-        isOpen,
-        openWindowId: isOpen ? 123 : undefined,
-      });
+      await select(
+        {},
+        {
+          type: 'repository',
+          name: 'widgets',
+          localPath: '/work/widgets',
+          alexandriaEntry,
+          isOpen,
+          openWindowId: isOpen ? 123 : undefined,
+        },
+      );
       expect(send).toHaveBeenCalledWith(WindowEvent.OPEN_TERMINAL_TAB, {
         directory: '/work/widgets',
         label: 'widgets',
@@ -131,12 +138,15 @@ describe('Quick Open selection', () => {
 
   it('waits for a new principal window before opening a repository tab', async () => {
     isLoading.mockReturnValue(true);
-    await select({}, {
-      type: 'repository',
-      name: 'widgets',
-      localPath: '/work/widgets',
-      isOpen: false,
-    });
+    await select(
+      {},
+      {
+        type: 'repository',
+        name: 'widgets',
+        localPath: '/work/widgets',
+        isOpen: false,
+      },
+    );
     expect(send).not.toHaveBeenCalled();
     expect(once).toHaveBeenCalledWith('did-finish-load', expect.any(Function));
 
@@ -150,12 +160,15 @@ describe('Quick Open selection', () => {
 
   it('does not open a repository tab in a window destroyed while loading', async () => {
     isLoading.mockReturnValue(true);
-    await select({}, {
-      type: 'repository',
-      name: 'widgets',
-      localPath: '/work/widgets',
-      isOpen: false,
-    });
+    await select(
+      {},
+      {
+        type: 'repository',
+        name: 'widgets',
+        localPath: '/work/widgets',
+        isOpen: false,
+      },
+    );
     isDestroyed.mockReturnValue(true);
     once.mock.calls[0][1]();
     expect(send).not.toHaveBeenCalled();

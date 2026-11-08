@@ -980,8 +980,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   // a repo payload, or undefined when the terminal isn't rooted in a registered
   // clone.
   const resolveActiveTerminalRepoPayload = useCallback(():
-    | RepositorySelectedPayload
-    | undefined => {
+    RepositorySelectedPayload | undefined => {
     if (!activeTabDirectory) return undefined;
     try {
       return resolveRepoPayloadForDirectory(activeTabDirectory);
@@ -1315,18 +1314,18 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               : activeView === 'sessions'
                 ? 'Sessions'
                 : activeView === 'projects'
-                ? 'Activity'
-                : activeView === 'drawings'
-                  ? 'Drawings'
-                  : activeView === 'skills'
-                    ? 'Skills'
-                    : activeView === 'subsystem-models'
-                      ? 'Subsystem Models'
-                      : activeView === 'processes'
-                        ? 'Processes'
-                        : activeView === 'requests'
-                          ? 'Requests'
-                          : 'Topics',
+                  ? 'Activity'
+                  : activeView === 'drawings'
+                    ? 'Drawings'
+                    : activeView === 'skills'
+                      ? 'Skills'
+                      : activeView === 'subsystem-models'
+                        ? 'Subsystem Models'
+                        : activeView === 'processes'
+                          ? 'Processes'
+                          : activeView === 'requests'
+                            ? 'Requests'
+                            : 'Topics',
         content:
           isRepositoryPanelActive && selectedRepository ? (
             <RepoAboutCard

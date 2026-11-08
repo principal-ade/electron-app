@@ -7,31 +7,100 @@ import type { UserPreferences } from '../../../shared/types/userPreferences.type
 // Mock FileSystemService for Storybook
 const createMockFileSystemService = () => {
   const mockFolders = [
-    { name: 'Developer', path: '/Users/demo/Developer', category: 'dev' as const, selected: true },
-    { name: 'Code', path: '/Users/demo/Code', category: 'dev' as const, selected: true },
-    { name: 'Projects', path: '/Users/demo/Projects', category: 'dev' as const, selected: true },
-    { name: 'Documents', path: '/Users/demo/Documents', category: 'common' as const, selected: false },
-    { name: 'Desktop', path: '/Users/demo/Desktop', category: 'common' as const, selected: false },
-    { name: 'Downloads', path: '/Users/demo/Downloads', category: 'system' as const, selected: false },
-    { name: 'Music', path: '/Users/demo/Music', category: 'system' as const, selected: false },
-    { name: 'Pictures', path: '/Users/demo/Pictures', category: 'system' as const, selected: false },
+    {
+      name: 'Developer',
+      path: '/Users/demo/Developer',
+      category: 'dev' as const,
+      selected: true,
+    },
+    {
+      name: 'Code',
+      path: '/Users/demo/Code',
+      category: 'dev' as const,
+      selected: true,
+    },
+    {
+      name: 'Projects',
+      path: '/Users/demo/Projects',
+      category: 'dev' as const,
+      selected: true,
+    },
+    {
+      name: 'Documents',
+      path: '/Users/demo/Documents',
+      category: 'common' as const,
+      selected: false,
+    },
+    {
+      name: 'Desktop',
+      path: '/Users/demo/Desktop',
+      category: 'common' as const,
+      selected: false,
+    },
+    {
+      name: 'Downloads',
+      path: '/Users/demo/Downloads',
+      category: 'system' as const,
+      selected: false,
+    },
+    {
+      name: 'Music',
+      path: '/Users/demo/Music',
+      category: 'system' as const,
+      selected: false,
+    },
+    {
+      name: 'Pictures',
+      path: '/Users/demo/Pictures',
+      category: 'system' as const,
+      selected: false,
+    },
   ];
 
   const mockRepos = [
     { path: '/Users/demo/Developer/my-app', name: 'my-app', owner: 'johndoe' },
-    { path: '/Users/demo/Developer/react-project', name: 'react-project', owner: 'acme' },
-    { path: '/Users/demo/Code/electron-app', name: 'electron-app', owner: 'company' },
-    { path: '/Users/demo/Code/api-server', name: 'api-server', owner: 'backend-team' },
-    { path: '/Users/demo/Projects/mobile-app', name: 'mobile-app', owner: 'mobile' },
+    {
+      path: '/Users/demo/Developer/react-project',
+      name: 'react-project',
+      owner: 'acme',
+    },
+    {
+      path: '/Users/demo/Code/electron-app',
+      name: 'electron-app',
+      owner: 'company',
+    },
+    {
+      path: '/Users/demo/Code/api-server',
+      name: 'api-server',
+      owner: 'backend-team',
+    },
+    {
+      path: '/Users/demo/Projects/mobile-app',
+      name: 'mobile-app',
+      owner: 'mobile',
+    },
   ];
 
   return {
     getTopLevelFolders: async () => {
       // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       return mockFolders;
     },
-    scanFoldersForRepos: async (_folderPaths: string[]): Promise<{ success: boolean; repos: Array<{ path: string; name: string; owner?: string; registered?: boolean; alreadyRegistered?: boolean; registrationError?: string }>; error?: string }> => {
+    scanFoldersForRepos: async (
+      _folderPaths: string[],
+    ): Promise<{
+      success: boolean;
+      repos: Array<{
+        path: string;
+        name: string;
+        owner?: string;
+        registered?: boolean;
+        alreadyRegistered?: boolean;
+        registrationError?: string;
+      }>;
+      error?: string;
+    }> => {
       // Simulate scanning with progress
       return new Promise((resolve) => {
         setTimeout(() => {
@@ -42,32 +111,39 @@ const createMockFileSystemService = () => {
               return {
                 ...repo,
                 registered: true,
-                alreadyRegistered: true
+                alreadyRegistered: true,
               };
             } else if (idx === 2) {
               // Third repo: registration failed
               return {
                 ...repo,
                 registered: false,
-                registrationError: 'Failed to access repository directory'
+                registrationError: 'Failed to access repository directory',
               };
             } else {
               // Others: newly registered
               return {
                 ...repo,
                 registered: true,
-                alreadyRegistered: false
+                alreadyRegistered: false,
               };
             }
           });
           resolve({
             success: true,
-            repos: reposWithStatus
+            repos: reposWithStatus,
           });
         }, 3000); // 3 second simulated scan
       });
     },
-    onRepoScanProgress: (callback: (progress: { current: number; total: number; currentFolder: string; foundRepos: number }) => void) => {
+    onRepoScanProgress: (
+      callback: (progress: {
+        current: number;
+        total: number;
+        currentFolder: string;
+        foundRepos: number;
+      }) => void,
+    ) => {
       // Simulate progress updates
       let current = 0;
       const folders = ['Developer', 'Code', 'Projects'];
@@ -78,7 +154,7 @@ const createMockFileSystemService = () => {
             current: current + 1,
             total: folders.length,
             currentFolder: folders[current],
-            foundRepos: Math.min(current + 2, mockRepos.length)
+            foundRepos: Math.min(current + 2, mockRepos.length),
           });
           current++;
         } else {
@@ -87,7 +163,7 @@ const createMockFileSystemService = () => {
       }, 1000);
 
       return () => clearInterval(interval);
-    }
+    },
   };
 };
 
@@ -101,7 +177,7 @@ const createMockGitHubCliService = ({
 }) => ({
   check: async () => {
     // Small delay so the loading state is visible
-    await new Promise(resolve => setTimeout(resolve, 600));
+    await new Promise((resolve) => setTimeout(resolve, 600));
     if (!configured) {
       return { authenticated: false, user: null };
     }
@@ -138,8 +214,8 @@ const createMockSkillInstaller = ({
   installSkills: async (
     skills: ReadonlyArray<{ name: string }>,
   ): Promise<{ installed: string[]; failures: string[] }> => {
-    await new Promise(resolve => setTimeout(resolve, 900));
-    return { installed: skills.map(skill => skill.name), failures: [] };
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    return { installed: skills.map((skill) => skill.name), failures: [] };
   },
 });
 
@@ -151,26 +227,37 @@ const meta: Meta<typeof OnboardingWizard> = {
       <ThemeProvider>
         <Story />
       </ThemeProvider>
-    )
+    ),
   ],
   parameters: {
     layout: 'fullscreen',
     docs: {
       description: {
-        component: 'Experimental onboarding wizard for setting up git, repositories, and checking the GitHub CLI session. Focus on copy and flow before adding animations and polish.'
-      }
-    }
+        component:
+          'Experimental onboarding wizard for setting up git, repositories, and checking the GitHub CLI session. Focus on copy and flow before adding animations and polish.',
+      },
+    },
   },
   argTypes: {
     initialStep: {
       control: 'select',
-      options: ['welcome', 'git-config', 'home-directory', 'choose-method', 'folder-selection', 'scanning', 'github-cli', 'skills', 'ready'],
-      description: 'Jump straight to a step (story/debug aid)'
+      options: [
+        'welcome',
+        'git-config',
+        'home-directory',
+        'choose-method',
+        'folder-selection',
+        'scanning',
+        'github-cli',
+        'skills',
+        'ready',
+      ],
+      description: 'Jump straight to a step (story/debug aid)',
     },
     onComplete: {
-      action: 'onboarding-completed'
-    }
-  }
+      action: 'onboarding-completed',
+    },
+  },
 };
 
 export default meta;
@@ -185,7 +272,7 @@ export const Default: Story = {
     githubCliService: createMockGitHubCliService({ configured: true }),
     preferencesService: createMockPreferencesService(),
     skillInstaller: createMockSkillInstaller(),
-  }
+  },
 };
 
 /**
@@ -202,10 +289,11 @@ export const CloneDirectory: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'The example line under the input previews the resulting path, e.g. ~/Development/octocat/hello-world, and follows the directory name you type.'
-      }
-    }
-  }
+        story:
+          'The example line under the input previews the resulting path, e.g. ~/Development/octocat/hello-world, and follows the directory name you type.',
+      },
+    },
+  },
 };
 
 /**
@@ -222,10 +310,11 @@ export const ChooseMethod: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Only two paths remain: scan folders for git projects, or skip and add them later.'
-      }
-    }
-  }
+        story:
+          'Only two paths remain: scan folders for git projects, or skip and add them later.',
+      },
+    },
+  },
 };
 
 /**
@@ -238,16 +327,19 @@ export const Interactive: Story = {
     preferencesService: createMockPreferencesService(),
     skillInstaller: createMockSkillInstaller(),
     onComplete: (data) => {
-      alert(`Onboarding complete!\n\nMultiple locations: ${data.hasMultipleLocations}\nGitHub CLI configured: ${data.githubCliConfigured}\nGitHub login: ${data.githubLogin ?? 'none'}`);
-    }
+      alert(
+        `Onboarding complete!\n\nMultiple locations: ${data.hasMultipleLocations}\nGitHub CLI configured: ${data.githubCliConfigured}\nGitHub login: ${data.githubLogin ?? 'none'}`,
+      );
+    },
   },
   parameters: {
     docs: {
       description: {
-        story: 'Full interactive version - go through the entire flow and see the completion data in the console.'
-      }
-    }
-  }
+        story:
+          'Full interactive version - go through the entire flow and see the completion data in the console.',
+      },
+    },
+  },
 };
 
 /**
@@ -263,10 +355,11 @@ export const ScanningFlow: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Simulates the full scanning experience with progress updates and discovered repositories. Choose "Automatic" to test the scan flow.'
-      }
-    }
-  }
+        story:
+          'Simulates the full scanning experience with progress updates and discovered repositories. Choose "Automatic" to test the scan flow.',
+      },
+    },
+  },
 };
 
 /**
@@ -283,10 +376,11 @@ export const Skills: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Installs catalog skills from GitHub. Every skill starts checked (uncheck any you do not want); the install button reports per-skill progress and failures, and Continue works whether or not anything is installed.'
-      }
-    }
-  }
+        story:
+          'Installs catalog skills from GitHub. Every skill starts checked (uncheck any you do not want); the install button reports per-skill progress and failures, and Continue works whether or not anything is installed.',
+      },
+    },
+  },
 };
 
 /**
@@ -305,10 +399,11 @@ export const SkillsAlreadyInstalled: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Already-installed skills are checked, disabled, and marked with a check; the rest stay selected so one click installs what is missing.'
-      }
-    }
-  }
+        story:
+          'Already-installed skills are checked, disabled, and marked with a check; the rest stay selected so one click installs what is missing.',
+      },
+    },
+  },
 };
 
 /**
@@ -325,10 +420,11 @@ export const GitHubCliConnected: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'The step only checks the session: when gh is signed in it shows the GitHub account that Principal will use.'
-      }
-    }
-  }
+        story:
+          'The step only checks the session: when gh is signed in it shows the GitHub account that Principal will use.',
+      },
+    },
+  },
 };
 
 /**
@@ -345,10 +441,11 @@ export const GitHubCliMissing: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'When no CLI session is found the step explains `gh auth login` and the user can continue anyway.'
-      }
-    }
-  }
+        story:
+          'When no CLI session is found the step explains `gh auth login` and the user can continue anyway.',
+      },
+    },
+  },
 };
 
 /**
@@ -358,15 +455,19 @@ export const GitHubCliSavedToken: Story = {
   args: {
     initialStep: 'github-cli',
     fileSystemService: createMockFileSystemService(),
-    githubCliService: createMockGitHubCliService({ configured: true, source: 'stored-token' }),
+    githubCliService: createMockGitHubCliService({
+      configured: true,
+      source: 'stored-token',
+    }),
     preferencesService: createMockPreferencesService(),
     skillInstaller: createMockSkillInstaller(),
   },
   parameters: {
     docs: {
       description: {
-        story: 'Account details still render, with a note that the token came from saved credentials rather than the CLI.'
-      }
-    }
-  }
+        story:
+          'Account details still render, with a note that the token came from saved credentials rather than the CLI.',
+      },
+    },
+  },
 };

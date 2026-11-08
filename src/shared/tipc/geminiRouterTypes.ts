@@ -91,7 +91,12 @@ export interface SummarizeCommitsOutput {
  */
 export type GeminiRouterType = Record<
   string,
-  { action: (args: { context: ActionContext; input: unknown }) => Promise<unknown> }
+  {
+    action: (args: {
+      context: ActionContext;
+      input: unknown;
+    }) => Promise<unknown>;
+  }
 > & {
   listModels: {
     action: (args: {

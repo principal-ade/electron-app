@@ -40,7 +40,9 @@ export interface AuxiliaryManifest {
  * Type guard: true when the value plausibly conforms to `AuxiliaryManifest`.
  * Shallow check — matches upstream pvc `isAuxiliaryManifest`.
  */
-export function isAuxiliaryManifest(value: unknown): value is AuxiliaryManifest {
+export function isAuxiliaryManifest(
+  value: unknown,
+): value is AuxiliaryManifest {
   if (!value || typeof value !== 'object') return false;
   const v = value as { areas?: unknown };
   return Array.isArray(v.areas);
@@ -105,6 +107,8 @@ export interface OtelScopeNode {
 }
 
 /** Type guard for OTEL scope nodes. */
-export function isOtelScopeNode(node: { type?: unknown }): node is OtelScopeNode {
+export function isOtelScopeNode(node: {
+  type?: unknown;
+}): node is OtelScopeNode {
   return node?.type === 'otel-scope';
 }

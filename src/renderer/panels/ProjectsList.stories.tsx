@@ -70,17 +70,23 @@ const asOrg = (login: string) => ({
 });
 
 (
-  GithubService as unknown as { getCurrentUser: typeof GithubService.getCurrentUser }
+  GithubService as unknown as {
+    getCurrentUser: typeof GithubService.getCurrentUser;
+  }
 ).getCurrentUser = async () =>
   activeMocks.currentUser
-    ? ({ login: activeMocks.currentUser } as Awaited<ReturnType<typeof GithubService.getCurrentUser>>)
+    ? ({ login: activeMocks.currentUser } as Awaited<
+        ReturnType<typeof GithubService.getCurrentUser>
+      >)
     : null;
 (
   GithubService as unknown as {
     getUserOrganizations: typeof GithubService.getUserOrganizations;
   }
 ).getUserOrganizations = async () =>
-  activeMocks.orgs.map(asOrg) as Awaited<ReturnType<typeof GithubService.getUserOrganizations>>;
+  activeMocks.orgs.map(asOrg) as Awaited<
+    ReturnType<typeof GithubService.getUserOrganizations>
+  >;
 // The hook fetches the user's repos and each org's repos, then dedupes by
 // full_name. We return the whole fixture set for the user call and an empty
 // list for every org call — the merged result is identical, with no dupes.
@@ -105,7 +111,10 @@ const asOrg = (login: string) => ({
     getGitStatusWithFiles: typeof RepositoryMonitoringService.getGitStatusWithFiles;
   }
 ).getGitStatusWithFiles = async (repoPath: string) =>
-  ({ repoPath, isDirty: activeMocks.dirtyPaths.has(repoPath) } as GitStatusWithFiles);
+  ({
+    repoPath,
+    isDirty: activeMocks.dirtyPaths.has(repoPath),
+  }) as GitStatusWithFiles;
 (
   RepositoryMonitoringService as unknown as {
     onGitStatusChanged: typeof RepositoryMonitoringService.onGitStatusChanged;
@@ -117,8 +126,8 @@ const asOrg = (login: string) => ({
 // the panel renders signed in — that's what gates the filter switch and drives
 // useGithubProjects' fan-out (whose GithubService calls are mocked above).
 if (typeof window !== 'undefined') {
-  const mainProcess = ((window as unknown as { mainProcess?: unknown }).mainProcess ??
-    {}) as Record<string, unknown>;
+  const mainProcess = ((window as unknown as { mainProcess?: unknown })
+    .mainProcess ?? {}) as Record<string, unknown>;
   (window as unknown as { mainProcess: unknown }).mainProcess = mainProcess;
   mainProcess.authentication = {
     ...(mainProcess.authentication as Record<string, unknown> | undefined),
@@ -168,8 +177,10 @@ const ProjectsListStory: React.FC<{ repositories?: AlexandriaEntry[] }> = ({
 
 // ---------- fixtures ----------
 
-const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
-const hoursAgo = (n: number) => new Date(Date.now() - n * 3_600_000).toISOString();
+const daysAgo = (n: number) =>
+  new Date(Date.now() - n * 86_400_000).toISOString();
+const hoursAgo = (n: number) =>
+  new Date(Date.now() - n * 3_600_000).toISOString();
 
 const ghRepo = (
   owner: string,

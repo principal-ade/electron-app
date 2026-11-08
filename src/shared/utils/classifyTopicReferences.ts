@@ -14,7 +14,10 @@
  * out of the zero-dep markdown package; only the agnostic extractor is shared.
  */
 
-import { parsePurl, type ParsedPurl } from '@principal-ai/alexandria-core-library';
+import {
+  parsePurl,
+  type ParsedPurl,
+} from '@principal-ai/alexandria-core-library';
 import { extractDocReferences, type DocReference } from './docReferences';
 
 export type ReferenceSeverity = 'error' | 'finding' | 'suggestion';

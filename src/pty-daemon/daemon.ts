@@ -133,7 +133,10 @@ async function main(): Promise<void> {
     }
 
     // Only start idle timer if no sessions and no clients
-    if (sessionManager.getSessionCount() === 0 && server.getClientCount() === 0) {
+    if (
+      sessionManager.getSessionCount() === 0 &&
+      server.getClientCount() === 0
+    ) {
       logger.debug('Starting idle shutdown timer...');
       idleStartTime = Date.now();
 

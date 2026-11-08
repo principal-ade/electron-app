@@ -22,11 +22,7 @@ interface KeychainPermissionModalProps {
   onRetry: () => void;
   error?: string | null;
   errorType?:
-    | 'timeout'
-    | 'permission_denied'
-    | 'not_available'
-    | 'unknown'
-    | null;
+    'timeout' | 'permission_denied' | 'not_available' | 'unknown' | null;
 }
 
 interface KeychainStatus {
@@ -166,7 +162,9 @@ export const KeychainPermissionModal: React.FC<
 
     if (errorType === 'timeout' || errorType === 'not_available') {
       steps.push({ text: 'Unlock your system keychain if it is locked' });
-      steps.push({ text: 'Ensure the "login" keychain is unlocked (it should show as "status: unlocked")' });
+      steps.push({
+        text: 'Ensure the "login" keychain is unlocked (it should show as "status: unlocked")',
+      });
     }
 
     if (errorType === 'permission_denied') {
@@ -174,7 +172,9 @@ export const KeychainPermissionModal: React.FC<
       steps.push({
         text: `Find "${processName}" in the list (check "Automation", "Files & Folders", or "Full Disk Access")`,
       });
-      steps.push({ text: `Toggle the switch next to "${processName}" to enable access` });
+      steps.push({
+        text: `Toggle the switch next to "${processName}" to enable access`,
+      });
     }
 
     steps.push({

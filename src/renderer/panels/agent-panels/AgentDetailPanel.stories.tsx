@@ -197,7 +197,11 @@ export const SubagentSelected: Story = {
         mockSlices={{
           fileTree: {
             allFiles: [
-              { name: 'code-reviewer.md', relativePath: '.claude/agents/code-reviewer.md', type: 'file' },
+              {
+                name: 'code-reviewer.md',
+                relativePath: '.claude/agents/code-reviewer.md',
+                type: 'file',
+              },
             ],
             sha: 'mock-sha',
           },

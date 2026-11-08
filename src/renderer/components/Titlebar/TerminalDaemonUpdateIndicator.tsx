@@ -55,7 +55,7 @@ export const TerminalDaemonUpdateIndicator: React.FC = () => {
       ? 'Terminal daemon update failed'
       : 'Terminal daemon updated';
   const title = isFailed
-    ? event.error ?? label
+    ? (event.error ?? label)
     : `${label} (v${event.from?.version ?? 'unknown'} → v${event.to.version})`;
   const StatusIcon = isUpdating ? Loader2 : isFailed ? TriangleAlert : Check;
 
@@ -83,7 +83,9 @@ export const TerminalDaemonUpdateIndicator: React.FC = () => {
       <span>{label}</span>
       <StatusIcon
         size={14}
-        style={isUpdating ? { animation: 'spin 1s linear infinite' } : undefined}
+        style={
+          isUpdating ? { animation: 'spin 1s linear infinite' } : undefined
+        }
       />
     </div>
   );

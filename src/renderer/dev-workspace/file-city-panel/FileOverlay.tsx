@@ -45,7 +45,10 @@ export const FileOverlay: React.FC<FileOverlayProps> = ({
     const onMove = (ev: MouseEvent) => {
       const next = Math.max(
         MIN_WIDTH_PX,
-        Math.min(parentRect.width - MIN_LEFT_GAP_PX, parentRect.right - ev.clientX),
+        Math.min(
+          parentRect.width - MIN_LEFT_GAP_PX,
+          parentRect.right - ev.clientX,
+        ),
       );
       setWidthPx(next);
     };

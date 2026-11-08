@@ -16,7 +16,10 @@ import { WebTracerProvider } from '@opentelemetry/sdk-trace-web';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { ZoneContextManager } from '@opentelemetry/context-zone';
-import { registerInstrumentations, Instrumentation } from '@opentelemetry/instrumentation';
+import {
+  registerInstrumentations,
+  Instrumentation,
+} from '@opentelemetry/instrumentation';
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch';
 import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request';
 import { DocumentLoadInstrumentation } from '@opentelemetry/instrumentation-document-load';
@@ -113,7 +116,9 @@ class WebTelemetryProvider {
     const endpoint = settings.endpoint;
 
     try {
-      console.info(`[Telemetry] Initializing renderer telemetry for ${windowType}...`);
+      console.info(
+        `[Telemetry] Initializing renderer telemetry for ${windowType}...`,
+      );
 
       const appVersion = this.getAppVersion();
 
@@ -166,7 +171,7 @@ class WebTelemetryProvider {
             propagateTraceHeaderCorsUrls: [/localhost/], // Only propagate to localhost
             clearTimingResources: true,
             ignoreUrls: [/\/v1\/traces$/, /\/v1\/metrics$/, /\/v1\/logs$/], // Don't instrument OTLP exports
-          })
+          }),
         );
       }
 
@@ -209,7 +214,7 @@ class WebTelemetryProvider {
               recentEvents.set(recentKey, now);
               return false;
             },
-          })
+          }),
         );
       }
 
@@ -227,7 +232,10 @@ class WebTelemetryProvider {
       console.info(`[Telemetry] Window type: ${windowType}`);
       console.info(`[Telemetry] Sending to: ${endpoint}`);
     } catch (error) {
-      console.error('[Telemetry] Failed to initialize renderer telemetry:', error);
+      console.error(
+        '[Telemetry] Failed to initialize renderer telemetry:',
+        error,
+      );
       this.provider = null;
       // Don't throw - allow app to continue without telemetry
     }
@@ -258,7 +266,9 @@ class WebTelemetryProvider {
       return;
     }
 
-    console.info('[Telemetry] Renderer telemetry settings changed, re-initializing');
+    console.info(
+      '[Telemetry] Renderer telemetry settings changed, re-initializing',
+    );
     this.initialize(this.windowType);
   }
 
@@ -270,7 +280,10 @@ class WebTelemetryProvider {
       try {
         this.unregisterInstrumentations();
       } catch (error) {
-        console.error('[Telemetry] Error unregistering instrumentations:', error);
+        console.error(
+          '[Telemetry] Error unregistering instrumentations:',
+          error,
+        );
       }
       this.unregisterInstrumentations = null;
     }

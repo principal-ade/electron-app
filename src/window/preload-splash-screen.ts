@@ -23,7 +23,9 @@ try {
   contextBridge.exposeInMainWorld('mainProcess', {
     userPreferences: userPreferencesAPI,
   });
-  console.info('[Preload-SplashScreen] mainProcess.userPreferences API exposed');
+  console.info(
+    '[Preload-SplashScreen] mainProcess.userPreferences API exposed',
+  );
 } catch (error) {
   console.error(
     '[Preload-SplashScreen] Failed to expose mainProcess API:',
@@ -58,10 +60,7 @@ try {
   });
   console.info('[Preload-SplashScreen] electronAPI exposed');
 } catch (error) {
-  console.error(
-    '[Preload-SplashScreen] Failed to expose electronAPI:',
-    error,
-  );
+  console.error('[Preload-SplashScreen] Failed to expose electronAPI:', error);
 }
 
 // Expose app name

@@ -173,7 +173,9 @@ export class PtyDaemonClient extends EventEmitter {
   /**
    * Create a new PTY session.
    */
-  async createSession(opts: CreateSessionOptions): Promise<{ id: string; pid: number }> {
+  async createSession(
+    opts: CreateSessionOptions,
+  ): Promise<{ id: string; pid: number }> {
     const msg: CreateSessionMessage = {
       type: 'create',
       id: opts.id,
@@ -198,7 +200,7 @@ export class PtyDaemonClient extends EventEmitter {
         }
         return null;
       },
-      10000 // 10 second timeout
+      10000, // 10 second timeout
     );
   }
 
@@ -249,7 +251,7 @@ export class PtyDaemonClient extends EventEmitter {
         }
         return null;
       },
-      5000
+      5000,
     );
   }
 
@@ -273,7 +275,7 @@ export class PtyDaemonClient extends EventEmitter {
         }
         return null;
       },
-      5000
+      5000,
     );
   }
 
@@ -291,7 +293,7 @@ export class PtyDaemonClient extends EventEmitter {
         }
         return null;
       },
-      HEALTH_CHECK_TIMEOUT_MS
+      HEALTH_CHECK_TIMEOUT_MS,
     );
   }
 
@@ -309,7 +311,7 @@ export class PtyDaemonClient extends EventEmitter {
         }
         return null;
       },
-      5000
+      5000,
     );
   }
 
@@ -414,8 +416,9 @@ export class PtyDaemonClient extends EventEmitter {
     }
 
     const delay = Math.min(
-      RECONNECT_INITIAL_DELAY_MS * Math.pow(RECONNECT_BACKOFF_FACTOR, this.reconnectAttempts),
-      RECONNECT_MAX_DELAY_MS
+      RECONNECT_INITIAL_DELAY_MS *
+        Math.pow(RECONNECT_BACKOFF_FACTOR, this.reconnectAttempts),
+      RECONNECT_MAX_DELAY_MS,
     );
 
     this.reconnectAttempts++;
@@ -479,7 +482,7 @@ export class PtyDaemonClient extends EventEmitter {
   private waitForResponse<T>(
     key: string,
     matcher: (msg: DaemonMessage) => T | null,
-    timeoutMs: number
+    timeoutMs: number,
   ): Promise<T> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -494,8 +497,11 @@ export class PtyDaemonClient extends EventEmitter {
       });
 
       // Store matcher for later use
-      (this.pendingCallbacks.get(key) as PendingCallback & { matcher: typeof matcher }).matcher =
-        matcher;
+      (
+        this.pendingCallbacks.get(key) as PendingCallback & {
+          matcher: typeof matcher;
+        }
+      ).matcher = matcher;
     });
   }
 
@@ -504,8 +510,11 @@ export class PtyDaemonClient extends EventEmitter {
    */
   private checkPendingCallbacks(msg: DaemonMessage): void {
     for (const [key, callback] of this.pendingCallbacks) {
-      const matcher = (callback as PendingCallback & { matcher: (msg: DaemonMessage) => unknown })
-        .matcher;
+      const matcher = (
+        callback as PendingCallback & {
+          matcher: (msg: DaemonMessage) => unknown;
+        }
+      ).matcher;
       if (matcher) {
         try {
           const result = matcher(msg);

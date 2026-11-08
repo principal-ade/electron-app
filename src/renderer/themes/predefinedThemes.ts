@@ -52,7 +52,10 @@ const transparentTheme: Theme = {
     relaxed: 1.7,
   },
   breakpoints: ['640px', '768px', '1024px', '1280px', '1400px'],
-  sizes: [16, 32, 64, 128, 200, 240, 256, 300, 512, 740, 768, 820, 900, 1024, 1200, 1400, 1536],
+  sizes: [
+    16, 32, 64, 128, 200, 240, 256, 300, 512, 740, 768, 820, 900, 1024, 1200,
+    1400, 1536,
+  ],
   radii: [0, 2, 4, 6, 7, 8, 9, 10, 12, 14, 16, 24],
   shadows: ['none', 'none', 'none', 'none', 'none', 'none'],
   zIndices: [0, 1, 10, 20, 30, 40, 50, 1000],
@@ -170,7 +173,8 @@ export const predefinedThemes: Record<
 > = {
   transparent: {
     name: 'Transparent',
-    description: 'Transparent theme — paints no background so the window shows through',
+    description:
+      'Transparent theme — paints no background so the window shows through',
     theme: transparentTheme,
   },
   iceTangerine: {

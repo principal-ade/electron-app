@@ -217,13 +217,13 @@ export const fileSystemAPI: FileSystemAPI = {
   getFileContentAtRevision: async (
     repositoryPath: string,
     filePath: string,
-    revision: string = 'HEAD'
+    revision: string = 'HEAD',
   ) => {
     return ipcRenderer.invoke(
       FileSystemAPIEvent.GET_FILE_CONTENT_AT_REVISION,
       repositoryPath,
       filePath,
-      revision
+      revision,
     );
   },
   // Skills Git sync methods
@@ -239,24 +239,39 @@ export const fileSystemAPI: FileSystemAPI = {
   updateSyncConfig: async (updates: Partial<SkillsRepoConfig>) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.UPDATE_SYNC_CONFIG, updates);
   },
-  enableSkillSync: async (options: { skillPath: string; syncSource: 'git-global' | 'github' }) => {
+  enableSkillSync: async (options: {
+    skillPath: string;
+    syncSource: 'git-global' | 'github';
+  }) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.ENABLE_SKILL_SYNC, options);
   },
   disableSkillSync: async (options: { skillPath: string }) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.DISABLE_SKILL_SYNC, options);
   },
-  resolveSkillConflict: async (options: { skillPath: string; resolution: 'keep-local' | 'use-remote' }) => {
-    return ipcRenderer.invoke(FileSystemAPIEvent.RESOLVE_SKILL_CONFLICT, options);
+  resolveSkillConflict: async (options: {
+    skillPath: string;
+    resolution: 'keep-local' | 'use-remote';
+  }) => {
+    return ipcRenderer.invoke(
+      FileSystemAPIEvent.RESOLVE_SKILL_CONFLICT,
+      options,
+    );
   },
   // Skills repository initialization
   getAllLocalSkills: async () => {
     return ipcRenderer.invoke(FileSystemAPIEvent.GET_ALL_LOCAL_SKILLS);
   },
   initializeSkillsRepo: async (options: { repoUrl?: string }) => {
-    return ipcRenderer.invoke(FileSystemAPIEvent.INITIALIZE_SKILLS_REPO, options);
+    return ipcRenderer.invoke(
+      FileSystemAPIEvent.INITIALIZE_SKILLS_REPO,
+      options,
+    );
   },
   migrateSkillsToRepo: async (options: { skillPaths: string[] }) => {
-    return ipcRenderer.invoke(FileSystemAPIEvent.MIGRATE_SKILLS_TO_REPO, options);
+    return ipcRenderer.invoke(
+      FileSystemAPIEvent.MIGRATE_SKILLS_TO_REPO,
+      options,
+    );
   },
   pushSkillsRepo: async () => {
     return ipcRenderer.invoke(FileSystemAPIEvent.PUSH_SKILLS_REPO);
@@ -271,11 +286,22 @@ export const fileSystemAPI: FileSystemAPI = {
   getSkillDirectories: async () => {
     return ipcRenderer.invoke(FileSystemAPIEvent.GET_SKILL_DIRECTORIES);
   },
-  addSkillDirectory: async (directory: Omit<GlobalSkillDirectory, 'id' | 'localClonePath'>) => {
-    return ipcRenderer.invoke(FileSystemAPIEvent.ADD_SKILL_DIRECTORY, directory);
+  addSkillDirectory: async (
+    directory: Omit<GlobalSkillDirectory, 'id' | 'localClonePath'>,
+  ) => {
+    return ipcRenderer.invoke(
+      FileSystemAPIEvent.ADD_SKILL_DIRECTORY,
+      directory,
+    );
   },
-  updateSkillDirectory: async (options: { id: string; updates: Partial<GlobalSkillDirectory> }) => {
-    return ipcRenderer.invoke(FileSystemAPIEvent.UPDATE_SKILL_DIRECTORY, options);
+  updateSkillDirectory: async (options: {
+    id: string;
+    updates: Partial<GlobalSkillDirectory>;
+  }) => {
+    return ipcRenderer.invoke(
+      FileSystemAPIEvent.UPDATE_SKILL_DIRECTORY,
+      options,
+    );
   },
   removeSkillDirectory: async (id: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.REMOVE_SKILL_DIRECTORY, id);
@@ -284,41 +310,61 @@ export const fileSystemAPI: FileSystemAPI = {
     return ipcRenderer.invoke(FileSystemAPIEvent.DETECT_PRESET_DIRECTORIES);
   },
   createAgentDirectories: async (agentIds: string[]) => {
-    return ipcRenderer.invoke(FileSystemAPIEvent.CREATE_AGENT_DIRECTORIES, agentIds);
+    return ipcRenderer.invoke(
+      FileSystemAPIEvent.CREATE_AGENT_DIRECTORIES,
+      agentIds,
+    );
   },
   deleteAgentDirectory: async (agentId: string) => {
-    return ipcRenderer.invoke(FileSystemAPIEvent.DELETE_AGENT_DIRECTORY, agentId);
+    return ipcRenderer.invoke(
+      FileSystemAPIEvent.DELETE_AGENT_DIRECTORY,
+      agentId,
+    );
   },
   deleteSkill: async (skillPath: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.DELETE_SKILL, skillPath);
   },
   syncSingleDirectory: async (directoryId: string) => {
-    return ipcRenderer.invoke(FileSystemAPIEvent.SYNC_SINGLE_DIRECTORY, directoryId);
+    return ipcRenderer.invoke(
+      FileSystemAPIEvent.SYNC_SINGLE_DIRECTORY,
+      directoryId,
+    );
   },
   // Pending changes methods (watch-notify-confirm workflow)
   getPendingChanges: async () => {
     return ipcRenderer.invoke(FileSystemAPIEvent.GET_PENDING_CHANGES);
   },
   clearPendingChanges: async (directoryId: string) => {
-    return ipcRenderer.invoke(FileSystemAPIEvent.CLEAR_PENDING_CHANGES, directoryId);
+    return ipcRenderer.invoke(
+      FileSystemAPIEvent.CLEAR_PENDING_CHANGES,
+      directoryId,
+    );
   },
-  onPendingChangesUpdated: (callback: (event: {
-    directoryId: string;
-    changes: {
-      changes: Array<{ path: string; type: string }>;
-      lastDetected: Date;
-    };
-  }) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, payload: {
+  onPendingChangesUpdated: (
+    callback: (event: {
       directoryId: string;
       changes: {
         changes: Array<{ path: string; type: string }>;
         lastDetected: Date;
       };
-    }) => callback(payload);
+    }) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: {
+        directoryId: string;
+        changes: {
+          changes: Array<{ path: string; type: string }>;
+          lastDetected: Date;
+        };
+      },
+    ) => callback(payload);
     ipcRenderer.on(FileSystemAPIEvent.PENDING_CHANGES_UPDATED, handler);
     return () => {
-      ipcRenderer.removeListener(FileSystemAPIEvent.PENDING_CHANGES_UPDATED, handler);
+      ipcRenderer.removeListener(
+        FileSystemAPIEvent.PENDING_CHANGES_UPDATED,
+        handler,
+      );
     };
   },
   // Repository scanning for onboarding
@@ -326,23 +372,34 @@ export const fileSystemAPI: FileSystemAPI = {
     return ipcRenderer.invoke(FileSystemAPIEvent.GET_TOP_LEVEL_FOLDERS);
   },
   scanFoldersForRepos: async (folderPaths: string[]) => {
-    return ipcRenderer.invoke(FileSystemAPIEvent.SCAN_FOLDERS_FOR_REPOS, folderPaths);
+    return ipcRenderer.invoke(
+      FileSystemAPIEvent.SCAN_FOLDERS_FOR_REPOS,
+      folderPaths,
+    );
   },
-  onRepoScanProgress: (callback: (progress: {
-    current: number;
-    total: number;
-    currentFolder: string;
-    foundRepos: number;
-  }) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, progress: {
+  onRepoScanProgress: (
+    callback: (progress: {
       current: number;
       total: number;
       currentFolder: string;
       foundRepos: number;
-    }) => callback(progress);
+    }) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      progress: {
+        current: number;
+        total: number;
+        currentFolder: string;
+        foundRepos: number;
+      },
+    ) => callback(progress);
     ipcRenderer.on(FileSystemAPIEvent.REPO_SCAN_PROGRESS, handler);
     return () => {
-      ipcRenderer.removeListener(FileSystemAPIEvent.REPO_SCAN_PROGRESS, handler);
+      ipcRenderer.removeListener(
+        FileSystemAPIEvent.REPO_SCAN_PROGRESS,
+        handler,
+      );
     };
   },
 };

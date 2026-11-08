@@ -247,9 +247,9 @@ export const onActivitySync = (
   callback: (activities: TerminalActivityState[]) => void,
 ): (() => void) => {
   return ipcOn('terminal:activity-sync', (...args: unknown[]) => {
-      // Preload strips IPC event, so first arg is activities array
-      const activities = args[0] as TerminalActivityState[];
-      callback(activities);
+    // Preload strips IPC event, so first arg is activities array
+    const activities = args[0] as TerminalActivityState[];
+    callback(activities);
   });
 };
 
@@ -265,12 +265,12 @@ export const onProgramStatus = (
   }) => void,
 ): (() => void) => {
   return ipcOn('terminal:program-status', (...args: unknown[]) => {
-      // Preload strips the IPC event, so the first arg is the payload.
-      const payload = args[0] as {
-        sessionId: string;
-        records: ProgramStatusRecord[];
-      };
-      callback(payload);
+    // Preload strips the IPC event, so the first arg is the payload.
+    const payload = args[0] as {
+      sessionId: string;
+      records: ProgramStatusRecord[];
+    };
+    callback(payload);
   });
 };
 
@@ -298,9 +298,9 @@ export const onSessionsChanged = (
   callback: (sessions: TerminalSessionInfo[]) => void,
 ): (() => void) => {
   return ipcOn('terminal:sessions-changed', (...args: unknown[]) => {
-      // Preload strips IPC event, so first arg is sessions array
-      const sessions = args[0] as TerminalSessionInfo[];
-      callback(sessions);
+    // Preload strips IPC event, so first arg is sessions array
+    const sessions = args[0] as TerminalSessionInfo[];
+    callback(sessions);
   });
 };
 

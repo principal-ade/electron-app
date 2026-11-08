@@ -13,7 +13,7 @@ const AGENT_OPTIONS: AgentOption[] = [
   {
     id: 'claude-specific',
     name: 'Claude',
-    description: 'Claude-specific skills for Anthropic\'s Claude',
+    description: "Claude-specific skills for Anthropic's Claude",
     path: '~/.claude/skills',
   },
   {
@@ -90,7 +90,10 @@ export const AgentSetupModal: React.FC<AgentSetupModalProps> = ({
     setSuccess(false);
 
     try {
-      console.info('[AgentSetupModal] Creating directories for:', Array.from(selectedAgents));
+      console.info(
+        '[AgentSetupModal] Creating directories for:',
+        Array.from(selectedAgents),
+      );
       await onSetup(Array.from(selectedAgents));
       console.info('[AgentSetupModal] Directories created successfully');
 
@@ -106,7 +109,9 @@ export const AgentSetupModal: React.FC<AgentSetupModalProps> = ({
       }, 1500);
     } catch (err) {
       console.error('[AgentSetupModal] Failed to create directories:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create directories');
+      setError(
+        err instanceof Error ? err.message : 'Failed to create directories',
+      );
       setIsCreating(false);
     }
   };
@@ -125,7 +130,9 @@ export const AgentSetupModal: React.FC<AgentSetupModalProps> = ({
       console.info('[AgentSetupModal] Directory removed successfully');
     } catch (err) {
       console.error('[AgentSetupModal] Failed to remove directory:', err);
-      setError(err instanceof Error ? err.message : 'Failed to remove directory');
+      setError(
+        err instanceof Error ? err.message : 'Failed to remove directory',
+      );
     } finally {
       setIsRemoving(null);
     }
@@ -207,7 +214,8 @@ export const AgentSetupModal: React.FC<AgentSetupModalProps> = ({
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -219,167 +227,175 @@ export const AgentSetupModal: React.FC<AgentSetupModalProps> = ({
 
         {/* Agent Selection */}
         <div style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+          >
             {AGENT_OPTIONS.map((agent) => {
               const isExisting = existingDirectoryIds.includes(agent.id);
               const isSelected = selectedAgents.has(agent.id);
-              const detectedDir = detectedDirectories.find(d => d.id === agent.id);
+              const detectedDir = detectedDirectories.find(
+                (d) => d.id === agent.id,
+              );
               const isEmpty = detectedDir && detectedDir.skillCount <= 1; // Only placeholder or empty
 
               return (
-              <button
-                key={agent.id}
-                onClick={() => toggleAgent(agent.id)}
-                style={{
-                  padding: '16px',
-                  border: `2px solid ${
-                    isSelected
-                      ? theme.colors.primary
+                <button
+                  key={agent.id}
+                  onClick={() => toggleAgent(agent.id)}
+                  style={{
+                    padding: '16px',
+                    border: `2px solid ${
+                      isSelected
+                        ? theme.colors.primary
+                        : isExisting
+                          ? theme.colors.success
+                          : theme.colors.border
+                    }`,
+                    borderRadius: '8px',
+                    backgroundColor: isSelected
+                      ? `${theme.colors.primary}10`
                       : isExisting
-                        ? theme.colors.success
-                        : theme.colors.border
-                  }`,
-                  borderRadius: '8px',
-                  backgroundColor: isSelected
-                    ? `${theme.colors.primary}10`
-                    : isExisting
-                      ? `${theme.colors.success}05`
-                      : theme.colors.background,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.2s',
-                  position: 'relative',
-                  opacity: isExisting && !isSelected ? 0.7 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = isExisting ? `${theme.colors.success}05` : theme.colors.background;
-                  }
-                }}
-              >
-                {/* Selected indicator */}
-                {isSelected && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: '12px',
-                      backgroundColor: theme.colors.primary,
-                      borderRadius: '50%',
-                      width: '24px',
-                      height: '24px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: theme.colors.background,
-                    }}
-                  >
-                    <Check size={14} />
-                  </div>
-                )}
-
-                {/* Remove button for empty directories or "Created" badge */}
-                {isExisting && !isSelected && (
-                  isEmpty && onRemove ? (
-                    <button
-                      onClick={(e) => handleRemove(agent.id, e)}
-                      disabled={isRemoving === agent.id}
+                        ? `${theme.colors.success}05`
+                        : theme.colors.background,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                    position: 'relative',
+                    opacity: isExisting && !isSelected ? 0.7 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundSecondary;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.backgroundColor = isExisting
+                        ? `${theme.colors.success}05`
+                        : theme.colors.background;
+                    }
+                  }}
+                >
+                  {/* Selected indicator */}
+                  {isSelected && (
+                    <div
                       style={{
                         position: 'absolute',
                         top: '12px',
                         right: '12px',
-                        padding: '6px 10px',
-                        backgroundColor: theme.colors.error,
-                        borderRadius: '4px',
-                        fontSize: theme.fontSizes[0],
-                        fontWeight: theme.fontWeights.medium,
-                        color: theme.colors.background,
-                        border: 'none',
-                        cursor: isRemoving === agent.id ? 'not-allowed' : 'pointer',
+                        backgroundColor: theme.colors.primary,
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        transition: 'all 0.2s',
-                        opacity: isRemoving === agent.id ? 0.5 : 1,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (isRemoving !== agent.id) {
-                          e.currentTarget.style.opacity = '0.85';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (isRemoving !== agent.id) {
-                          e.currentTarget.style.opacity = '1';
-                        }
-                      }}
-                    >
-                      <Trash2 size={12} />
-                      {isRemoving === agent.id ? 'Removing...' : 'Remove'}
-                    </button>
-                  ) : (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '12px',
-                        right: '12px',
-                        padding: '4px 8px',
-                        backgroundColor: theme.colors.success,
-                        borderRadius: '4px',
-                        fontSize: theme.fontSizes[0],
-                        fontWeight: theme.fontWeights.medium,
+                        justifyContent: 'center',
                         color: theme.colors.background,
                       }}
                     >
-                      Created
+                      <Check size={14} />
                     </div>
-                  )
-                )}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginBottom: '8px',
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        fontSize: theme.fontSizes[2],
-                        fontWeight: theme.fontWeights.medium,
-                        color: theme.colors.text,
-                        marginBottom: '4px',
-                      }}
-                    >
-                      {agent.name}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: theme.fontSizes[0],
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      {agent.description}
+                  )}
+
+                  {/* Remove button for empty directories or "Created" badge */}
+                  {isExisting &&
+                    !isSelected &&
+                    (isEmpty && onRemove ? (
+                      <button
+                        onClick={(e) => handleRemove(agent.id, e)}
+                        disabled={isRemoving === agent.id}
+                        style={{
+                          position: 'absolute',
+                          top: '12px',
+                          right: '12px',
+                          padding: '6px 10px',
+                          backgroundColor: theme.colors.error,
+                          borderRadius: '4px',
+                          fontSize: theme.fontSizes[0],
+                          fontWeight: theme.fontWeights.medium,
+                          color: theme.colors.background,
+                          border: 'none',
+                          cursor:
+                            isRemoving === agent.id ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'all 0.2s',
+                          opacity: isRemoving === agent.id ? 0.5 : 1,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (isRemoving !== agent.id) {
+                            e.currentTarget.style.opacity = '0.85';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (isRemoving !== agent.id) {
+                            e.currentTarget.style.opacity = '1';
+                          }
+                        }}
+                      >
+                        <Trash2 size={12} />
+                        {isRemoving === agent.id ? 'Removing...' : 'Remove'}
+                      </button>
+                    ) : (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '12px',
+                          right: '12px',
+                          padding: '4px 8px',
+                          backgroundColor: theme.colors.success,
+                          borderRadius: '4px',
+                          fontSize: theme.fontSizes[0],
+                          fontWeight: theme.fontWeights.medium,
+                          color: theme.colors.background,
+                        }}
+                      >
+                        Created
+                      </div>
+                    ))}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[2],
+                          fontWeight: theme.fontWeights.medium,
+                          color: theme.colors.text,
+                          marginBottom: '4px',
+                        }}
+                      >
+                        {agent.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          color: theme.colors.textSecondary,
+                        }}
+                      >
+                        {agent.description}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div
-                  style={{
-                    fontSize: theme.fontSizes[0],
-                    fontFamily: theme.fonts.monospace,
-                    color: theme.colors.textSecondary,
-                    marginTop: '8px',
-                  }}
-                >
-                  {agent.path}
-                </div>
-              </button>
-            );
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts.monospace,
+                      color: theme.colors.textSecondary,
+                      marginTop: '8px',
+                    }}
+                  >
+                    {agent.path}
+                  </div>
+                </button>
+              );
             })}
           </div>
 
@@ -445,7 +461,8 @@ export const AgentSetupModal: React.FC<AgentSetupModalProps> = ({
             }}
             onMouseEnter={(e) => {
               if (!isCreating && !success) {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
               }
             }}
             onMouseLeave={(e) => {
@@ -463,13 +480,23 @@ export const AgentSetupModal: React.FC<AgentSetupModalProps> = ({
               padding: '10px 20px',
               borderRadius: '6px',
               border: 'none',
-              backgroundColor: success ? theme.colors.success : theme.colors.primary,
+              backgroundColor: success
+                ? theme.colors.success
+                : theme.colors.primary,
               color: theme.colors.background,
-              cursor: isCreating || success || selectedAgents.size === 0 ? 'not-allowed' : 'pointer',
+              cursor:
+                isCreating || success || selectedAgents.size === 0
+                  ? 'not-allowed'
+                  : 'pointer',
               fontSize: theme.fontSizes[1],
               fontWeight: theme.fontWeights.medium,
               transition: 'all 0.2s',
-              opacity: isCreating || success || selectedAgents.size === 0 ? (success ? 1 : 0.5) : 1,
+              opacity:
+                isCreating || success || selectedAgents.size === 0
+                  ? success
+                    ? 1
+                    : 0.5
+                  : 1,
               display: 'flex',
               alignItems: 'center',
               gap: '8px',

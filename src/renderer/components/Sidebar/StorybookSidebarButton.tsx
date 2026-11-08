@@ -17,8 +17,13 @@ export const StorybookSidebarButton: React.FC<StorybookSidebarButtonProps> = ({
   theme,
   storybook,
 }) => {
-  const { isRunning, isStorybookVisible, showPanel, hidePanel, selectedPackage } =
-    storybook;
+  const {
+    isRunning,
+    isStorybookVisible,
+    showPanel,
+    hidePanel,
+    selectedPackage,
+  } = storybook;
 
   if (!isRunning) return null;
 

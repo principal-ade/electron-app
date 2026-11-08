@@ -26,10 +26,15 @@ class MockEventEmitter implements PanelEventEmitter {
   emit<T>(event: PanelEvent<T>): void {
     console.info('[Mock Event]:', event);
     const eventListeners = this.listeners.get(event.type) || [];
-    eventListeners.forEach((listener) => listener(event as PanelEvent<unknown>));
+    eventListeners.forEach((listener) =>
+      listener(event as PanelEvent<unknown>),
+    );
   }
 
-  on<T>(eventType: string, handler: (event: PanelEvent<T>) => void): () => void {
+  on<T>(
+    eventType: string,
+    handler: (event: PanelEvent<T>) => void,
+  ): () => void {
     const listeners = this.listeners.get(eventType) || [];
     const wrappedHandler = handler as EventHandler;
     listeners.push(wrappedHandler);
@@ -115,7 +120,11 @@ const hourBucketIso = (hoursAgo: number): string => {
   return d.toISOString();
 };
 
-const makeCommits = (count: number, hoursAgo: number, idPrefix: string): CommitInfo[] => {
+const makeCommits = (
+  count: number,
+  hoursAgo: number,
+  idPrefix: string,
+): CommitInfo[] => {
   const commits: CommitInfo[] = [];
   const base = Date.now() - hoursAgo * 60 * 60 * 1000;
   for (let i = 0; i < count; i++) {
@@ -124,7 +133,9 @@ const makeCommits = (count: number, hoursAgo: number, idPrefix: string): CommitI
     const committedAt = new Date(base + i * 5 * 60 * 1000).toISOString();
     commits.push({
       sha: `${idPrefix}${i.toString().padStart(4, '0')}`,
-      message: MESSAGES[(i + idPrefix.charCodeAt(0)) % MESSAGES.length] ?? 'Update code',
+      message:
+        MESSAGES[(i + idPrefix.charCodeAt(0)) % MESSAGES.length] ??
+        'Update code',
       author,
       committedAt,
       url: `https://github.com/example/example/commit/${idPrefix}${i}`,
@@ -139,7 +150,11 @@ const makeCard = (
   hoursAgo: number,
   commitCount: number,
 ): CommitActivityCard => {
-  const commits = makeCommits(commitCount, hoursAgo, `${repo.slice(0, 3)}${hoursAgo}`);
+  const commits = makeCommits(
+    commitCount,
+    hoursAgo,
+    `${repo.slice(0, 3)}${hoursAgo}`,
+  );
   const hourBucket = hourBucketIso(hoursAgo);
   const latestCommit = commits[commits.length - 1];
   if (!latestCommit) {
@@ -158,7 +173,9 @@ const makeCard = (
 
 // ---- Mock actions factory --------------------------------------------------
 
-const makeMockActions = (cards: CommitActivityCard[]): CommitActivityPanelActions => ({
+const makeMockActions = (
+  cards: CommitActivityCard[],
+): CommitActivityPanelActions => ({
   getFileTreeForLocalRepo: async () => null,
   getGithubTree: async () => ({
     sha: 'mock-sha',
@@ -167,8 +184,10 @@ const makeMockActions = (cards: CommitActivityCard[]): CommitActivityPanelAction
     truncated: false,
   }),
   getAlexandriaRepositories: async () => [],
-  getChangedFilesForLocalCommit: async (_path, sha) => buildMockChangedFiles(sha),
-  getChangedFilesForGithubCommit: async (_owner, _repo, sha) => buildMockChangedFiles(sha),
+  getChangedFilesForLocalCommit: async (_path, sha) =>
+    buildMockChangedFiles(sha),
+  getChangedFilesForGithubCommit: async (_owner, _repo, sha) =>
+    buildMockChangedFiles(sha),
   explainCommits: async () => ({
     text: 'Mock explanation for Storybook — no real AI call is made.',
   }),
@@ -201,7 +220,9 @@ const PanelStory: React.FC<{
           display: 'flex',
         }}
       >
-        <div style={{ width: 480, borderRight: '1px solid #333', height: '100%' }}>
+        <div
+          style={{ width: 480, borderRight: '1px solid #333', height: '100%' }}
+        >
           <CommitActivityPanel
             source={source}
             events={events}
@@ -252,7 +273,11 @@ export const User: Story = {
 export const Organization: Story = {
   render: () => (
     <PanelStory
-      source={{ kind: 'owner', login: 'acme-corp', accountType: 'Organization' }}
+      source={{
+        kind: 'owner',
+        login: 'acme-corp',
+        accountType: 'Organization',
+      }}
       actions={makeMockActions([
         makeCard('acme-corp', 'frontend-app', 0, 7),
         makeCard('acme-corp', 'backend-api', 0, 4),

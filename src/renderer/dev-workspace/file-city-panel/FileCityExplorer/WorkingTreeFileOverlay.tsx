@@ -11,10 +11,7 @@ import { FileSystemService } from '../../../main-process-api/FileSystemService';
  * pipeline can render it as all-additions. Mirrors the format
  * `git diff --no-index /dev/null <file>` produces.
  */
-function buildUntrackedFilePatch(
-  filePath: string,
-  content: string,
-): string {
+function buildUntrackedFilePatch(filePath: string, content: string): string {
   const hasTrailingNewline = content.endsWith('\n');
   const split = content.split('\n');
   // `"a\nb\n".split("\n")` → ["a","b",""] — drop the trailing empty so it

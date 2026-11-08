@@ -1,11 +1,7 @@
 import type { ChildProcessWithoutNullStreams } from 'child_process';
 
 export type DevServerLifecycleStatus =
-  | 'idle'
-  | 'starting'
-  | 'running'
-  | 'stopped'
-  | 'error';
+  'idle' | 'starting' | 'running' | 'stopped' | 'error';
 
 export interface DevServerDescriptor {
   /**

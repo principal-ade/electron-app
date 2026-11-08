@@ -24,10 +24,9 @@ export default function dynamic<P extends object>(
 ): React.ComponentType<P> {
   const Lazy = React.lazy(async () => {
     const mod = await loader();
-    const component = (
+    const component =
       (mod as { default?: React.ComponentType<P> }).default ??
-      (mod as React.ComponentType<P>)
-    );
+      (mod as React.ComponentType<P>);
     return { default: component };
   });
 

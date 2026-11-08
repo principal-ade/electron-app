@@ -1,7 +1,18 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { Code2, Loader2, CheckCircle, AlertTriangle, AlertOctagon, Scan, Activity, Zap, AlertCircle, X } from 'lucide-react';
+import {
+  Code2,
+  Loader2,
+  CheckCircle,
+  AlertTriangle,
+  AlertOctagon,
+  Scan,
+  Activity,
+  Zap,
+  AlertCircle,
+  X,
+} from 'lucide-react';
 
 type SeverityLevel = 'safe' | 'low' | 'moderate' | 'high' | 'critical';
 
@@ -15,9 +26,19 @@ interface SeverityConfig {
 const SEVERITY: Record<SeverityLevel, SeverityConfig> = {
   safe: { level: 'safe', label: 'Safe', color: '#22c55e', icon: CheckCircle },
   low: { level: 'low', label: 'Low', color: '#eab308', icon: AlertTriangle },
-  moderate: { level: 'moderate', label: 'Moderate', color: '#f97316', icon: Activity },
+  moderate: {
+    level: 'moderate',
+    label: 'Moderate',
+    color: '#f97316',
+    icon: Activity,
+  },
   high: { level: 'high', label: 'High', color: '#ef4444', icon: Zap },
-  critical: { level: 'critical', label: 'Critical', color: '#d946ef', icon: AlertOctagon },
+  critical: {
+    level: 'critical',
+    label: 'Critical',
+    color: '#d946ef',
+    icon: AlertOctagon,
+  },
 };
 
 function getSeverity(occurrences: number): SeverityConfig {
@@ -61,7 +82,8 @@ export default function VibeCodingPane({
 }: VibeCodingPaneProps) {
   const { theme } = useTheme();
 
-  const severity = occurrenceCount !== null ? getSeverity(occurrenceCount) : null;
+  const severity =
+    occurrenceCount !== null ? getSeverity(occurrenceCount) : null;
   const SeverityIcon = severity?.icon ?? Code2;
   const hasResults = fileCount !== null && occurrenceCount !== null;
 
@@ -78,18 +100,34 @@ export default function VibeCodingPane({
         className="flex items-center justify-between px-4 py-3 border-b shrink-0"
         style={{
           borderColor: theme.colors.border,
-          ...(severity ? { background: `color-mix(in srgb, ${severity.color} 8%, transparent)` } : {}),
+          ...(severity
+            ? {
+                background: `color-mix(in srgb, ${severity.color} 8%, transparent)`,
+              }
+            : {}),
         }}
       >
         <div className="flex items-center gap-2">
           {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" style={{ color: theme.colors.textMuted }} />
+            <Loader2
+              className="w-4 h-4 animate-spin"
+              style={{ color: theme.colors.textMuted }}
+            />
           ) : severity ? (
-            <SeverityIcon className="w-4 h-4" style={{ color: severity.color }} />
+            <SeverityIcon
+              className="w-4 h-4"
+              style={{ color: severity.color }}
+            />
           ) : scanActive ? (
-            <Scan className="w-4 h-4 animate-pulse" style={{ color: theme.colors.primary }} />
+            <Scan
+              className="w-4 h-4 animate-pulse"
+              style={{ color: theme.colors.primary }}
+            />
           ) : (
-            <Code2 className="w-4 h-4" style={{ color: theme.colors.textMuted }} />
+            <Code2
+              className="w-4 h-4"
+              style={{ color: theme.colors.textMuted }}
+            />
           )}
           <span className="text-sm font-semibold">Vibe Coding Detector</span>
         </div>
@@ -133,35 +171,50 @@ export default function VibeCodingPane({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ scrollbarWidth: 'thin' }}>
+      <div
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+        style={{ scrollbarWidth: 'thin' }}
+      >
         {/* LOADING STATE */}
         {loading && (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="relative">
-              <Scan className="w-10 h-10 animate-pulse" style={{ color: theme.colors.primary }} />
+              <Scan
+                className="w-10 h-10 animate-pulse"
+                style={{ color: theme.colors.primary }}
+              />
               <div
                 className="absolute inset-0 rounded-full animate-ping opacity-20"
                 style={{ background: theme.colors.primary }}
               />
             </div>
             <div className="text-center">
-              <div className="text-sm font-medium" style={{ color: theme.colors.text }}>
+              <div
+                className="text-sm font-medium"
+                style={{ color: theme.colors.text }}
+              >
                 Scanning codebase...
               </div>
-              <div className="text-xs mt-1" style={{ color: theme.colors.textMuted }}>
+              <div
+                className="text-xs mt-1"
+                style={{ color: theme.colors.textMuted }}
+              >
                 Searching for isRecord, is_record, is_empty patterns
               </div>
               {scanDirectory && (
-                <div className="text-xs mt-2 px-2 py-1 rounded inline-block" style={{
-                  background: `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`,
-                  color: theme.colors.primary,
-                  fontFamily: theme.fonts.monospace,
-                  maxWidth: '100%',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-block',
-                }}>
+                <div
+                  className="text-xs mt-2 px-2 py-1 rounded inline-block"
+                  style={{
+                    background: `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`,
+                    color: theme.colors.primary,
+                    fontFamily: theme.fonts.monospace,
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-block',
+                  }}
+                >
                   {scanDirectory}
                 </div>
               )}
@@ -170,7 +223,9 @@ export default function VibeCodingPane({
             <div className="w-full space-y-1.5">
               <div
                 className="w-full h-2 rounded-full overflow-hidden"
-                style={{ background: `color-mix(in srgb, ${theme.colors.textMuted} 15%, transparent)` }}
+                style={{
+                  background: `color-mix(in srgb, ${theme.colors.textMuted} 15%, transparent)`,
+                }}
               >
                 <div
                   className="h-full rounded-full transition-all duration-100 ease-linear"
@@ -180,9 +235,13 @@ export default function VibeCodingPane({
                   }}
                 />
               </div>
-              <div className="flex items-center justify-between text-xs" style={{ color: theme.colors.textMuted }}>
+              <div
+                className="flex items-center justify-between text-xs"
+                style={{ color: theme.colors.textMuted }}
+              >
                 <span>
-                  {Math.round(scanProgress * totalRepoFiles).toLocaleString()} / {totalRepoFiles.toLocaleString()} files
+                  {Math.round(scanProgress * totalRepoFiles).toLocaleString()} /{' '}
+                  {totalRepoFiles.toLocaleString()} files
                 </span>
                 <span>{Math.round(scanProgress * 100)}%</span>
               </div>
@@ -192,7 +251,10 @@ export default function VibeCodingPane({
 
         {/* ERROR STATE */}
         {error && (
-          <div className="flex items-center gap-2 text-sm py-2" style={{ color: theme.colors.error ?? '#ef4444' }}>
+          <div
+            className="flex items-center gap-2 text-sm py-2"
+            style={{ color: theme.colors.error ?? '#ef4444' }}
+          >
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -214,10 +276,16 @@ export default function VibeCodingPane({
                 style={{ color: severity!.color }}
               />
               <div className="flex-1 min-w-0">
-                <div className="text-xl font-bold tracking-tight" style={{ color: severity!.color }}>
+                <div
+                  className="text-xl font-bold tracking-tight"
+                  style={{ color: severity!.color }}
+                >
                   {severity!.label}
                 </div>
-                <div className="text-sm mt-0.5" style={{ color: theme.colors.textMuted }}>
+                <div
+                  className="text-sm mt-0.5"
+                  style={{ color: theme.colors.textMuted }}
+                >
                   {occurrenceCount! > 0
                     ? `${occurrenceCount} pattern${occurrenceCount !== 1 ? 's' : ''} found across ${fileCount} file${fileCount !== 1 ? 's' : ''}`
                     : 'No vibe coding patterns detected'}
@@ -227,24 +295,41 @@ export default function VibeCodingPane({
 
             {/* Severity Scale */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs" style={{ color: theme.colors.textMuted }}>
+              <div
+                className="flex items-center justify-between text-xs"
+                style={{ color: theme.colors.textMuted }}
+              >
                 <span>0</span>
                 <span>Severity Index</span>
                 <span>100+</span>
               </div>
               <div
                 className="w-full h-2 rounded-full overflow-hidden flex"
-                style={{ background: `color-mix(in srgb, ${theme.colors.textMuted} 12%, transparent)` }}
+                style={{
+                  background: `color-mix(in srgb, ${theme.colors.textMuted} 12%, transparent)`,
+                }}
               >
-                {(['safe', 'low', 'moderate', 'high', 'critical'] as SeverityLevel[]).map((lvl) => {
+                {(
+                  [
+                    'safe',
+                    'low',
+                    'moderate',
+                    'high',
+                    'critical',
+                  ] as SeverityLevel[]
+                ).map((lvl) => {
                   const cfg = SEVERITY[lvl];
-                  const isActive = occurrenceCount !== null && getSeverity(occurrenceCount).level === cfg.level;
+                  const isActive =
+                    occurrenceCount !== null &&
+                    getSeverity(occurrenceCount).level === cfg.level;
                   return (
                     <div
                       key={lvl}
                       className="flex-1 h-full transition-all duration-500"
                       style={{
-                        background: isActive ? cfg.color : `color-mix(in srgb, ${cfg.color} 20%, transparent)`,
+                        background: isActive
+                          ? cfg.color
+                          : `color-mix(in srgb, ${cfg.color} 20%, transparent)`,
                         opacity: isActive ? 1 : 0.5,
                       }}
                     />
@@ -257,8 +342,12 @@ export default function VibeCodingPane({
               >
                 {occurrenceCount! > 0 ? (
                   <span>
-                    {occurrenceCount} occurrence{occurrenceCount !== 1 ? 's' : ''} —{' '}
-                    {Math.round((occurrenceCount! / Math.max(totalRepoFiles, 1)) * 100)}% of repo
+                    {occurrenceCount} occurrence
+                    {occurrenceCount !== 1 ? 's' : ''} —{' '}
+                    {Math.round(
+                      (occurrenceCount! / Math.max(totalRepoFiles, 1)) * 100,
+                    )}
+                    % of repo
                   </span>
                 ) : (
                   <span>Clean — no patterns found</span>
@@ -295,15 +384,25 @@ export default function VibeCodingPane({
             {/* File List — grouped by matched term */}
             {files.length > 0 && (
               <div className="space-y-3">
-                <div className="text-xs font-medium" style={{ color: theme.colors.textMuted }}>
+                <div
+                  className="text-xs font-medium"
+                  style={{ color: theme.colors.textMuted }}
+                >
                   Matching files ({fileCount} total)
                 </div>
                 {(() => {
-                  const termOrder = terms.length > 0 ? terms : Array.from(new Set(files.flatMap((f) => f.matched_terms)));
+                  const termOrder =
+                    terms.length > 0
+                      ? terms
+                      : Array.from(
+                          new Set(files.flatMap((f) => f.matched_terms)),
+                        );
                   const grouped = new Map<string, typeof files>();
                   const ungrouped: typeof files = [];
                   for (const f of files) {
-                    const fTerms = f.matched_terms.filter((t) => termOrder.includes(t));
+                    const fTerms = f.matched_terms.filter((t) =>
+                      termOrder.includes(t),
+                    );
                     if (fTerms.length === 0) {
                       ungrouped.push(f);
                       continue;
@@ -328,11 +427,17 @@ export default function VibeCodingPane({
                                 color: theme.colors.primary,
                               }}
                             >
-                              <span className="px-1.5 py-0.5 rounded font-mono" style={{ background: `color-mix(in srgb, ${theme.colors.primary} 15%, transparent)` }}>
+                              <span
+                                className="px-1.5 py-0.5 rounded font-mono"
+                                style={{
+                                  background: `color-mix(in srgb, ${theme.colors.primary} 15%, transparent)`,
+                                }}
+                              >
                                 {term}
                               </span>
                               <span style={{ color: theme.colors.textMuted }}>
-                                {termFiles.length} file{termFiles.length !== 1 ? 's' : ''}
+                                {termFiles.length} file
+                                {termFiles.length !== 1 ? 's' : ''}
                               </span>
                             </div>
                             <div
@@ -356,13 +461,19 @@ export default function VibeCodingPane({
                                 >
                                   <span
                                     className="w-1.5 h-1.5 rounded-full shrink-0"
-                                    style={{ background: severity!.color, opacity: 0.6 }}
+                                    style={{
+                                      background: severity!.color,
+                                      opacity: 0.6,
+                                    }}
                                   />
                                   {f.path}
                                 </a>
                               ))}
                               {termFiles.length > maxShow && (
-                                <div className="px-2.5 py-1.5 text-xs" style={{ color: theme.colors.textMuted }}>
+                                <div
+                                  className="px-2.5 py-1.5 text-xs"
+                                  style={{ color: theme.colors.textMuted }}
+                                >
                                   +{termFiles.length - maxShow} more files
                                 </div>
                               )}
@@ -372,7 +483,10 @@ export default function VibeCodingPane({
                       })}
                       {ungrouped.length > 0 && (
                         <div>
-                          <div className="text-xs font-medium px-2 py-1 mb-1" style={{ color: theme.colors.textMuted }}>
+                          <div
+                            className="text-xs font-medium px-2 py-1 mb-1"
+                            style={{ color: theme.colors.textMuted }}
+                          >
                             Other ({ungrouped.length})
                           </div>
                           <div
@@ -394,12 +508,21 @@ export default function VibeCodingPane({
                                   fontFamily: theme.fonts.monospace,
                                 }}
                               >
-                                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: severity!.color, opacity: 0.6 }} />
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                                  style={{
+                                    background: severity!.color,
+                                    opacity: 0.6,
+                                  }}
+                                />
                                 {f.path}
                               </a>
                             ))}
                             {ungrouped.length > 20 && (
-                              <div className="px-2.5 py-1.5 text-xs" style={{ color: theme.colors.textMuted }}>
+                              <div
+                                className="px-2.5 py-1.5 text-xs"
+                                style={{ color: theme.colors.textMuted }}
+                              >
                                 +{ungrouped.length - 20} more files
                               </div>
                             )}
@@ -417,8 +540,14 @@ export default function VibeCodingPane({
         {/* IDLE STATE (no results, not loading, not error — should only show briefly) */}
         {!hasResults && !loading && !error && !scanActive && (
           <div className="flex flex-col items-center gap-3 py-8">
-            <Code2 className="w-8 h-8" style={{ color: theme.colors.textMuted }} />
-            <div className="text-sm text-center" style={{ color: theme.colors.textMuted }}>
+            <Code2
+              className="w-8 h-8"
+              style={{ color: theme.colors.textMuted }}
+            />
+            <div
+              className="text-sm text-center"
+              style={{ color: theme.colors.textMuted }}
+            >
               Click the vibe coding button in the header to scan this repo.
             </div>
           </div>

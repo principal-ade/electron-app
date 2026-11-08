@@ -39,7 +39,7 @@ export interface FileCityImageAPI {
   getImageForCommit: (
     repoPath: string,
     commitHash: string,
-    filePaths: string[]
+    filePaths: string[],
   ) => Promise<string | null>;
 
   /**
@@ -51,14 +51,27 @@ export interface FileCityImageAPI {
     repoPath: string,
     commitHash: string,
     filePaths: string[],
-    changedFiles: Record<string, 'added' | 'modified' | 'deleted' | 'renamed' | { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>
+    changedFiles: Record<
+      string,
+      | 'added'
+      | 'modified'
+      | 'deleted'
+      | 'renamed'
+      | {
+          status: 'added' | 'modified' | 'deleted' | 'renamed';
+          additions: number;
+          deletions: number;
+        }
+    >,
   ) => Promise<string | null>;
 
   /**
    * Subscribe to image generation events
    * Called when a new image is generated for a repository
    */
-  onImageGenerated: (callback: (repoPath: string, imageUrl: string) => void) => () => void;
+  onImageGenerated: (
+    callback: (repoPath: string, imageUrl: string) => void,
+  ) => () => void;
 
   /**
    * Count lines in all tracked files in a repository

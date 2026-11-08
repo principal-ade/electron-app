@@ -10,7 +10,14 @@
  * Format (W3C): `00-<32 hex trace id>-<16 hex span id>-<2 hex flags>`.
  */
 
-import { context, trace, TraceFlags, type Context, type Span, type SpanContext } from '@opentelemetry/api';
+import {
+  context,
+  trace,
+  TraceFlags,
+  type Context,
+  type Span,
+  type SpanContext,
+} from '@opentelemetry/api';
 
 const INVALID_TRACE_ID = '00000000000000000000000000000000';
 
@@ -60,14 +67,13 @@ export function currentTraceparent(): string | undefined {
  * Parse a `traceparent` header. Returns `null` for anything that is not a
  * well-formed v00 trace context, so a malformed value can never corrupt a trace.
  */
-export function parseTraceparent(
-  value: unknown,
-): ParsedTraceparent | null {
+export function parseTraceparent(value: unknown): ParsedTraceparent | null {
   if (typeof value !== 'string') return null;
 
-  const match = /^([0-9a-f]{2})-([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})$/.exec(
-    value.trim().toLowerCase(),
-  );
+  const match =
+    /^([0-9a-f]{2})-([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})$/.exec(
+      value.trim().toLowerCase(),
+    );
   if (!match) return null;
 
   const [, version, traceId, spanId, flags] = match;

@@ -30,7 +30,13 @@ const FRESH_GREEN = '#3fb950';
  * fall in a staggered wave, evoking the line-count / 3D-city building heights
  * being (re)built. Reads better here than a generic spinner.
  */
-function BarsLoader({ color, height = 14 }: { color: string; height?: number }) {
+function BarsLoader({
+  color,
+  height = 14,
+}: {
+  color: string;
+  height?: number;
+}) {
   return (
     <span
       aria-hidden
@@ -51,9 +57,11 @@ function BarsLoader({ color, height = 14 }: { color: string; height?: number }) 
           }}
         />
       ))}
-      <style>{
-        '@keyframes lc-bars { 0%, 100% { height: 25%; opacity: 0.55 } 50% { height: 100%; opacity: 1 } }'
-      }</style>
+      <style>
+        {
+          '@keyframes lc-bars { 0%, 100% { height: 25%; opacity: 0.55 } 50% { height: 100%; opacity: 1 } }'
+        }
+      </style>
     </span>
   );
 }
@@ -84,7 +92,10 @@ export function RepoAnalysisStatus() {
           Line Counts
         </span>
         <span
-          style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}
+          style={{
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textMuted,
+          }}
         >
           Not available yet
         </span>
@@ -196,154 +207,188 @@ export function RepoAnalysisStatus() {
         }}
       >
         <div style={{ overflow: 'hidden', minHeight: 0 }}>
-      {/* Opaque strip so the floating card fully hides the list scrolling behind
+          {/* Opaque strip so the floating card fully hides the list scrolling behind
           it; the upward shadow lifts it off the content. */}
-      <div
-        className="px-4 pt-3 pb-2"
-        style={{
-          background: theme.colors.background,
-          borderTop: `1px solid ${theme.colors.border}`,
-          boxShadow: '0 -8px 24px rgba(0, 0, 0, 0.28)',
-        }}
-      >
-      <div
-        className="flex flex-col gap-3 rounded-lg border p-3"
-        style={{
-          borderColor: theme.colors.border,
-          background: `color-mix(in srgb, ${theme.colors.text} 4%, transparent)`,
-          color: theme.colors.text,
-        }}
-      >
-        {analyzed && (
-          <>
-            <div className="flex flex-col gap-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2" style={rowLabel}>
-                  <Server size={14} style={{ color: theme.colors.textMuted }} />
-                  Warm VM
-                </span>
-                <span className="inline-flex items-center gap-1.5" style={rowValue}>
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: 9999,
-                      background: hasVm ? FRESH_GREEN : theme.colors.textMuted,
-                      boxShadow: hasVm
-                        ? `0 0 0 3px color-mix(in srgb, ${FRESH_GREEN} 22%, transparent)`
-                        : 'none',
-                    }}
-                  />
-                  {hasVm ? 'Ready' : 'Cold start'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2" style={rowLabel}>
-                  <GitCommitHorizontal size={14} style={{ color: theme.colors.textMuted }} />
-                  Last built
-                </span>
-                <code
-                  style={{
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.text,
-                    background: `color-mix(in srgb, ${theme.colors.text} 7%, transparent)`,
-                    padding: '1px 6px',
-                    borderRadius: 4,
-                  }}
-                >
-                  {shortSha ?? '—'}
-                </code>
-              </div>
-
-              <div className="flex items-center justify-between gap-2">
-                <span style={rowLabel}>Status</span>
-                <span
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5"
-                  style={{
-                    fontSize: theme.fontSizes[0],
-                    fontWeight: theme.fontWeights.semibold,
-                    color: stale ? theme.colors.accent : FRESH_GREEN,
-                    background: stale
-                      ? `color-mix(in srgb, ${theme.colors.accent} 15%, transparent)`
-                      : `color-mix(in srgb, ${FRESH_GREEN} 15%, transparent)`,
-                  }}
-                >
-                  {stale ? <RefreshCw size={11} /> : <Check size={11} />}
-                  {stale ? 'Update available' : 'Up to date'}
-                </span>
-              </div>
-            </div>
-
-            <div className="h-px w-full" style={{ background: theme.colors.border }} />
-          </>
-        )}
-
-        {state.kind === 'error' && (
-          <div style={{ fontSize: theme.fontSizes[0], color: '#f0a0a0', lineHeight: 1.4 }}>
-            {state.message}
-          </div>
-        )}
-
-        <div className="flex flex-col gap-1.5">
-          <span
+          <div
+            className="px-4 pt-3 pb-2"
             style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textMuted,
-              lineHeight: 1.4,
+              background: theme.colors.background,
+              borderTop: `1px solid ${theme.colors.border}`,
+              boxShadow: '0 -8px 24px rgba(0, 0, 0, 0.28)',
             }}
           >
-            Line count data powers
-          </span>
-          <div className="flex gap-1.5">
-            {[
-              { icon: <Users size={13} />, label: 'Contributor coverage' },
-              { icon: <Boxes size={13} />, label: '3D visualization' },
-            ].map((f) => (
-              <span
-                key={f.label}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1 text-center"
+            <div
+              className="flex flex-col gap-3 rounded-lg border p-3"
+              style={{
+                borderColor: theme.colors.border,
+                background: `color-mix(in srgb, ${theme.colors.text} 4%, transparent)`,
+                color: theme.colors.text,
+              }}
+            >
+              {analyzed && (
+                <>
+                  <div className="flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className="flex items-center gap-2"
+                        style={rowLabel}
+                      >
+                        <Server
+                          size={14}
+                          style={{ color: theme.colors.textMuted }}
+                        />
+                        Warm VM
+                      </span>
+                      <span
+                        className="inline-flex items-center gap-1.5"
+                        style={rowValue}
+                      >
+                        <span
+                          style={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: 9999,
+                            background: hasVm
+                              ? FRESH_GREEN
+                              : theme.colors.textMuted,
+                            boxShadow: hasVm
+                              ? `0 0 0 3px color-mix(in srgb, ${FRESH_GREEN} 22%, transparent)`
+                              : 'none',
+                          }}
+                        />
+                        {hasVm ? 'Ready' : 'Cold start'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className="flex items-center gap-2"
+                        style={rowLabel}
+                      >
+                        <GitCommitHorizontal
+                          size={14}
+                          style={{ color: theme.colors.textMuted }}
+                        />
+                        Last built
+                      </span>
+                      <code
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          color: theme.colors.text,
+                          background: `color-mix(in srgb, ${theme.colors.text} 7%, transparent)`,
+                          padding: '1px 6px',
+                          borderRadius: 4,
+                        }}
+                      >
+                        {shortSha ?? '—'}
+                      </code>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <span style={rowLabel}>Status</span>
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5"
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          fontWeight: theme.fontWeights.semibold,
+                          color: stale ? theme.colors.accent : FRESH_GREEN,
+                          background: stale
+                            ? `color-mix(in srgb, ${theme.colors.accent} 15%, transparent)`
+                            : `color-mix(in srgb, ${FRESH_GREEN} 15%, transparent)`,
+                        }}
+                      >
+                        {stale ? <RefreshCw size={11} /> : <Check size={11} />}
+                        {stale ? 'Update available' : 'Up to date'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div
+                    className="h-px w-full"
+                    style={{ background: theme.colors.border }}
+                  />
+                </>
+              )}
+
+              {state.kind === 'error' && (
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    color: '#f0a0a0',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {state.message}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1.5">
+                <span
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textMuted,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Line count data powers
+                </span>
+                <div className="flex gap-1.5">
+                  {[
+                    {
+                      icon: <Users size={13} />,
+                      label: 'Contributor coverage',
+                    },
+                    { icon: <Boxes size={13} />, label: '3D visualization' },
+                  ].map((f) => (
+                    <span
+                      key={f.label}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1 text-center"
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textSecondary,
+                        background: `color-mix(in srgb, ${theme.colors.text} 5%, transparent)`,
+                        border: `1px solid ${theme.colors.border}`,
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: theme.colors.primary,
+                          display: 'inline-flex',
+                        }}
+                      >
+                        {f.icon}
+                      </span>
+                      {f.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={run}
+                disabled={running}
+                className="flex items-center justify-center gap-2 rounded-md px-3 py-2.5 transition-opacity hover:opacity-90 disabled:opacity-60"
                 style={{
-                  fontSize: theme.fontSizes[0],
-                  color: theme.colors.textSecondary,
-                  background: `color-mix(in srgb, ${theme.colors.text} 5%, transparent)`,
-                  border: `1px solid ${theme.colors.border}`,
+                  background: theme.colors.primary,
+                  color: '#fff',
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: theme.fontWeights.semibold,
+                  cursor: running ? 'wait' : 'pointer',
+                  boxShadow: `0 1px 2px color-mix(in srgb, ${theme.colors.primary} 40%, transparent)`,
                 }}
               >
-                <span style={{ color: theme.colors.primary, display: 'inline-flex' }}>
-                  {f.icon}
-                </span>
-                {f.label}
-              </span>
-            ))}
+                {running ? (
+                  <BarsLoader color="#ffffff" height={14} />
+                ) : analyzed ? (
+                  <RefreshCw size={14} />
+                ) : (
+                  <Play size={14} />
+                )}
+                {actionLabel}
+              </button>
+            </div>
           </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={run}
-          disabled={running}
-          className="flex items-center justify-center gap-2 rounded-md px-3 py-2.5 transition-opacity hover:opacity-90 disabled:opacity-60"
-          style={{
-            background: theme.colors.primary,
-            color: '#fff',
-            fontSize: theme.fontSizes[1],
-            fontWeight: theme.fontWeights.semibold,
-            cursor: running ? 'wait' : 'pointer',
-            boxShadow: `0 1px 2px color-mix(in srgb, ${theme.colors.primary} 40%, transparent)`,
-          }}
-        >
-          {running ? (
-            <BarsLoader color="#ffffff" height={14} />
-          ) : analyzed ? (
-            <RefreshCw size={14} />
-          ) : (
-            <Play size={14} />
-          )}
-          {actionLabel}
-        </button>
-      </div>
-      </div>
         </div>
       </div>
     </div>

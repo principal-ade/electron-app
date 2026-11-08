@@ -17,9 +17,9 @@ export function useTerminalProgramStatusState(): Record<
     // Subscribe first so an update during the initial read cannot be lost.
     const unsubscribe = TerminalService.onProgramStatus(
       ({ sessionId, records: next }) => {
-      if (disposed) return;
-      updates[sessionId] = next ?? [];
-      setRecords((prev) => ({ ...prev, [sessionId]: next ?? [] }));
+        if (disposed) return;
+        updates[sessionId] = next ?? [];
+        setRecords((prev) => ({ ...prev, [sessionId]: next ?? [] }));
       },
     );
 

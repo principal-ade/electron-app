@@ -13,7 +13,7 @@ interface SubagentCardProps {
  * Helper function to get source badge info
  */
 const getSourceBadge = (
-  source: Subagent['source']
+  source: Subagent['source'],
 ): { label: string; icon: React.ReactNode; color: string; bgColor: string } => {
   switch (source) {
     case 'project-claude':
@@ -51,14 +51,18 @@ const getModelColor = (model?: string): string => {
   }
 };
 
-export const SubagentCard: React.FC<SubagentCardProps> = ({ subagent, onClick, isSelected }) => {
+export const SubagentCard: React.FC<SubagentCardProps> = ({
+  subagent,
+  onClick,
+  isSelected,
+}) => {
   const { theme } = useTheme();
   const sourceBadge = getSourceBadge(subagent.source);
   const modelColor = getModelColor(subagent.frontmatter.model);
 
   // Extract tool count
   const hasTools = subagent.frontmatter.tools;
-  const toolsArray = hasTools ? hasTools.split(',').map(t => t.trim()) : null;
+  const toolsArray = hasTools ? hasTools.split(',').map((t) => t.trim()) : null;
 
   return (
     <div
@@ -96,7 +100,9 @@ export const SubagentCard: React.FC<SubagentCardProps> = ({ subagent, onClick, i
           gap: '8px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}
+        >
           <Bot size={18} color={theme.colors.primary} />
           <h3
             style={{
@@ -199,25 +205,28 @@ export const SubagentCard: React.FC<SubagentCardProps> = ({ subagent, onClick, i
             }}
           >
             <Wrench size={11} />
-            <span>{toolsArray.length} {toolsArray.length === 1 ? 'tool' : 'tools'}</span>
+            <span>
+              {toolsArray.length} {toolsArray.length === 1 ? 'tool' : 'tools'}
+            </span>
           </div>
         )}
 
         {/* Permission mode badge */}
-        {subagent.frontmatter.permissionMode && subagent.frontmatter.permissionMode !== 'default' && (
-          <div
-            style={{
-              fontSize: theme.fontSizes[0],
-              padding: '3px 8px',
-              background: theme.colors.background,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radii[1],
-              color: theme.colors.textSecondary,
-            }}
-          >
-            {subagent.frontmatter.permissionMode}
-          </div>
-        )}
+        {subagent.frontmatter.permissionMode &&
+          subagent.frontmatter.permissionMode !== 'default' && (
+            <div
+              style={{
+                fontSize: theme.fontSizes[0],
+                padding: '3px 8px',
+                background: theme.colors.background,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.radii[1],
+                color: theme.colors.textSecondary,
+              }}
+            >
+              {subagent.frontmatter.permissionMode}
+            </div>
+          )}
       </div>
     </div>
   );

@@ -6,7 +6,10 @@ import {
   useFileTreeSelector,
   type UseFileTreeResult,
 } from '@pierre/trees/react';
-import type { FileTreeDirectoryHandle, FileTreeItemHandle } from '@pierre/trees';
+import type {
+  FileTreeDirectoryHandle,
+  FileTreeItemHandle,
+} from '@pierre/trees';
 
 import {
   FileCity3D,
@@ -117,7 +120,9 @@ function pathConflictsWithScopes(
 function asDir(
   handle: FileTreeItemHandle | null | undefined,
 ): FileTreeDirectoryHandle | null {
-  return handle && handle.isDirectory() ? (handle as FileTreeDirectoryHandle) : null;
+  return handle && handle.isDirectory()
+    ? (handle as FileTreeDirectoryHandle)
+    : null;
 }
 
 export interface FileCityExplorerProps {
@@ -165,7 +170,8 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
 }) => {
   const { commit: latestCommit } = useLatestCommit(repositoryPath ?? null);
   const workingTree = useWorkingTreeChanges(repositoryPath ?? null);
-  const [commitHighlightActive, setCommitHighlightActive] = React.useState(false);
+  const [commitHighlightActive, setCommitHighlightActive] =
+    React.useState(false);
   const [workingTreeHighlightActive, setWorkingTreeHighlightActive] =
     React.useState(false);
   // Toolbar toggles for the floating cards. Both default to off — the
@@ -208,7 +214,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   }, [cityData]);
 
   const cityDirectories = React.useMemo<Set<string>>(
-    () => new Set(cityData.districts.map(d => d.path)),
+    () => new Set(cityData.districts.map((d) => d.path)),
     [cityData],
   );
   // Mirror in a ref so the `useFileTree` callbacks (frozen at first
@@ -227,11 +233,14 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   }, [cityData]);
 
   const districtsByPath = React.useMemo<Map<string, CityDistrict>>(
-    () => new Map(cityData.districts.map(d => [d.path, d])),
+    () => new Map(cityData.districts.map((d) => [d.path, d])),
     [cityData],
   );
 
-  const folderIndex = React.useMemo(() => buildFolderIndex(cityData), [cityData]);
+  const folderIndex = React.useMemo(
+    () => buildFolderIndex(cityData),
+    [cityData],
+  );
 
   // Scope and area state come from the dev-workspace providers; mutations
   // round-trip through .principal-views/ on disk via the managers. The panel
@@ -243,7 +252,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   const areas = areaCtx?.workspace.areas ?? EMPTY_AREAS;
 
   const [focusDirectory, setFocusDirectory] = React.useState<string | null>(
-    initialFocusDirectory !== undefined ? initialFocusDirectory : packageRootClamp,
+    initialFocusDirectory !== undefined
+      ? initialFocusDirectory
+      : packageRootClamp,
   );
   const [focusPinned, setFocusPinned] = React.useState(false);
   // While pinned, tree/scope selections must not change focusDirectory.
@@ -267,7 +278,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     },
     [],
   );
-  const [selectedPanelFolder, setSelectedPanelFolder] = React.useState<string | null>(null);
+  const [selectedPanelFolder, setSelectedPanelFolder] = React.useState<
+    string | null
+  >(null);
   // Mirrored in a ref so the contents-tree `useFileTree` callback (frozen
   // at first render) can re-prefix stripped paths back to full city paths.
   const selectedPanelFolderRef = React.useRef<string | null>(null);
@@ -281,7 +294,8 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   const cityClickConsumedRef = React.useRef(false);
   // Pointer-down position to distinguish a click from a camera drag.
   const cityClickStartRef = React.useRef<{ x: number; y: number } | null>(null);
-  const [showPanelFolderContents, setShowPanelFolderContents] = React.useState(false);
+  const [showPanelFolderContents, setShowPanelFolderContents] =
+    React.useState(false);
   const [showAddPicker, setShowAddPicker] = React.useState(false);
   const addPickerRef = React.useRef<HTMLDivElement | null>(null);
   // Close the +Add picker on any click outside of it. Listens at the
@@ -304,8 +318,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   const panelFolderContentsPaths = React.useMemo(() => {
     if (!selectedPanelFolder || !showPanelFolderContents) return [] as string[];
     const prefix = selectedPanelFolder + '/';
-    const stripped = cityPaths.filter(p => p.startsWith(prefix))
-      .map(p => p.slice(prefix.length))
+    const stripped = cityPaths
+      .filter((p) => p.startsWith(prefix))
+      .map((p) => p.slice(prefix.length))
       .sort();
     // @pierre/trees' Builder rejects consecutive duplicate paths; FS-watcher
     // batches can leak a duplicate into cityPaths, so dedupe before resetPaths
@@ -337,13 +352,18 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     panelFolderContentsTreeModel.resetPaths(panelFolderContentsPaths);
   }, [panelFolderContentsTreeModel, panelFolderContentsPaths]);
 
-  const [scopeSelection, setScopeSelection] = React.useState<ScopeTreeSelection | null>(null);
+  const [scopeSelection, setScopeSelection] =
+    React.useState<ScopeTreeSelection | null>(null);
   const [showAddModal, setShowAddModal] = React.useState(false);
-  const [scopeModalTargetPath, setScopeModalTargetPath] = React.useState<string | null>(null);
+  const [scopeModalTargetPath, setScopeModalTargetPath] = React.useState<
+    string | null
+  >(null);
   const [modalScopeId, setModalScopeId] = React.useState('');
   const [modalNamespaceName, setModalNamespaceName] = React.useState('');
   const [showAddAreaModal, setShowAddAreaModal] = React.useState(false);
-  const [areaModalTargetPath, setAreaModalTargetPath] = React.useState<string | null>(null);
+  const [areaModalTargetPath, setAreaModalTargetPath] = React.useState<
+    string | null
+  >(null);
   const [modalAreaName, setModalAreaName] = React.useState('');
   const [modalAreaDescription, setModalAreaDescription] = React.useState('');
   const [activeTab, setActiveTab] = React.useState<'files' | 'scopes'>('files');
@@ -437,7 +457,14 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
       });
     }
     return layers;
-  }, [commitHighlightActive, showLatestCommit, latestCommit, cityBuildingPaths, toCityPath, theme]);
+  }, [
+    commitHighlightActive,
+    showLatestCommit,
+    latestCommit,
+    cityBuildingPaths,
+    toCityPath,
+    theme,
+  ]);
 
   // Working-tree highlights — toggled by clicking the WorkingTreeCard. Same
   // bucketing rules as the commit card: added=success, modified=warning,
@@ -445,7 +472,8 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   // a building either (city is built from package contents at load time);
   // those silently fall away in the cityBuildingPaths filter.
   const workingTreeHighlightLayers = React.useMemo<HighlightLayer[]>(() => {
-    if (!workingTreeHighlightActive || !workingTree || !showWorkingTree) return [];
+    if (!workingTreeHighlightActive || !workingTree || !showWorkingTree)
+      return [];
     const added: string[] = [];
     const modified: string[] = [];
     for (const file of workingTree.files) {
@@ -490,30 +518,40 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
       });
     }
     return layers;
-  }, [workingTreeHighlightActive, showWorkingTree, workingTree, cityBuildingPaths, toCityPath, theme]);
+  }, [
+    workingTreeHighlightActive,
+    showWorkingTree,
+    workingTree,
+    cityBuildingPaths,
+    toCityPath,
+    theme,
+  ]);
 
   // Hovered search result → its own one-item highlight layer at a slightly
   // higher priority than the bulk search layer, so the hovered building reads
   // as the "currently aimed at" hit while the rest stay blue.
-  const [hoveredSearchResult, setHoveredSearchResult] = React.useState<string | null>(null);
-  const hoveredSearchHighlightLayer = React.useMemo<HighlightLayer | null>(() => {
-    if (!hoveredSearchResult) return null;
-    return {
-      id: 'search-results-hover',
-      name: 'Hovered search result',
-      enabled: true,
-      color: theme.colors.warning,
-      priority: 950,
-      opacity: 1,
-      items: [
-        {
-          path: hoveredSearchResult,
-          type: 'file',
-          renderStrategy: 'fill',
-        },
-      ],
-    };
-  }, [hoveredSearchResult, theme]);
+  const [hoveredSearchResult, setHoveredSearchResult] = React.useState<
+    string | null
+  >(null);
+  const hoveredSearchHighlightLayer =
+    React.useMemo<HighlightLayer | null>(() => {
+      if (!hoveredSearchResult) return null;
+      return {
+        id: 'search-results-hover',
+        name: 'Hovered search result',
+        enabled: true,
+        color: theme.colors.warning,
+        priority: 950,
+        opacity: 1,
+        items: [
+          {
+            path: hoveredSearchResult,
+            type: 'file',
+            renderStrategy: 'fill',
+          },
+        ],
+      };
+    }, [hoveredSearchResult, theme]);
 
   // Hovered file row in either the WorkingTreeCard or RecentCommitCard →
   // fill on the matching building. Card rows expose repo-relative paths,
@@ -554,7 +592,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     paths: initialCityPaths.current,
     search: true,
     initialExpandedPaths: [],
-    onSelectionChange: paths => {
+    onSelectionChange: (paths) => {
       const selected = stripTrailingSlash(paths[0]);
       if (!selected) {
         setFocusDirectoryIfUnpinned(null);
@@ -594,12 +632,12 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     [scopes],
   );
   const initialScopeTreePaths = React.useRef(scopeTreePaths);
-  const initialExpandedScopeIds = React.useRef(scopes.map(s => s.name));
+  const initialExpandedScopeIds = React.useRef(scopes.map((s) => s.name));
   const { model: scopeTreeModel } = useFileTree({
     paths: initialScopeTreePaths.current,
     search: true,
     initialExpandedPaths: initialExpandedScopeIds.current,
-    onSelectionChange: paths => {
+    onSelectionChange: (paths) => {
       const selected = paths[0];
       if (!selected) {
         setScopeSelection(null);
@@ -611,8 +649,10 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
       // Selecting a namespace or event also focuses the city on the namespace's
       // first declared path; selecting a bare scope clears the focus.
       if (parsed.namespaceName) {
-        const scope = scopes.find(s => s.name === parsed.scopeId);
-        const ns = scope?.namespaces.find(n => n.name === parsed.namespaceName);
+        const scope = scopes.find((s) => s.name === parsed.scopeId);
+        const ns = scope?.namespaces.find(
+          (n) => n.name === parsed.namespaceName,
+        );
         if (ns?.paths[0]) setFocusDirectoryIfUnpinned(toCityPath(ns.paths[0]));
       } else {
         setFocusDirectoryIfUnpinned(null);
@@ -669,9 +709,12 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
         next: { expandedScopes: Set<string>; expandedNamespaces: Set<string> },
       ) => {
         if (prev.expandedScopes.size !== next.expandedScopes.size) return false;
-        for (const k of prev.expandedScopes) if (!next.expandedScopes.has(k)) return false;
-        if (prev.expandedNamespaces.size !== next.expandedNamespaces.size) return false;
-        for (const k of prev.expandedNamespaces) if (!next.expandedNamespaces.has(k)) return false;
+        for (const k of prev.expandedScopes)
+          if (!next.expandedScopes.has(k)) return false;
+        if (prev.expandedNamespaces.size !== next.expandedNamespaces.size)
+          return false;
+        for (const k of prev.expandedNamespaces)
+          if (!next.expandedNamespaces.has(k)) return false;
         return true;
       },
       [],
@@ -681,14 +724,16 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   // Resolve the current scope tree selection into the underlying objects.
   const scopeInfo = React.useMemo(() => {
     if (!scopeSelection) return null;
-    const scope = scopes.find(s => s.name === scopeSelection.scopeId);
+    const scope = scopes.find((s) => s.name === scopeSelection.scopeId);
     if (!scope) return null;
     const ns = scopeSelection.namespaceName
-      ? scope.namespaces.find(n => n.name === scopeSelection.namespaceName) ?? null
+      ? (scope.namespaces.find(
+          (n) => n.name === scopeSelection.namespaceName,
+        ) ?? null)
       : null;
     const ev =
       ns && scopeSelection.eventName
-        ? ns.events.find(e => e.name === scopeSelection.eventName) ?? null
+        ? (ns.events.find((e) => e.name === scopeSelection.eventName) ?? null)
         : null;
     return { scope, ns, ev };
   }, [scopeSelection, scopes]);
@@ -698,7 +743,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   //   files tab  → border around the currently-selected folder
   const cityHighlightLayers = React.useMemo(() => {
     if (activeTab === 'scopes') {
-      return scopeInfo ? buildLayersForScope(scopeInfo.scope, toCityPath) : undefined;
+      return scopeInfo
+        ? buildLayersForScope(scopeInfo.scope, toCityPath)
+        : undefined;
     }
     if (activeTab === 'files' && selectedPanelFolder) {
       return [
@@ -725,7 +772,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   // - Collapsed scope → one gray umbrella tile per scope path.
   // - Expanded scope, collapsed namespace → colored tile per namespace path.
   // - Expanded namespace → no tile (buildings show through).
-  const cityElevatedPanels = React.useMemo<ElevatedScopePanel[] | undefined>(() => {
+  const cityElevatedPanels = React.useMemo<
+    ElevatedScopePanel[] | undefined
+  >(() => {
     if (activeTab !== 'scopes') return undefined;
     const panels: ElevatedScopePanel[] = [];
 
@@ -778,7 +827,15 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     }
 
     return panels.length > 0 ? panels : undefined;
-  }, [activeTab, scopes, scopeTreeModel, treeExpansion, districtsByPath, toCityPath, theme]);
+  }, [
+    activeTab,
+    scopes,
+    scopeTreeModel,
+    treeExpansion,
+    districtsByPath,
+    toCityPath,
+    theme,
+  ]);
 
   // Track which folders are expanded in the file tree. The file-tree tab's
   // elevated panels mirror this: a collapsed folder shows one umbrella tile
@@ -786,14 +843,17 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   // sub-folder tiles (or the buildings themselves at the leaves).
   const folderTreeExpansion = useFileTreeSelector(
     treeModel,
-    React.useCallback((model: FileTreeModel) => {
-      const expanded = new Set<string>();
-      for (const dir of cityDirectories) {
-        const item = asDir(model.getItem(dir));
-        if (item && item.isExpanded()) expanded.add(dir);
-      }
-      return { expanded };
-    }, [cityDirectories]),
+    React.useCallback(
+      (model: FileTreeModel) => {
+        const expanded = new Set<string>();
+        for (const dir of cityDirectories) {
+          const item = asDir(model.getItem(dir));
+          if (item && item.isExpanded()) expanded.add(dir);
+        }
+        return { expanded };
+      },
+      [cityDirectories],
+    ),
     React.useCallback(
       (prev: { expanded: Set<string> }, next: { expanded: Set<string> }) => {
         if (prev.expanded.size !== next.expanded.size) return false;
@@ -860,7 +920,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     return m;
   }, [areas, toCityPath]);
 
-  const folderElevatedPanels = React.useMemo<ElevatedScopePanel[] | undefined>(() => {
+  const folderElevatedPanels = React.useMemo<
+    ElevatedScopePanel[] | undefined
+  >(() => {
     if (activeTab !== 'files') return undefined;
     const rawPanels = buildFolderElevatedPanels({
       cityData,
@@ -901,9 +963,13 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
       },
       index: folderIndex,
     });
-    const panels: ElevatedScopePanel[] = rawPanels.map(panel => {
-      const folderPath = panel.id.startsWith('folder::') ? panel.id.slice('folder::'.length) : null;
-      const displayLabel = folderPath ? areaNameByCityPath.get(folderPath) : undefined;
+    const panels: ElevatedScopePanel[] = rawPanels.map((panel) => {
+      const folderPath = panel.id.startsWith('folder::')
+        ? panel.id.slice('folder::'.length)
+        : null;
+      const displayLabel = folderPath
+        ? areaNameByCityPath.get(folderPath)
+        : undefined;
       return displayLabel ? { ...panel, displayLabel } : panel;
     });
     // Two-layer selection ring: when the selected folder is collapsed, its
@@ -912,7 +978,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     // an accent rim. The expanded case is covered by the `border`-strategy
     // highlight layer in `cityHighlightLayers`.
     if (selectedPanelFolder) {
-      const idx = panels.findIndex(p => p.id === `folder::${selectedPanelFolder}`);
+      const idx = panels.findIndex(
+        (p) => p.id === `folder::${selectedPanelFolder}`,
+      );
       if (idx >= 0) {
         const target = panels[idx];
         const inflate = 4;
@@ -978,16 +1046,20 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   const panelFolderCoverage = React.useMemo(() => {
     if (!selectedPanelFolder) return null;
     const sp = toScopePath(selectedPanelFolder);
-    const covers = (claim: string) => sp === claim || sp.startsWith(claim + '/');
+    const covers = (claim: string) =>
+      sp === claim || sp.startsWith(claim + '/');
 
-    const scopeHits: { scope: ScopeRecord; namespace: NamespaceRecord | null }[] = [];
+    const scopeHits: {
+      scope: ScopeRecord;
+      namespace: NamespaceRecord | null;
+    }[] = [];
     for (const scope of scopes) {
-      const ns = scope.namespaces.find(n => n.paths.some(covers)) ?? null;
+      const ns = scope.namespaces.find((n) => n.paths.some(covers)) ?? null;
       const scopeLevel = scope.paths.some(covers);
       if (ns || scopeLevel) scopeHits.push({ scope, namespace: ns });
     }
 
-    const areaHits = areas.filter(a => a.paths.some(covers));
+    const areaHits = areas.filter((a) => a.paths.some(covers));
 
     return { scopeHits, areaHits };
   }, [selectedPanelFolder, scopes, areas, toScopePath]);
@@ -1001,7 +1073,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
     if (!scopeId) return;
 
     // Queue branches to auto-expand once the tree re-resets.
-    pendingExpand.current = namespaceName ? [scopeId, `${scopeId}/${namespaceName}`] : [scopeId];
+    pendingExpand.current = namespaceName
+      ? [scopeId, `${scopeId}/${namespaceName}`]
+      : [scopeId];
 
     // Manager handles all five branches (new scope, new scope+ns, existing
     // scope, existing scope+new ns, existing scope+existing ns) and the
@@ -1021,7 +1095,14 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
 
     setShowAddModal(false);
     setScopeModalTargetPath(null);
-  }, [scopeCtx, scopes, scopeModalTargetPath, modalScopeId, modalNamespaceName, toScopePath]);
+  }, [
+    scopeCtx,
+    scopes,
+    scopeModalTargetPath,
+    modalScopeId,
+    modalNamespaceName,
+    toScopePath,
+  ]);
 
   const openAddAreaModal = React.useCallback((targetPath: string) => {
     setAreaModalTargetPath(targetPath);
@@ -1075,7 +1156,14 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
   ]);
 
   return (
-    <div style={{ height: '100%', width: '100%', display: 'flex', background: theme.colors.background }}>
+    <div
+      style={{
+        height: '100%',
+        width: '100%',
+        display: 'flex',
+        background: theme.colors.background,
+      }}
+    >
       <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
         {((latestCommit && showLatestCommit) ||
           (workingTree && showWorkingTree)) && (
@@ -1187,8 +1275,10 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               extras.push(...commitHighlightLayers);
               extras.push(...workingTreeHighlightLayers);
               if (searchHighlightLayer) extras.push(searchHighlightLayer);
-              if (hoveredSearchHighlightLayer) extras.push(hoveredSearchHighlightLayer);
-              if (hoveredCardHighlightLayer) extras.push(hoveredCardHighlightLayer);
+              if (hoveredSearchHighlightLayer)
+                extras.push(hoveredSearchHighlightLayer);
+              if (hoveredCardHighlightLayer)
+                extras.push(hoveredCardHighlightLayer);
               if (extras.length === 0) return cityHighlightLayers;
               return [...(cityHighlightLayers ?? []), ...extras];
             })()}
@@ -1197,8 +1287,8 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               searchInputFocused ||
               commitHighlightLayers.length > 0 ||
               workingTreeHighlightLayers.length > 0
-              ? undefined
-              : cityElevatedPanels ?? folderElevatedPanels
+                ? undefined
+                : (cityElevatedPanels ?? folderElevatedPanels)
             }
             onBuildingClick={handleBuildingClick}
             animation={{
@@ -1268,13 +1358,21 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               const focusDepth = focusDirectory
                 ? focusDirectory.split('/').length
                 : Infinity;
-              const segments: { label: string; path: string; beyondFocus: boolean }[] = [];
+              const segments: {
+                label: string;
+                path: string;
+                beyondFocus: boolean;
+              }[] = [];
               if (breadcrumbAnchor) {
                 const parts = breadcrumbAnchor.split('/');
                 for (let i = 0; i < parts.length; i++) {
                   const path = parts.slice(0, i + 1).join('/');
                   if (cityDirectories.has(path)) {
-                    segments.push({ label: parts[i], path, beyondFocus: i + 1 > focusDepth });
+                    segments.push({
+                      label: parts[i],
+                      path,
+                      beyondFocus: i + 1 > focusDepth,
+                    });
                   }
                 }
               }
@@ -1322,9 +1420,10 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                         fontFamily: theme.fonts.monospace,
                         fontSize: theme.fontSizes[1],
                         color: theme.colors.text,
-                        fontWeight: segments.length === 0
-                          ? theme.fontWeights.semibold
-                          : theme.fontWeights.body,
+                        fontWeight:
+                          segments.length === 0
+                            ? theme.fontWeights.semibold
+                            : theme.fontWeights.body,
                         cursor: 'pointer',
                         textDecoration: 'underline',
                         textDecorationColor: theme.colors.muted,
@@ -1337,14 +1436,20 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                     const isFocus = seg.path === focusDirectory;
                     const isSelectedLeaf =
                       seg.path === selectedPanelFolder && seg.beyondFocus;
-                    const color = isFocus || seg.beyondFocus
-                      ? theme.colors.text
-                      : theme.colors.textMuted;
+                    const color =
+                      isFocus || seg.beyondFocus
+                        ? theme.colors.text
+                        : theme.colors.textMuted;
                     const showSeparator = repoLabel || i > 0;
                     return (
                       <React.Fragment key={seg.path}>
                         {showSeparator && (
-                          <span style={{ color: theme.colors.text, fontFamily: theme.fonts.monospace }}>
+                          <span
+                            style={{
+                              color: theme.colors.text,
+                              fontFamily: theme.fonts.monospace,
+                            }}
+                          >
                             /
                           </span>
                         )}
@@ -1361,9 +1466,10 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                             fontFamily: theme.fonts.monospace,
                             fontSize: theme.fontSizes[1],
                             color,
-                            fontWeight: isFocus || isSelectedLeaf
-                              ? theme.fontWeights.semibold
-                              : theme.fontWeights.body,
+                            fontWeight:
+                              isFocus || isSelectedLeaf
+                                ? theme.fontWeights.semibold
+                                : theme.fontWeights.body,
                             cursor: 'pointer',
                             textDecoration: 'underline',
                             textDecorationColor: theme.colors.muted,
@@ -1389,10 +1495,10 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
             <input
               type="text"
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchInputFocused(true)}
               onBlur={() => setSearchInputFocused(false)}
-              onKeyDown={e => {
+              onKeyDown={(e) => {
                 if (e.key === 'Escape') setSearchQuery('');
               }}
               placeholder="Search files…"
@@ -1467,7 +1573,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
           )}
           {focusDirectory && (
             <button
-              onClick={() => setFocusPinned(p => !p)}
+              onClick={() => setFocusPinned((p) => !p)}
               title={
                 focusPinned
                   ? 'Unpin — selections will move the focus again'
@@ -1475,7 +1581,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               }
               style={{
                 background: focusPinned ? theme.colors.warning : 'transparent',
-                color: focusPinned ? theme.colors.background : theme.colors.textSecondary,
+                color: focusPinned
+                  ? theme.colors.background
+                  : theme.colors.textSecondary,
                 border: `1px solid ${focusPinned ? theme.colors.warning : theme.colors.border}`,
                 borderRadius: theme.radii[2],
                 padding: '4px 8px',
@@ -1536,107 +1644,164 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
               gap: theme.space[2],
             }}
           >
-            {panelFolderCoverage && (panelFolderCoverage.scopeHits.length > 0 ||
-              panelFolderCoverage.areaHits.length > 0) && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {panelFolderCoverage.areaHits.map(area => (
-                  <div
-                    key={area.name}
-                    style={{
-                      padding: '6px 8px',
-                      background: theme.colors.backgroundDark ?? theme.colors.background,
-                      border: `1px dashed ${theme.colors.border}`,
-                      borderRadius: theme.radii[2],
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: theme.space[1],
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span
+            {panelFolderCoverage &&
+              (panelFolderCoverage.scopeHits.length > 0 ||
+                panelFolderCoverage.areaHits.length > 0) && (
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
+                >
+                  {panelFolderCoverage.areaHits.map((area) => (
+                    <div
+                      key={area.name}
+                      style={{
+                        padding: '6px 8px',
+                        background:
+                          theme.colors.backgroundDark ??
+                          theme.colors.background,
+                        border: `1px dashed ${theme.colors.border}`,
+                        borderRadius: theme.radii[2],
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: theme.space[1],
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textMuted,
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.5,
+                            fontWeight: theme.fontWeights.semibold,
+                          }}
+                        >
+                          Area
+                        </span>
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: theme.radii[1],
+                            background: AREA_PANEL_COLOR,
+                            border: `1px dashed ${theme.colors.textMuted}`,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <code
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
+                          {area.name}
+                        </code>
+                      </div>
+                      <div
                         style={{
                           fontSize: theme.fontSizes[0],
                           color: theme.colors.textMuted,
-                          textTransform: 'uppercase',
-                          letterSpacing: 0.5,
-                          fontWeight: theme.fontWeights.semibold,
+                          lineHeight: 1.4,
                         }}
                       >
-                        Area
-                      </span>
-                      <span
+                        {area.description}
+                      </div>
+                    </div>
+                  ))}
+                  {panelFolderCoverage.scopeHits.map(({ scope, namespace }) => (
+                    <div
+                      key={scope.name}
+                      style={{
+                        padding: '6px 8px',
+                        background:
+                          theme.colors.backgroundDark ??
+                          theme.colors.background,
+                        border: `1px solid ${theme.colors.backgroundSecondary}`,
+                        borderRadius: theme.radii[2],
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: theme.space[1],
+                      }}
+                    >
+                      <div
                         style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: theme.radii[1],
-                          background: AREA_PANEL_COLOR,
-                          border: `1px dashed ${theme.colors.textMuted}`,
-                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
                         }}
-                      />
-                      <code style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>{area.name}</code>
-                    </div>
-                    <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted, lineHeight: 1.4 }}>
-                      {area.description}
-                    </div>
-                  </div>
-                ))}
-                {panelFolderCoverage.scopeHits.map(({ scope, namespace }) => (
-                  <div
-                    key={scope.name}
-                    style={{
-                      padding: '6px 8px',
-                      background: theme.colors.backgroundDark ?? theme.colors.background,
-                      border: `1px solid ${theme.colors.backgroundSecondary}`,
-                      borderRadius: theme.radii[2],
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: theme.space[1],
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span
+                      >
+                        <span
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.accent,
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.5,
+                            fontWeight: theme.fontWeights.semibold,
+                          }}
+                        >
+                          Scope
+                        </span>
+                        <code
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
+                          {scope.name}
+                        </code>
+                        {namespace && (
+                          <>
+                            <span style={{ color: theme.colors.muted }}>/</span>
+                            <span
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: theme.radii[1],
+                                background:
+                                  namespace.color ?? DEFAULT_NAMESPACE_COLOR,
+                                flexShrink: 0,
+                              }}
+                            />
+                            <code
+                              style={{
+                                fontSize: theme.fontSizes[0],
+                                color: theme.colors.textSecondary,
+                              }}
+                            >
+                              {namespace.name}
+                            </code>
+                          </>
+                        )}
+                      </div>
+                      <div
                         style={{
                           fontSize: theme.fontSizes[0],
-                          color: theme.colors.accent,
-                          textTransform: 'uppercase',
-                          letterSpacing: 0.5,
-                          fontWeight: theme.fontWeights.semibold,
+                          color: theme.colors.textMuted,
+                          lineHeight: 1.4,
                         }}
                       >
-                        Scope
-                      </span>
-                      <code style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>{scope.name}</code>
-                      {namespace && (
-                        <>
-                          <span style={{ color: theme.colors.muted }}>/</span>
-                          <span
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: theme.radii[1],
-                              background: namespace.color ?? DEFAULT_NAMESPACE_COLOR,
-                              flexShrink: 0,
-                            }}
-                          />
-                          <code style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>{namespace.name}</code>
-                        </>
-                      )}
+                        {namespace
+                          ? namespace.description
+                          : (scope.description ?? '')}
+                      </div>
                     </div>
-                    <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted, lineHeight: 1.4 }}>
-                      {namespace ? namespace.description : scope.description ?? ''}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <div ref={addPickerRef} style={{ position: 'relative' }}>
                 <button
-                  onClick={() => setShowAddPicker(v => !v)}
+                  onClick={() => setShowAddPicker((v) => !v)}
                   title="Add this folder to a scope or area"
                   style={{
-                    background: showAddPicker ? theme.colors.backgroundSecondary : 'transparent',
+                    background: showAddPicker
+                      ? theme.colors.backgroundSecondary
+                      : 'transparent',
                     color: theme.colors.textSecondary,
                     border: `1px solid ${theme.colors.muted}`,
                     borderRadius: theme.radii[2],
@@ -1724,7 +1889,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                 }}
                 title="Show files inside this folder"
                 style={{
-                  background: showPanelFolderContents ? theme.colors.backgroundSecondary : 'transparent',
+                  background: showPanelFolderContents
+                    ? theme.colors.backgroundSecondary
+                    : 'transparent',
                   color: theme.colors.textSecondary,
                   border: `1px solid ${theme.colors.border}`,
                   borderRadius: theme.radii[2],
@@ -1760,7 +1927,13 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                     No files in this folder.
                   </div>
                 ) : (
-                  <div style={{ height: 640, display: 'flex', flexDirection: 'column' }}>
+                  <div
+                    style={{
+                      height: 640,
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                  >
                     <ThemedFileTree
                       model={panelFolderContentsTreeModel}
                       accentColor={theme.colors.primary}
@@ -1872,12 +2045,17 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                         fontFamily: theme.fonts.body,
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = withAlpha(theme.colors.primary, 14);
+                        e.currentTarget.style.background = withAlpha(
+                          theme.colors.primary,
+                          14,
+                        );
                         setHoveredSearchResult(path);
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
-                        setHoveredSearchResult((prev) => (prev === path ? null : prev));
+                        setHoveredSearchResult((prev) =>
+                          prev === path ? null : prev,
+                        );
                       }}
                     >
                       <span
@@ -1932,12 +2110,18 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
             zIndex: 10,
           }}
         >
-          {(
-            [
-              { id: 'files' as const, label: 'Files', accent: theme.colors.primary },
-              { id: 'scopes' as const, label: 'Scopes', accent: theme.colors.accent },
-            ]
-          ).map((opt, i) => {
+          {[
+            {
+              id: 'files' as const,
+              label: 'Files',
+              accent: theme.colors.primary,
+            },
+            {
+              id: 'scopes' as const,
+              label: 'Scopes',
+              accent: theme.colors.accent,
+            },
+          ].map((opt, i) => {
             const active = activeTab === opt.id;
             return (
               <button
@@ -1946,11 +2130,18 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
                 style={{
                   padding: '8px 16px',
                   background: active ? opt.accent : 'transparent',
-                  color: active ? theme.colors.textOnPrimary : theme.colors.textSecondary,
+                  color: active
+                    ? theme.colors.textOnPrimary
+                    : theme.colors.textSecondary,
                   border: 'none',
-                  borderLeft: i === 0 ? 'none' : `1px solid ${theme.colors.backgroundSecondary}`,
+                  borderLeft:
+                    i === 0
+                      ? 'none'
+                      : `1px solid ${theme.colors.backgroundSecondary}`,
                   cursor: 'pointer',
-                  fontWeight: active ? theme.fontWeights.semibold : theme.fontWeights.body,
+                  fontWeight: active
+                    ? theme.fontWeights.semibold
+                    : theme.fontWeights.body,
                   fontFamily: 'inherit',
                   fontSize: 'inherit',
                 }}
@@ -1962,7 +2153,9 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
         </div>
 
         {/* Info overlay — driven by scope tree selection */}
-        {activeTab === 'scopes' && scopeInfo && <ScopeInfoOverlay info={scopeInfo} />}
+        {activeTab === 'scopes' && scopeInfo && (
+          <ScopeInfoOverlay info={scopeInfo} />
+        )}
       </div>
 
       {/* Add-to-scope modal */}
@@ -1995,7 +2188,7 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
           description={modalAreaDescription}
           onAreaNameChange={setModalAreaName}
           onDescriptionChange={setModalAreaDescription}
-          onPickExisting={name => setModalAreaName(name)}
+          onPickExisting={(name) => setModalAreaName(name)}
           onSubmit={submitAddToArea}
           onClose={() => {
             setShowAddAreaModal(false);
@@ -2003,7 +2196,6 @@ export const FileCityExplorer: React.FC<FileCityExplorerProps> = ({
           }}
         />
       )}
-
     </div>
   );
 };

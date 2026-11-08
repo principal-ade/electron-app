@@ -61,7 +61,10 @@ export class CLIBridge extends EventEmitter {
       try {
         const testResult = await this.testWorker();
         if (testResult.success) {
-          this.log('info', 'Worker is responsive despite timeout! Marking as initialized.');
+          this.log(
+            'info',
+            'Worker is responsive despite timeout! Marking as initialized.',
+          );
           this.initialized = true;
           return;
         } else {
@@ -126,20 +129,26 @@ export class CLIBridge extends EventEmitter {
             // Log file stats to help debug stale file issues
             try {
               const stats = fs.statSync(tryPath);
-              this.log('info', `  Size: ${stats.size} bytes, Modified: ${stats.mtime.toISOString()}`);
+              this.log(
+                'info',
+                `  Size: ${stats.size} bytes, Modified: ${stats.mtime.toISOString()}`,
+              );
             } catch (_e) {
               // Ignore stat errors
             }
             break;
           } else {
-            this.log('debug', `Worker not found at ${tryPath}, trying next location...`);
+            this.log(
+              'debug',
+              `Worker not found at ${tryPath}, trying next location...`,
+            );
           }
         }
 
         if (!foundPath) {
           throw new Error(
             `Worker script not found in development. Tried:\n` +
-              pathsToTry.map(p => `  - ${p}`).join('\n'),
+              pathsToTry.map((p) => `  - ${p}`).join('\n'),
           );
         }
 
@@ -248,16 +257,35 @@ export class CLIBridge extends EventEmitter {
       const timeout = setTimeout(() => {
         if (!settled) {
           cleanup();
-          this.log('error', `Worker ${name} failed to send ready signal within 30 seconds`);
-          this.log('error', `  Worker PID: ${this.workers.get(name)?.pid || 'unknown'}`);
-          this.log('error', `  Worker process exists: ${this.workers.has(name)}`);
-          this.log('error', `  WORKAROUND: You can use testWorker() to verify if the worker is actually responsive`);
-          reject(new Error(`Worker ${name} failed to start within timeout (30s safety limit)`));
+          this.log(
+            'error',
+            `Worker ${name} failed to send ready signal within 30 seconds`,
+          );
+          this.log(
+            'error',
+            `  Worker PID: ${this.workers.get(name)?.pid || 'unknown'}`,
+          );
+          this.log(
+            'error',
+            `  Worker process exists: ${this.workers.has(name)}`,
+          );
+          this.log(
+            'error',
+            `  WORKAROUND: You can use testWorker() to verify if the worker is actually responsive`,
+          );
+          reject(
+            new Error(
+              `Worker ${name} failed to start within timeout (30s safety limit)`,
+            ),
+          );
         }
       }, 30000);
 
       // Listen for ready message
-      const messageHandler = (workerName: string, msg: WorkerResponse | { type: 'ready' }) => {
+      const messageHandler = (
+        workerName: string,
+        msg: WorkerResponse | { type: 'ready' },
+      ) => {
         if (workerName === name && msg.type === 'ready') {
           cleanup();
           this.log('info', `Worker ${name} ready signal received`);
@@ -269,8 +297,15 @@ export class CLIBridge extends EventEmitter {
       const exitHandler = (workerName: string, code: number) => {
         if (workerName === name && !settled) {
           cleanup();
-          this.log('error', `Worker ${name} exited with code ${code} during startup`);
-          reject(new Error(`Worker ${name} crashed during startup (exit code: ${code})`));
+          this.log(
+            'error',
+            `Worker ${name} exited with code ${code} during startup`,
+          );
+          reject(
+            new Error(
+              `Worker ${name} crashed during startup (exit code: ${code})`,
+            ),
+          );
         }
       };
 
@@ -282,7 +317,10 @@ export class CLIBridge extends EventEmitter {
   /**
    * Handle messages from workers
    */
-  private handleWorkerMessage(workerName: string, msg: WorkerResponse | { type: 'ready' }): void {
+  private handleWorkerMessage(
+    workerName: string,
+    msg: WorkerResponse | { type: 'ready' },
+  ): void {
     this.log('debug', `Message from ${workerName}: ${JSON.stringify(msg)}`);
     this.emit('worker-message', workerName, msg);
 
@@ -346,7 +384,10 @@ export class CLIBridge extends EventEmitter {
    */
   private handleWorkerExit(name: string, code: number): void {
     this.log('warn', `Worker ${name} exited with code ${code}`);
-    this.log('warn', `  Pending calls being rejected: ${this.pendingCalls.size}`);
+    this.log(
+      'warn',
+      `  Pending calls being rejected: ${this.pendingCalls.size}`,
+    );
     this.emit('worker-exit', name, code);
     this.workers.delete(name);
     this.workerStartTimes.delete(name);
@@ -354,11 +395,16 @@ export class CLIBridge extends EventEmitter {
     // Reject all pending calls for this worker
     const pendingCount = this.pendingCalls.size;
     for (const [id, call] of this.pendingCalls.entries()) {
-      call.reject(new Error(`Worker ${name} exited unexpectedly (exit code: ${code})`));
+      call.reject(
+        new Error(`Worker ${name} exited unexpectedly (exit code: ${code})`),
+      );
       this.pendingCalls.delete(id);
     }
     if (pendingCount > 0) {
-      this.log('warn', `Rejected ${pendingCount} pending calls due to worker exit`);
+      this.log(
+        'warn',
+        `Rejected ${pendingCount} pending calls due to worker exit`,
+      );
     }
 
     // Attempt to restart the worker if bridge is still initialized
@@ -398,9 +444,14 @@ export class CLIBridge extends EventEmitter {
     // Check if worker process is actually running
     if (!worker.pid) {
       this.log('error', 'Worker process is not running (no PID)');
-      this.log('error', 'Marking bridge as uninitialized to trigger re-initialization');
+      this.log(
+        'error',
+        'Marking bridge as uninitialized to trigger re-initialization',
+      );
       this.initialized = false;
-      throw new Error('Worker process is not running. Try restarting the worker.');
+      throw new Error(
+        'Worker process is not running. Try restarting the worker.',
+      );
     }
 
     const id = this.generateCallId();
@@ -519,7 +570,9 @@ export class CLIBridge extends EventEmitter {
   /**
    * Restart the universal worker
    */
-  async restartWorker(name: string = 'universal'): Promise<{ success: boolean; error?: string }> {
+  async restartWorker(
+    name: string = 'universal',
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       this.log('info', `Restarting worker: ${name}`);
 
@@ -537,7 +590,8 @@ export class CLIBridge extends EventEmitter {
       this.log('info', `Worker ${name} restarted successfully`);
       return { success: true };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.log('error', `Failed to restart worker ${name}: ${errorMessage}`);
       return { success: false, error: errorMessage };
     }

@@ -75,7 +75,14 @@ export function PrivatePropertySign() {
       {/* Background trees — set well back from the fence on the horizon */}
       <g>
         {/* Far-left oak (largest of the back trees) */}
-        <rect x="-51" y="74" width="3" height="22" fill="#4a3014" opacity="0.9" />
+        <rect
+          x="-51"
+          y="74"
+          width="3"
+          height="22"
+          fill="#4a3014"
+          opacity="0.9"
+        />
         <g>
           <circle cx="-50" cy="62" r="11" fill="#3d6b2a" />
           <circle cx="-58" cy="66" r="7.5" fill="#3d6b2a" />
@@ -85,7 +92,14 @@ export function PrivatePropertySign() {
         </g>
 
         {/* Far-right oak */}
-        <rect x="191" y="76" width="3" height="20" fill="#4a3014" opacity="0.9" />
+        <rect
+          x="191"
+          y="76"
+          width="3"
+          height="20"
+          fill="#4a3014"
+          opacity="0.9"
+        />
         <g>
           <circle cx="192" cy="64" r="10.5" fill="#3d6b2a" />
           <circle cx="184" cy="68" r="7" fill="#3d6b2a" />
@@ -95,19 +109,48 @@ export function PrivatePropertySign() {
         </g>
 
         {/* Pine, far left */}
-        <rect x="-78" y="84" width="2" height="14" fill="#4a3014" opacity="0.85" />
+        <rect
+          x="-78"
+          y="84"
+          width="2"
+          height="14"
+          fill="#4a3014"
+          opacity="0.85"
+        />
         <path d="M -77 56 L -83 84 L -71 84 Z" fill="#345b22" opacity="0.9" />
         <path d="M -77 64 L -81 80 L -73 80 Z" fill="#456e2a" opacity="0.7" />
-        <path d="M -77 72 L -79.5 78 L -74.5 78 Z" fill="#5d8538" opacity="0.5" />
+        <path
+          d="M -77 72 L -79.5 78 L -74.5 78 Z"
+          fill="#5d8538"
+          opacity="0.5"
+        />
 
         {/* Pine, far right */}
-        <rect x="222" y="84" width="2" height="14" fill="#4a3014" opacity="0.85" />
+        <rect
+          x="222"
+          y="84"
+          width="2"
+          height="14"
+          fill="#4a3014"
+          opacity="0.85"
+        />
         <path d="M 223 56 L 217 84 L 229 84 Z" fill="#345b22" opacity="0.9" />
         <path d="M 223 64 L 219 80 L 227 80 Z" fill="#456e2a" opacity="0.7" />
-        <path d="M 223 72 L 220.5 78 L 225.5 78 Z" fill="#5d8538" opacity="0.5" />
+        <path
+          d="M 223 72 L 220.5 78 L 225.5 78 Z"
+          fill="#5d8538"
+          opacity="0.5"
+        />
 
         {/* Mid-distance oak, left side */}
-        <rect x="-30" y="82" width="2.5" height="16" fill="#4a3014" opacity="0.88" />
+        <rect
+          x="-30"
+          y="82"
+          width="2.5"
+          height="16"
+          fill="#4a3014"
+          opacity="0.88"
+        />
         <g opacity="0.95">
           <circle cx="-28.75" cy="72" r="8" fill="#456e2a" />
           <circle cx="-34" cy="75" r="5" fill="#456e2a" />
@@ -117,7 +160,14 @@ export function PrivatePropertySign() {
         </g>
 
         {/* Mid-distance oak, right side */}
-        <rect x="170" y="84" width="2.5" height="14" fill="#4a3014" opacity="0.88" />
+        <rect
+          x="170"
+          y="84"
+          width="2.5"
+          height="14"
+          fill="#4a3014"
+          opacity="0.88"
+        />
         <g opacity="0.95">
           <circle cx="171.25" cy="74" r="7.5" fill="#456e2a" />
           <circle cx="166" cy="77" r="5" fill="#456e2a" />
@@ -127,9 +177,24 @@ export function PrivatePropertySign() {
         </g>
 
         {/* Skinny pine framed in the gate opening (deep distance) */}
-        <rect x="118" y="78" width="1.5" height="8" fill="#5a3818" opacity="0.7" />
-        <path d="M 118.75 58 L 114 78 L 123.5 78 Z" fill="#345b22" opacity="0.85" />
-        <path d="M 118.75 64 L 116 75 L 121.5 75 Z" fill="#456e2a" opacity="0.7" />
+        <rect
+          x="118"
+          y="78"
+          width="1.5"
+          height="8"
+          fill="#5a3818"
+          opacity="0.7"
+        />
+        <path
+          d="M 118.75 58 L 114 78 L 123.5 78 Z"
+          fill="#345b22"
+          opacity="0.85"
+        />
+        <path
+          d="M 118.75 64 L 116 75 L 121.5 75 Z"
+          fill="#456e2a"
+          opacity="0.7"
+        />
 
         {/* Tiny distant trees on the horizon */}
         <g opacity="0.8">
@@ -377,7 +442,14 @@ export function PrivatePropertySign() {
         <ellipse cx="52" cy="62" rx="0.9" ry="1.4" />
         <ellipse cx="52" cy="66" rx="1.4" ry="0.9" />
         {/* Right chain: (108,52) → (108,68) */}
-        <line x1="108" y1="52" x2="108" y2="68" strokeWidth="0.4" opacity="0.5" />
+        <line
+          x1="108"
+          y1="52"
+          x2="108"
+          y2="68"
+          strokeWidth="0.4"
+          opacity="0.5"
+        />
         <ellipse cx="108" cy="54" rx="0.9" ry="1.4" />
         <ellipse cx="108" cy="58" rx="1.4" ry="0.9" />
         <ellipse cx="108" cy="62" rx="0.9" ry="1.4" />
@@ -419,8 +491,22 @@ export function PrivatePropertySign() {
           strokeWidth="1"
         />
         {/* Hanging rings on top corners of the sign */}
-        <circle cx="52" cy="68" r="1.7" fill="none" stroke="#3a3a3a" strokeWidth="0.9" />
-        <circle cx="108" cy="68" r="1.7" fill="none" stroke="#3a3a3a" strokeWidth="0.9" />
+        <circle
+          cx="52"
+          cy="68"
+          r="1.7"
+          fill="none"
+          stroke="#3a3a3a"
+          strokeWidth="0.9"
+        />
+        <circle
+          cx="108"
+          cy="68"
+          r="1.7"
+          fill="none"
+          stroke="#3a3a3a"
+          strokeWidth="0.9"
+        />
         {/* Text */}
         <text
           x="77"
@@ -447,8 +533,18 @@ export function PrivatePropertySign() {
           PROPERTY
         </text>
         {/* Weathering scratches */}
-        <path d="M52 76 L60 75" stroke="#3d2412" strokeWidth="0.35" opacity="0.35" />
-        <path d="M96 92 L104 91" stroke="#3d2412" strokeWidth="0.35" opacity="0.3" />
+        <path
+          d="M52 76 L60 75"
+          stroke="#3d2412"
+          strokeWidth="0.35"
+          opacity="0.35"
+        />
+        <path
+          d="M96 92 L104 91"
+          stroke="#3d2412"
+          strokeWidth="0.35"
+          opacity="0.3"
+        />
       </g>
 
       {/* Foreground grass at the base of the gate posts */}
@@ -468,64 +564,282 @@ export function PrivatePropertySign() {
       {/* Foreground rocks — clusters near each gate post and out in the grass */}
       <g>
         {/* Cluster left of left gate post */}
-        <ellipse cx="0" cy="146" rx="6" ry="3" fill="#8a8580" stroke="#4f4a44" strokeWidth="0.4" />
-        <ellipse cx="0" cy="144" rx="5" ry="1.5" fill="#a8a39a" opacity="0.65" />
-        <ellipse cx="-7" cy="147" rx="3.5" ry="1.8" fill="#7a7570" stroke="#4f4a44" strokeWidth="0.35" />
-        <ellipse cx="6" cy="147" rx="2.5" ry="1.4" fill="#8a8580" stroke="#4f4a44" strokeWidth="0.3" />
+        <ellipse
+          cx="0"
+          cy="146"
+          rx="6"
+          ry="3"
+          fill="#8a8580"
+          stroke="#4f4a44"
+          strokeWidth="0.4"
+        />
+        <ellipse
+          cx="0"
+          cy="144"
+          rx="5"
+          ry="1.5"
+          fill="#a8a39a"
+          opacity="0.65"
+        />
+        <ellipse
+          cx="-7"
+          cy="147"
+          rx="3.5"
+          ry="1.8"
+          fill="#7a7570"
+          stroke="#4f4a44"
+          strokeWidth="0.35"
+        />
+        <ellipse
+          cx="6"
+          cy="147"
+          rx="2.5"
+          ry="1.4"
+          fill="#8a8580"
+          stroke="#4f4a44"
+          strokeWidth="0.3"
+        />
 
         {/* Cluster right of right gate post */}
-        <ellipse cx="158" cy="146" rx="5.5" ry="2.8" fill="#8a8580" stroke="#4f4a44" strokeWidth="0.4" />
-        <ellipse cx="158" cy="144.5" rx="4.5" ry="1.4" fill="#a8a39a" opacity="0.65" />
-        <ellipse cx="166" cy="147" rx="3" ry="1.6" fill="#7a7570" stroke="#4f4a44" strokeWidth="0.35" />
-        <ellipse cx="151" cy="147" rx="2.2" ry="1.2" fill="#8a8580" stroke="#4f4a44" strokeWidth="0.3" />
+        <ellipse
+          cx="158"
+          cy="146"
+          rx="5.5"
+          ry="2.8"
+          fill="#8a8580"
+          stroke="#4f4a44"
+          strokeWidth="0.4"
+        />
+        <ellipse
+          cx="158"
+          cy="144.5"
+          rx="4.5"
+          ry="1.4"
+          fill="#a8a39a"
+          opacity="0.65"
+        />
+        <ellipse
+          cx="166"
+          cy="147"
+          rx="3"
+          ry="1.6"
+          fill="#7a7570"
+          stroke="#4f4a44"
+          strokeWidth="0.35"
+        />
+        <ellipse
+          cx="151"
+          cy="147"
+          rx="2.2"
+          ry="1.2"
+          fill="#8a8580"
+          stroke="#4f4a44"
+          strokeWidth="0.3"
+        />
 
         {/* Lone rock further out left */}
-        <ellipse cx="-50" cy="147" rx="3.5" ry="1.8" fill="#7a7570" stroke="#4f4a44" strokeWidth="0.35" />
+        <ellipse
+          cx="-50"
+          cy="147"
+          rx="3.5"
+          ry="1.8"
+          fill="#7a7570"
+          stroke="#4f4a44"
+          strokeWidth="0.35"
+        />
         {/* Lone rock further out right */}
-        <ellipse cx="220" cy="147" rx="3.2" ry="1.7" fill="#7a7570" stroke="#4f4a44" strokeWidth="0.35" />
+        <ellipse
+          cx="220"
+          cy="147"
+          rx="3.2"
+          ry="1.7"
+          fill="#7a7570"
+          stroke="#4f4a44"
+          strokeWidth="0.35"
+        />
       </g>
 
       {/* Foreground flowers — small wildflowers in clusters */}
       <g>
         {/* Daisies left of trail */}
         <g>
-          <line x1="22" y1="148" x2="22" y2="142" stroke="#3d6b2a" strokeWidth="0.4" />
-          <circle cx="22" cy="141" r="1.4" fill="#fdfbe7" stroke="#c2a32a" strokeWidth="0.25" />
+          <line
+            x1="22"
+            y1="148"
+            x2="22"
+            y2="142"
+            stroke="#3d6b2a"
+            strokeWidth="0.4"
+          />
+          <circle
+            cx="22"
+            cy="141"
+            r="1.4"
+            fill="#fdfbe7"
+            stroke="#c2a32a"
+            strokeWidth="0.25"
+          />
           <circle cx="22" cy="141" r="0.6" fill="#e6b62a" />
-          <line x1="26" y1="148" x2="26" y2="143" stroke="#3d6b2a" strokeWidth="0.4" />
-          <circle cx="26" cy="142.5" r="1.2" fill="#fdfbe7" stroke="#c2a32a" strokeWidth="0.25" />
+          <line
+            x1="26"
+            y1="148"
+            x2="26"
+            y2="143"
+            stroke="#3d6b2a"
+            strokeWidth="0.4"
+          />
+          <circle
+            cx="26"
+            cy="142.5"
+            r="1.2"
+            fill="#fdfbe7"
+            stroke="#c2a32a"
+            strokeWidth="0.25"
+          />
           <circle cx="26" cy="142.5" r="0.5" fill="#e6b62a" />
-          <line x1="29" y1="148" x2="29" y2="144" stroke="#3d6b2a" strokeWidth="0.4" />
-          <circle cx="29" cy="143" r="1" fill="#fdfbe7" stroke="#c2a32a" strokeWidth="0.2" />
+          <line
+            x1="29"
+            y1="148"
+            x2="29"
+            y2="144"
+            stroke="#3d6b2a"
+            strokeWidth="0.4"
+          />
+          <circle
+            cx="29"
+            cy="143"
+            r="1"
+            fill="#fdfbe7"
+            stroke="#c2a32a"
+            strokeWidth="0.2"
+          />
         </g>
 
         {/* Pink/red flowers right of trail */}
         <g>
-          <line x1="134" y1="148" x2="134" y2="142" stroke="#3d6b2a" strokeWidth="0.4" />
-          <circle cx="134" cy="141" r="1.3" fill="#e85a8a" stroke="#a83766" strokeWidth="0.25" />
+          <line
+            x1="134"
+            y1="148"
+            x2="134"
+            y2="142"
+            stroke="#3d6b2a"
+            strokeWidth="0.4"
+          />
+          <circle
+            cx="134"
+            cy="141"
+            r="1.3"
+            fill="#e85a8a"
+            stroke="#a83766"
+            strokeWidth="0.25"
+          />
           <circle cx="134" cy="141" r="0.5" fill="#fde8b2" />
-          <line x1="138" y1="148" x2="138" y2="143" stroke="#3d6b2a" strokeWidth="0.4" />
-          <circle cx="138" cy="142" r="1.1" fill="#e85a8a" stroke="#a83766" strokeWidth="0.2" />
-          <line x1="141" y1="148" x2="141" y2="144" stroke="#3d6b2a" strokeWidth="0.4" />
-          <circle cx="141" cy="143" r="0.9" fill="#e85a8a" stroke="#a83766" strokeWidth="0.2" />
+          <line
+            x1="138"
+            y1="148"
+            x2="138"
+            y2="143"
+            stroke="#3d6b2a"
+            strokeWidth="0.4"
+          />
+          <circle
+            cx="138"
+            cy="142"
+            r="1.1"
+            fill="#e85a8a"
+            stroke="#a83766"
+            strokeWidth="0.2"
+          />
+          <line
+            x1="141"
+            y1="148"
+            x2="141"
+            y2="144"
+            stroke="#3d6b2a"
+            strokeWidth="0.4"
+          />
+          <circle
+            cx="141"
+            cy="143"
+            r="0.9"
+            fill="#e85a8a"
+            stroke="#a83766"
+            strokeWidth="0.2"
+          />
         </g>
 
         {/* Purple flowers far left */}
         <g>
-          <line x1="-30" y1="148" x2="-30" y2="143" stroke="#3d6b2a" strokeWidth="0.4" />
-          <circle cx="-30" cy="142" r="1.2" fill="#a47bc6" stroke="#6c4d8a" strokeWidth="0.25" />
+          <line
+            x1="-30"
+            y1="148"
+            x2="-30"
+            y2="143"
+            stroke="#3d6b2a"
+            strokeWidth="0.4"
+          />
+          <circle
+            cx="-30"
+            cy="142"
+            r="1.2"
+            fill="#a47bc6"
+            stroke="#6c4d8a"
+            strokeWidth="0.25"
+          />
           <circle cx="-30" cy="142" r="0.4" fill="#fde8b2" />
-          <line x1="-26" y1="148" x2="-26" y2="144" stroke="#3d6b2a" strokeWidth="0.4" />
-          <circle cx="-26" cy="143" r="1" fill="#a47bc6" stroke="#6c4d8a" strokeWidth="0.2" />
+          <line
+            x1="-26"
+            y1="148"
+            x2="-26"
+            y2="144"
+            stroke="#3d6b2a"
+            strokeWidth="0.4"
+          />
+          <circle
+            cx="-26"
+            cy="143"
+            r="1"
+            fill="#a47bc6"
+            stroke="#6c4d8a"
+            strokeWidth="0.2"
+          />
         </g>
 
         {/* Daisies far right */}
         <g>
-          <line x1="174" y1="148" x2="174" y2="143" stroke="#3d6b2a" strokeWidth="0.4" />
-          <circle cx="174" cy="142" r="1.3" fill="#fdfbe7" stroke="#c2a32a" strokeWidth="0.25" />
+          <line
+            x1="174"
+            y1="148"
+            x2="174"
+            y2="143"
+            stroke="#3d6b2a"
+            strokeWidth="0.4"
+          />
+          <circle
+            cx="174"
+            cy="142"
+            r="1.3"
+            fill="#fdfbe7"
+            stroke="#c2a32a"
+            strokeWidth="0.25"
+          />
           <circle cx="174" cy="142" r="0.5" fill="#e6b62a" />
-          <line x1="178" y1="148" x2="178" y2="144" stroke="#3d6b2a" strokeWidth="0.4" />
-          <circle cx="178" cy="143" r="1.1" fill="#fdfbe7" stroke="#c2a32a" strokeWidth="0.2" />
+          <line
+            x1="178"
+            y1="148"
+            x2="178"
+            y2="144"
+            stroke="#3d6b2a"
+            strokeWidth="0.4"
+          />
+          <circle
+            cx="178"
+            cy="143"
+            r="1.1"
+            fill="#fdfbe7"
+            stroke="#c2a32a"
+            strokeWidth="0.2"
+          />
           <circle cx="178" cy="143" r="0.4" fill="#e6b62a" />
         </g>
       </g>

@@ -81,5 +81,13 @@ export function useRepoPullRequests(
     fetchPage(1, false);
   }, [fetchPage]);
 
-  return { pullRequests, loading, loadingMore, error, hasMore, loadMore, refresh };
+  return {
+    pullRequests,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+    refresh,
+  };
 }

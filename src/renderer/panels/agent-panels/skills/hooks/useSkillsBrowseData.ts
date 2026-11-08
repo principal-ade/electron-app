@@ -2,10 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { PanelContextValue } from '@principal-ade/panel-framework-core';
 import type { SkillsPanelContext } from '../../types';
 import type { Skill } from './useSkillsData';
-import {
-  findSkillFiles,
-  parseSkillContent,
-} from '../utils/skillsUtils';
+import { findSkillFiles, parseSkillContent } from '../utils/skillsUtils';
 
 // Stable empty array to prevent unnecessary re-renders
 const EMPTY_SKILLS_ARRAY: Skill[] = [];
@@ -60,7 +57,9 @@ export const useSkillsBrowseData = ({
         const isGithubRepo = !repoPath.startsWith('/');
 
         if (!isGithubRepo) {
-          console.warn('[useSkillsBrowseData] Not a GitHub repo, skipping skill load');
+          console.warn(
+            '[useSkillsBrowseData] Not a GitHub repo, skipping skill load',
+          );
           setSkills(EMPTY_SKILLS_ARRAY);
           lastLoadedSha.current = fileTreeSha;
           setIsLoading(false);
@@ -75,15 +74,24 @@ export const useSkillsBrowseData = ({
           try {
             // Use the relative path directly (GitHub adapter expects this)
             const content = await fileSystem.readFile(skillPath);
-            return parseSkillContent(content as string, skillPath, fileTree, fileSystem, true);
+            return parseSkillContent(
+              content as string,
+              skillPath,
+              fileTree,
+              fileSystem,
+              true,
+            );
           } catch (err) {
-            console.error(`[useSkillsBrowseData] Failed to read skill at ${skillPath}:`, err);
+            console.error(
+              `[useSkillsBrowseData] Failed to read skill at ${skillPath}:`,
+              err,
+            );
             return null;
           }
         });
 
         repoSkills = (await Promise.all(skillPromises)).filter(
-          (skill): skill is Skill => skill !== null
+          (skill): skill is Skill => skill !== null,
         );
       }
 
@@ -92,7 +100,8 @@ export const useSkillsBrowseData = ({
       // Update tracking ref
       lastLoadedSha.current = fileTreeSha;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load skills';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to load skills';
       setError(errorMessage);
       console.error('[useSkillsBrowseData] Error loading skills:', err);
     } finally {

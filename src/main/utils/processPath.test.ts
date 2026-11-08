@@ -73,7 +73,8 @@ describe('processPath', () => {
       loadProcessPath(true);
 
     // Simulate a dev launch with the terminal's full PATH.
-    process.env.PATH = '/Users/me/.opencode/bin:/opt/homebrew/bin:/usr/bin:/bin';
+    process.env.PATH =
+      '/Users/me/.opencode/bin:/opt/homebrew/bin:/usr/bin:/bin';
     resetToPackagedBasePath();
 
     expect(process.env.PATH).toBe(PACKAGED_BASE_PATH);

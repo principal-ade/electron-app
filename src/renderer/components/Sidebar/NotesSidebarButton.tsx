@@ -20,7 +20,11 @@ export interface NotesSidebarButtonProps {
   /** Current panel layout */
   currentLayout?: { left: string; middle: string; right: string };
   /** Callback to change panel layout */
-  onLayoutChange?: (layout: { left: string; middle: string; right: string }) => void;
+  onLayoutChange?: (layout: {
+    left: string;
+    middle: string;
+    right: string;
+  }) => void;
 }
 
 /**
@@ -37,7 +41,9 @@ export const NotesSidebarButton: React.FC<NotesSidebarButtonProps> = ({
   onLayoutChange,
 }) => {
   const isActive = currentLayout?.right === 'notes';
-  const buttonColor = isActive ? theme.colors.primary : theme.colors.textSecondary;
+  const buttonColor = isActive
+    ? theme.colors.primary
+    : theme.colors.textSecondary;
 
   const handleClick = async () => {
     if (!repositoryPath || !currentLayout || !onLayoutChange) return;
@@ -52,7 +58,7 @@ export const NotesSidebarButton: React.FC<NotesSidebarButtonProps> = ({
       try {
         await FileSystemService.writeFile(notesPath, DEFAULT_CONTENT);
         // Small delay to ensure file system sync
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       } catch {
         return; // Don't switch panels if file creation failed
       }
@@ -113,7 +119,9 @@ export const NotesSidebarButton: React.FC<NotesSidebarButtonProps> = ({
         style={{
           fontFamily: theme.fonts.body,
           fontSize: theme.fontSizes[0],
-          fontWeight: isActive ? theme.fontWeights.semibold : theme.fontWeights.body,
+          fontWeight: isActive
+            ? theme.fontWeights.semibold
+            : theme.fontWeights.body,
           lineHeight: theme.lineHeights.tight,
           textAlign: 'center',
           maxWidth: '100%',

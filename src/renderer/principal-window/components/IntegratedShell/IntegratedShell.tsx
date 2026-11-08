@@ -165,10 +165,11 @@ export const IntegratedShell: React.FC = () => {
   // also choosing a surface — no left-panel swap, no collapse-state change.
   const [surface, setSurface] = useState<WorkspaceView | null>(null);
   const [overlay, setOverlay] = useState<OverlayView | null>('home');
-  const [isRepositoryPanelActive, setIsRepositoryPanelActive] =
-    useState(false);
+  const [isRepositoryPanelActive, setIsRepositoryPanelActive] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | undefined>(undefined);
+  const [settingsCategory, setSettingsCategory] = useState<
+    SettingsCategory | undefined
+  >(undefined);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const { theme, mode } = useTheme();
   const { events } = usePrincipalEvents();
@@ -235,7 +236,8 @@ export const IntegratedShell: React.FC = () => {
   // is the one showing whether or not an overlay is floating above it.
   const sidebarView = surface ?? 'home-panel';
   const sidebarCollapsed = viewCollapsedStates[sidebarView]?.left ?? false;
-  const rightSidebarCollapsed = viewCollapsedStates[sidebarView]?.right ?? false;
+  const rightSidebarCollapsed =
+    viewCollapsedStates[sidebarView]?.right ?? false;
 
   // Load saved navigation view and panel states on mount
   useEffect(() => {
@@ -245,10 +247,17 @@ export const IntegratedShell: React.FC = () => {
 
         if (prefs.interactiveShell?.activeNavigationView) {
           // Cast to string to handle legacy values from storage
-          const savedView = prefs.interactiveShell.activeNavigationView as string;
+          const savedView = prefs.interactiveShell
+            .activeNavigationView as string;
           // Migrate removed views to a supported workspace surface.
           // 'feed' is the former id for the Projects view, renamed 2026-06-17.
-          const legacyViews = ['local-projects', 'remote-projects', 'starred-projects', 'network', 'feed'];
+          const legacyViews = [
+            'local-projects',
+            'remote-projects',
+            'starred-projects',
+            'network',
+            'feed',
+          ];
           const view =
             savedView === 'inbox'
               ? 'topics'
@@ -760,10 +769,7 @@ export const IntegratedShell: React.FC = () => {
   // takes the mnemonic here; KeyS is otherwise unused).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (
-        !((e.metaKey || e.ctrlKey) && e.shiftKey) ||
-        e.altKey
-      ) {
+      if (!((e.metaKey || e.ctrlKey) && e.shiftKey) || e.altKey) {
         return;
       }
       if (e.code === 'KeyS') {
@@ -999,18 +1005,20 @@ export const IntegratedShell: React.FC = () => {
 
       {/* Onboarding Wizard Overlay */}
       {showOnboardingWizard && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 10000
-        }}>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10000,
+          }}
+        >
           <OnboardingWizard
             onComplete={async () => {
               setShowOnboardingWizard(false);
               selectSurface('home-panel');
               try {
                 await UserPreferencesService.updatePreferences({
-                  onboardingCompleted: true
+                  onboardingCompleted: true,
                 });
               } catch (error) {
                 console.error('Failed to save onboarding completion:', error);

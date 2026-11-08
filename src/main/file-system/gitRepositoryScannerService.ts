@@ -55,10 +55,14 @@ export class GitRepositoryScannerService {
    */
   private async getGitRemoteUrl(repoPath: string): Promise<string | null> {
     try {
-      const { stdout } = await execFileAsync('git', ['remote', 'get-url', 'origin'], {
-        cwd: repoPath,
-        timeout: 5000
-      });
+      const { stdout } = await execFileAsync(
+        'git',
+        ['remote', 'get-url', 'origin'],
+        {
+          cwd: repoPath,
+          timeout: 5000,
+        },
+      );
       return stdout.trim();
     } catch {
       return null;
@@ -77,7 +81,9 @@ export class GitRepositoryScannerService {
   /**
    * Get repository info including owner from git remote
    */
-  private async getRepositoryInfo(repoPath: string): Promise<{ owner?: string; name: string }> {
+  private async getRepositoryInfo(
+    repoPath: string,
+  ): Promise<{ owner?: string; name: string }> {
     const name = path.basename(repoPath);
     const remoteUrl = await this.getGitRemoteUrl(repoPath);
 
@@ -85,7 +91,7 @@ export class GitRepositoryScannerService {
       const { owner, repo } = this.parseGitRemote(remoteUrl);
       return {
         owner,
-        name: repo || name // Prefer parsed repo name, fallback to directory name
+        name: repo || name, // Prefer parsed repo name, fallback to directory name
       };
     }
 
@@ -235,16 +241,18 @@ export class GitRepositoryScannerService {
    * Get repository info (name and owner) for multiple repos in parallel
    * Used for onboarding wizard scanning
    */
-  async getRepositoriesInfo(repoPaths: string[]): Promise<Array<{ path: string; name: string; owner?: string }>> {
+  async getRepositoriesInfo(
+    repoPaths: string[],
+  ): Promise<Array<{ path: string; name: string; owner?: string }>> {
     const results = await Promise.all(
       repoPaths.map(async (repoPath) => {
         const info = await this.getRepositoryInfo(repoPath);
         return {
           path: repoPath,
           name: info.name,
-          owner: info.owner
+          owner: info.owner,
         };
-      })
+      }),
     );
 
     return results;

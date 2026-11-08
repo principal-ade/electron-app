@@ -48,8 +48,7 @@ function readBookmarks(): BookmarkSlots {
       parsed.slice(0, BOOKMARK_SLOT_COUNT).forEach((item, i) => {
         if (!isRepo(item)) return;
         const note = (item as { note?: unknown }).note;
-        base[i] =
-          typeof note === 'string' && note ? { ...item, note } : item;
+        base[i] = typeof note === 'string' && note ? { ...item, note } : item;
       });
     }
     return base;
@@ -102,9 +101,7 @@ export function useBookmarks() {
     (slotIndex: number, repo: BookmarkRepo) => {
       commit((prev) => {
         const next = [...prev];
-        const existing = next.findIndex(
-          (s) => s?.full_name === repo.full_name,
-        );
+        const existing = next.findIndex((s) => s?.full_name === repo.full_name);
         if (existing !== -1) next[existing] = null;
         next[slotIndex] = repo;
         return next;
