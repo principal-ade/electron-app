@@ -51,6 +51,8 @@ export interface BuildRunDependencies {
     secretEnvNames?: string[];
   }) => BuildRunRecord;
   getRun: (runId: string) => BuildRunRecord | null;
+  /** Read all currently retained run records for bridge discovery. */
+  listRuns?: () => BuildRunRecord[];
   /** Optional read-only PTY snapshot, used by the build output route. */
   getOutputBuffer?: (runId: string) => Promise<string | null>;
   /** Already-sanitized output captured when a run completed. */

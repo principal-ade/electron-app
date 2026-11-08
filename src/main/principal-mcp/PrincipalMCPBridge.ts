@@ -1108,6 +1108,7 @@ export class PrincipalMCPBridge extends EventEmitter {
           getBuildSecretResolver().resolve(secretRepoId, decls, options),
         trackRun: (input) => buildRunRegistry.trackRun(input),
         getRun: (runId) => buildRunRegistry.getRun(runId),
+        listRuns: () => buildRunRegistry.listRuns(),
         getOutputBuffer: (runId) => buildRunRegistry.getOutputBuffer(runId),
         getOutputSnapshot: (runId) => buildRunRegistry.getOutputSnapshot(runId),
         getSecretEnvNames: (runId) => buildRunRegistry.getSecretEnvNames(runId),

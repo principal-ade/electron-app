@@ -901,6 +901,19 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
       },
       {
         method: 'GET',
+        path: '/api/build-runs',
+        summary: 'List retained build runs, most-recent-first.',
+        response:
+          '{ success: true, runs: [{ runId, configId, terminalSessionId, status, exitCode?, startedAt, endedAt? }] }',
+        notes: [
+          'Use a returned runId with GET /api/build-runs/:id or /api/build-runs/:id/output. Run history is in-memory and cleared when the app restarts; finished records are evicted as needed to bound retention.',
+        ],
+        errors: {
+          '501': 'Build run listing is not available in this app build.',
+        },
+      },
+      {
+        method: 'GET',
         path: '/api/build-runs/:id',
         summary: 'Poll a build run for terminal status.',
         response:

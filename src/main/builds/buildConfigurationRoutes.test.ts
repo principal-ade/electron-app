@@ -48,6 +48,7 @@ function handlers(store: BuildConfigurationStore, overrides = {}) {
       '/api/build-configurations/:id/request-secrets',
     ),
     run: byPath(post, '/api/build-configurations/:id/run'),
+    listRuns: byPath(get, '/api/build-runs'),
     getRun: byPath(get, '/api/build-runs/:id'),
     getRunOutput: byPath(get, '/api/build-runs/:id/output'),
   };
@@ -262,6 +263,10 @@ describe('buildConfigurationRoutes', () => {
     await h.run({ params: { id: created.id } } as unknown as Request, run);
     expect(status(run)).toBe(501);
 
+    const listed = response();
+    await h.listRuns({} as Request, listed);
+    expect(status(listed)).toBe(501);
+
     const getRun = response();
     await h.getRun({ params: { id: 'run-1' } } as unknown as Request, getRun);
     expect(status(getRun)).toBe(404);
@@ -280,6 +285,7 @@ describe('buildConfigurationRoutes', () => {
       resolveSecrets: jest.Mock;
       trackRun: jest.Mock;
       getRun: jest.Mock;
+      listRuns: jest.Mock;
       getOutputBuffer: jest.Mock;
       getOutputSnapshot: jest.Mock;
       getSecretEnvNames: jest.Mock;
@@ -328,6 +334,7 @@ describe('buildConfigurationRoutes', () => {
           return record;
         }),
         getRun: jest.fn((runId: string) => records.get(runId) ?? null),
+        listRuns: jest.fn(() => Array.from(records.values())),
         getOutputBuffer: jest.fn(async () => ''),
         getOutputSnapshot: jest.fn(() => undefined),
         getSecretEnvNames: jest.fn(() => []),
@@ -346,6 +353,7 @@ describe('buildConfigurationRoutes', () => {
           resolveSecrets: runs.resolveSecrets,
           trackRun: runs.trackRun,
           getRun: runs.getRun,
+          listRuns: runs.listRuns,
           getOutputBuffer: runs.getOutputBuffer,
           getOutputSnapshot: runs.getOutputSnapshot,
           getSecretEnvNames: runs.getSecretEnvNames,
@@ -369,6 +377,21 @@ describe('buildConfigurationRoutes', () => {
         terminalSessionId: 'session-1',
         status: 'running',
       });
+
+      // The collection endpoint makes a run discoverable when its ID was
+      // not captured from the start response, and returns newest first.
+      runs.records.set('run-older', {
+        runId: 'run-older',
+        configId: created.id,
+        terminalSessionId: 'session-older',
+        status: 'failed',
+        startedAt: '2025-01-01T00:00:00.000Z',
+      });
+      const listed = response();
+      await h.listRuns({} as Request, listed);
+      expect(
+        body(listed).runs.map((record: { runId: string }) => record.runId),
+      ).toEqual([started.runId, 'run-older']);
       expect(runs.createBuildSession).toHaveBeenCalledWith(
         expect.objectContaining({
           cwd: checkoutDir,
@@ -520,6 +543,7 @@ describe('buildConfigurationRoutes', () => {
           resolveSecrets: runs.resolveSecrets,
           trackRun: runs.trackRun,
           getRun: runs.getRun,
+          listRuns: runs.listRuns,
           getOutputBuffer: runs.getOutputBuffer,
           getOutputSnapshot: runs.getOutputSnapshot,
           getSecretEnvNames: runs.getSecretEnvNames,

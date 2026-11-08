@@ -316,6 +316,26 @@ export function registerBuildConfigurationRoutes(
     },
   );
 
+  // List retained runs, newest first, so callers can discover run IDs before
+  // requesting status or sanitized output.
+  app.get('/api/build-runs', async (_req: Request, res: Response) => {
+    try {
+      if (!deps.runs?.listRuns) {
+        res.status(501).json({
+          success: false,
+          error: 'build run listing is not available in this app build',
+        });
+        return;
+      }
+      const runs = [...deps.runs.listRuns()].sort((a, b) =>
+        b.startedAt.localeCompare(a.startedAt),
+      );
+      res.json({ success: true, runs });
+    } catch (error) {
+      fail(res, error);
+    }
+  });
+
   app.get('/api/build-runs/:id', async (req: Request, res: Response) => {
     try {
       const runId = String(req.params.id);
