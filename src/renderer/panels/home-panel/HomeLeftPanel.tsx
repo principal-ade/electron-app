@@ -346,7 +346,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     setSelectedRepo((prev) =>
       prev ? { ...prev, localClones: nextClones } : prev,
     );
-  }, [repositories, selectedRepo?.purl]);
+  }, [repositories, selectedRepo]);
 
   const dismissRepoCard = useCallback(() => {
     setRepoCardExiting(true);

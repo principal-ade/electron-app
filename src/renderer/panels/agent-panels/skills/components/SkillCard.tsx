@@ -1,6 +1,14 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Code, BookOpen, Package, Globe, Folder, Github, AlertTriangle } from 'lucide-react';
+import {
+  Code,
+  BookOpen,
+  Package,
+  Globe,
+  Folder,
+  Github,
+  AlertTriangle,
+} from 'lucide-react';
 import {
   useDraggable,
   DATA_TYPES,
@@ -107,7 +115,7 @@ export const SkillCard: React.FC<SkillCardProps> = ({
   // Draggable hook for drag-and-drop support
   const { isDragging, ...dragProps } = useDraggable({
     dataType: DATA_TYPES.FILE_PATH,
-    primaryData: skill.path,  // Use skill path
+    primaryData: skill.path, // Use skill path
     metadata: {
       name: skill.name,
       description: skill.description,
@@ -121,7 +129,11 @@ export const SkillCard: React.FC<SkillCardProps> = ({
   // Determine which path to copy based on filter context and installed locations
   const getPathToCopy = (): string => {
     // If no filter context or no multiple installations, use default path
-    if (!filterContext || !skill.installedLocations || skill.installedLocations.length <= 1) {
+    if (
+      !filterContext ||
+      !skill.installedLocations ||
+      skill.installedLocations.length <= 1
+    ) {
       return skill.path;
     }
 
@@ -131,12 +143,13 @@ export const SkillCard: React.FC<SkillCardProps> = ({
         (loc) =>
           loc.source === 'project-universal' ||
           loc.source === 'project-claude' ||
-          loc.source === 'project-other'
+          loc.source === 'project-other',
       );
       return projectInstallation?.path || skill.path;
     } else if (filterContext === 'global') {
       const globalInstallation = skill.installedLocations.find(
-        (loc) => loc.source === 'global-universal' || loc.source === 'global-claude'
+        (loc) =>
+          loc.source === 'global-universal' || loc.source === 'global-claude',
       );
       return globalInstallation?.path || skill.path;
     }
@@ -162,10 +175,12 @@ export const SkillCard: React.FC<SkillCardProps> = ({
       {...dragProps}
       style={{
         padding: '16px',
-        background: isSelected ? `${theme.colors.primary}10` : theme.colors.surface,
+        background: isSelected
+          ? `${theme.colors.primary}10`
+          : theme.colors.surface,
         border: `1px solid ${isSelected ? theme.colors.primary : theme.colors.border}`,
         borderRadius: theme.radii[2],
-        cursor: isDragging ? 'grabbing' : (onClick ? 'pointer' : 'default'),
+        cursor: isDragging ? 'grabbing' : onClick ? 'pointer' : 'default',
         transition: 'all 0.2s ease',
         display: 'flex',
         flexDirection: 'column',
@@ -188,8 +203,23 @@ export const SkillCard: React.FC<SkillCardProps> = ({
       }}
     >
       {/* Header with name */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: '12px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
           <h3
             style={{
               margin: 0,
@@ -205,7 +235,14 @@ export const SkillCard: React.FC<SkillCardProps> = ({
             {skill.name}
           </h3>
           {/* Source badge - only show when no filter context (Browse mode, etc.) */}
-          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '4px',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
             {!filterContext && (
               <div
                 style={{
@@ -254,7 +291,10 @@ export const SkillCard: React.FC<SkillCardProps> = ({
             {/* GitHub source badge (if installed from GitHub) */}
             {skill.metadata?.owner && skill.metadata?.repo && (
               <a
-                href={skill.metadata.installedFrom || `https://github.com/${skill.metadata.owner}/${skill.metadata.repo}`}
+                href={
+                  skill.metadata.installedFrom ||
+                  `https://github.com/${skill.metadata.owner}/${skill.metadata.repo}`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()} // Prevent card click when clicking link
@@ -286,7 +326,9 @@ export const SkillCard: React.FC<SkillCardProps> = ({
                 }}
               >
                 <Github size={10} />
-                <span>From {skill.metadata.owner}/{skill.metadata.repo}</span>
+                <span>
+                  From {skill.metadata.owner}/{skill.metadata.repo}
+                </span>
               </a>
             )}
 
@@ -306,7 +348,10 @@ export const SkillCard: React.FC<SkillCardProps> = ({
                   fontWeight: 500,
                   width: 'fit-content',
                 }}
-                title={skill.frontmatterValidation.errorMessage || 'Invalid frontmatter'}
+                title={
+                  skill.frontmatterValidation.errorMessage ||
+                  'Invalid frontmatter'
+                }
               >
                 <AlertTriangle size={10} />
                 <span>
@@ -320,64 +365,83 @@ export const SkillCard: React.FC<SkillCardProps> = ({
             )}
 
             {/* Also installed in badge (multiple locations) */}
-            {skill.installedLocations && skill.installedLocations.length > 1 && (() => {
-              // Get locations based on filter context
-              // If viewing 'project', show 'global' locations and vice versa
-              let otherLocations: typeof skill.installedLocations = [];
+            {skill.installedLocations &&
+              skill.installedLocations.length > 1 &&
+              (() => {
+                // Get locations based on filter context
+                // If viewing 'project', show 'global' locations and vice versa
+                let otherLocations: typeof skill.installedLocations = [];
 
-              if (filterContext === 'project') {
-                // Show global installations
-                otherLocations = skill.installedLocations.filter(
-                  loc => loc.source === 'global-universal' || loc.source === 'global-claude'
+                if (filterContext === 'project') {
+                  // Show global installations
+                  otherLocations = skill.installedLocations.filter(
+                    (loc) =>
+                      loc.source === 'global-universal' ||
+                      loc.source === 'global-claude',
+                  );
+                } else if (filterContext === 'global') {
+                  // Show project installations
+                  otherLocations = skill.installedLocations.filter(
+                    (loc) =>
+                      loc.source === 'project-universal' ||
+                      loc.source === 'project-claude' ||
+                      loc.source === 'project-other',
+                  );
+                } else {
+                  // No filter context - show all other locations (not the primary)
+                  otherLocations = skill.installedLocations.filter(
+                    (loc) => loc.path !== skill.path,
+                  );
+                }
+
+                if (otherLocations.length === 0) return null;
+
+                const locationNames = otherLocations.map((loc) =>
+                  abbreviateSourceName(loc.source),
                 );
-              } else if (filterContext === 'global') {
-                // Show project installations
-                otherLocations = skill.installedLocations.filter(
-                  loc => loc.source === 'project-universal' ||
-                         loc.source === 'project-claude' ||
-                         loc.source === 'project-other'
+                const uniqueLocations = Array.from(new Set(locationNames));
+                const locationText = uniqueLocations.join(', ');
+
+                return (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '2px 6px',
+                      borderRadius: theme.radii[1],
+                      backgroundColor: `${theme.colors.accent}15`,
+                      border: `1px solid ${theme.colors.accent}30`,
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.accent,
+                      fontWeight: 500,
+                      width: 'fit-content',
+                    }}
+                    title={`Also installed in:\n${otherLocations
+                      .map(
+                        (loc) =>
+                          `${abbreviateSourceName(loc.source)}: ${loc.path}`,
+                      )
+                      .join('\n')}`}
+                  >
+                    <Package size={10} />
+                    <span>Also in: {locationText}</span>
+                  </div>
                 );
-              } else {
-                // No filter context - show all other locations (not the primary)
-                otherLocations = skill.installedLocations.filter(loc => loc.path !== skill.path);
-              }
-
-              if (otherLocations.length === 0) return null;
-
-              const locationNames = otherLocations.map(loc => abbreviateSourceName(loc.source));
-              const uniqueLocations = Array.from(new Set(locationNames));
-              const locationText = uniqueLocations.join(', ');
-
-              return (
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '2px 6px',
-                    borderRadius: theme.radii[1],
-                    backgroundColor: `${theme.colors.accent}15`,
-                    border: `1px solid ${theme.colors.accent}30`,
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.accent,
-                    fontWeight: 500,
-                    width: 'fit-content',
-                  }}
-                  title={`Also installed in:\n${otherLocations
-                    .map(loc => `${abbreviateSourceName(loc.source)}: ${loc.path}`)
-                    .join('\n')}`}
-                >
-                  <Package size={10} />
-                  <span>Also in: {locationText}</span>
-                </div>
-              );
-            })()}
+              })()}
           </div>
         </div>
 
         {/* Structure indicators */}
         {(skill.hasScripts || skill.hasReferences || skill.hasAssets) && (
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flexShrink: 0 }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '6px',
+              flexWrap: 'wrap',
+              flexShrink: 0,
+            }}
+          >
             {skill.hasScripts && (
               <div
                 style={{
@@ -463,9 +527,9 @@ export const SkillCard: React.FC<SkillCardProps> = ({
       {/* Capabilities */}
       {skill.capabilities && skill.capabilities.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {skill.capabilities.map((capability, index) => (
+          {skill.capabilities.map((capability) => (
             <div
-              key={index}
+              key={capability}
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
@@ -508,7 +572,9 @@ export const SkillCard: React.FC<SkillCardProps> = ({
           fontSize: theme.fontSizes[0],
           color: pathCopied ? theme.colors.success : theme.colors.textMuted,
           fontFamily: theme.fonts.monospace,
-          background: pathCopied ? `${theme.colors.success}15` : theme.colors.backgroundSecondary,
+          background: pathCopied
+            ? `${theme.colors.success}15`
+            : theme.colors.backgroundSecondary,
           padding: '4px 8px',
           borderRadius: theme.radii[1],
           overflow: 'hidden',
@@ -521,7 +587,8 @@ export const SkillCard: React.FC<SkillCardProps> = ({
         title={pathCopied ? 'Copied!' : `Click to copy: ${getPathToCopy()}`}
         onMouseEnter={(e) => {
           if (!pathCopied) {
-            e.currentTarget.style.background = theme.colors.backgroundTertiary || theme.colors.border;
+            e.currentTarget.style.background =
+              theme.colors.backgroundTertiary || theme.colors.border;
           }
         }}
         onMouseLeave={(e) => {

@@ -161,7 +161,6 @@ export interface RepositoryProfilePanelActions extends PanelActions {
     path: string,
     remoteUrl?: string,
   ) => Promise<AlexandriaEntry>;
-
 }
 
 interface RepositoryProfilePanelProps {
@@ -470,8 +469,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   // Read repository from context
   const repositoryData = context.currentScope?.repository as
-    | RepositoryProfileData
-    | undefined;
+    RepositoryProfileData | undefined;
   const repositoryPath = repositoryData?.localClones?.[0]?.path;
   // Home pin key: clone path when cloned, otherwise GitHub purl so uncloned
   // repos pin the same way the Home rail does (`path ?? pkg:github/o/n`).
@@ -579,13 +577,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       cityData.buildings.filter((building) => changedPaths.has(building.path)),
     ).map((layer) => ({ ...layer, priority: layer.priority + 100 }));
     return [...fileColors, ...gitLayers];
-  }, [
-    showStats,
-    repositoryPath,
-    gitStatusMap,
-    cityData,
-    highlightLayers,
-  ]);
+  }, [showStats, repositoryPath, gitStatusMap, cityData, highlightLayers]);
   const spotlightLayers = packageSpotlightLayers ?? changedFileSpotlightLayers;
 
   // Track which button is currently bouncing (by clone path)
@@ -738,12 +730,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       '[RepositoryProfilePanel] Total highlight layers:',
       layers.length,
     );
-  }, [
-    gitStatusMap,
-    repositoryData?.localClones,
-    theme.colors,
-    cityData,
-  ]);
+  }, [gitStatusMap, repositoryData?.localClones, theme.colors, cityData]);
 
   // Check if the current user has already forked this repo
   useEffect(() => {
@@ -960,6 +947,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     };
   }, [
     remoteFileTree,
+    repositoryData?.github,
     repositoryData?.github?.owner,
     repositoryData?.github?.name,
     repositoryData?.localClones,
@@ -2364,241 +2352,240 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 }
               })()}
             </h4>
-            {repositoryPath &&
-              gitStatusMap.get(repositoryPath)?.isDirty && (
-                <button
-                  type="button"
-                  onClick={() => setShowStats((previous) => !previous)}
-                  style={{
-                    marginLeft: 'auto',
-                    padding: `${spacing.xs}px ${spacing.sm}px`,
-                    background: 'transparent',
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: 4,
-                    color: theme.colors.primary,
-                    fontSize: theme.fontSizes[1],
-                    fontFamily: theme.fonts?.body,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {showStats ? 'Changed Files' : 'Repository Info'}
-                </button>
-              )}
+            {repositoryPath && gitStatusMap.get(repositoryPath)?.isDirty && (
+              <button
+                type="button"
+                onClick={() => setShowStats((previous) => !previous)}
+                style={{
+                  marginLeft: 'auto',
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  background: 'transparent',
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: 4,
+                  color: theme.colors.primary,
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts?.body,
+                  cursor: 'pointer',
+                }}
+              >
+                {showStats ? 'Changed Files' : 'Repository Info'}
+              </button>
+            )}
           </div>
 
-            {(() => {
-              // Check if we should show README for remote-only repos
-              const hasLocalClone =
-                repositoryData?.localClones &&
-                repositoryData.localClones.length > 0;
+          {(() => {
+            // Check if we should show README for remote-only repos
+            const hasLocalClone =
+              repositoryData?.localClones &&
+              repositoryData.localClones.length > 0;
 
-              if (!hasLocalClone && readmeContent) {
-                // Show README for remote-only repositories
-                return (
-                  <div style={{ flex: 1, overflow: 'auto' }}>
-                    <DocumentView
-                      content={readmeContent}
-                      theme={theme}
-                      enableKeyboardScrolling={false}
-                      transparentBackground={true}
-                      repositoryInfo={
-                        repositoryData.github
-                          ? {
-                              owner: repositoryData.github.owner,
-                              repo: repositoryData.github.name,
-                              branch: repositoryData.defaultBranch || undefined,
-                            }
-                          : undefined
-                      }
-                    />
-                  </div>
-                );
-              }
+            if (!hasLocalClone && readmeContent) {
+              // Show README for remote-only repositories
+              return (
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                  <DocumentView
+                    content={readmeContent}
+                    theme={theme}
+                    enableKeyboardScrolling={false}
+                    transparentBackground={true}
+                    repositoryInfo={
+                      repositoryData.github
+                        ? {
+                            owner: repositoryData.github.owner,
+                            repo: repositoryData.github.name,
+                            branch: repositoryData.defaultBranch || undefined,
+                          }
+                        : undefined
+                    }
+                  />
+                </div>
+              );
+            }
 
-              if (!hasLocalClone && readmeLoading) {
-                return (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: spacing.lg,
-                      color: theme.colors.textSecondary,
-                    }}
-                  >
-                    Loading README...
-                  </div>
-                );
-              }
+            if (!hasLocalClone && readmeLoading) {
+              return (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: spacing.lg,
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  Loading README...
+                </div>
+              );
+            }
 
-              // Check if we should show changed files instead of stats
-              const firstClone = repositoryData?.localClones?.[0];
-              const gitStatus = firstClone
-                ? gitStatusMap.get(firstClone.path)
-                : null;
-              const hasChanges = gitStatus && gitStatus.isDirty;
+            // Check if we should show changed files instead of stats
+            const firstClone = repositoryData?.localClones?.[0];
+            const gitStatus = firstClone
+              ? gitStatusMap.get(firstClone.path)
+              : null;
+            const hasChanges = gitStatus && gitStatus.isDirty;
 
-              if (hasChanges && !showStats) {
-                // Show changed files
-                // Paths that no longer exist on disk. Git reports a staged
-                // deletion in both `stagedFiles` and `deletedFiles`, so a
-                // deletion can also appear under Staged — those can't open.
-                const deletedSet = new Set(gitStatus.deletedFiles || []);
-                const sections = [
-                  {
-                    title: 'Staged',
-                    files: gitStatus.stagedFiles || [],
-                    color: theme.colors.success,
-                    icon: '✓',
-                  },
-                  {
-                    title: 'Modified',
-                    files: gitStatus.modifiedFiles || [],
-                    color: theme.colors.warning,
-                    icon: '●',
-                  },
-                  {
-                    title: 'Untracked',
-                    files: gitStatus.untrackedFiles || [],
-                    color: theme.colors.info,
-                    icon: '?',
-                  },
-                  {
-                    title: 'Deleted',
-                    files: gitStatus.deletedFiles || [],
-                    color: theme.colors.error,
-                    icon: '✕',
-                  },
-                ].filter((section) => section.files.length > 0);
+            if (hasChanges && !showStats) {
+              // Show changed files
+              // Paths that no longer exist on disk. Git reports a staged
+              // deletion in both `stagedFiles` and `deletedFiles`, so a
+              // deletion can also appear under Staged — those can't open.
+              const deletedSet = new Set(gitStatus.deletedFiles || []);
+              const sections = [
+                {
+                  title: 'Staged',
+                  files: gitStatus.stagedFiles || [],
+                  color: theme.colors.success,
+                  icon: '✓',
+                },
+                {
+                  title: 'Modified',
+                  files: gitStatus.modifiedFiles || [],
+                  color: theme.colors.warning,
+                  icon: '●',
+                },
+                {
+                  title: 'Untracked',
+                  files: gitStatus.untrackedFiles || [],
+                  color: theme.colors.info,
+                  icon: '?',
+                },
+                {
+                  title: 'Deleted',
+                  files: gitStatus.deletedFiles || [],
+                  color: theme.colors.error,
+                  icon: '✕',
+                },
+              ].filter((section) => section.files.length > 0);
 
-                return (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: spacing.md,
-                      flex: 1,
-                      overflow: 'auto',
-                    }}
-                  >
-                    {sections.map((section) => (
-                      <div key={section.title}>
-                        <div
-                          style={{
-                            fontSize: theme.fontSizes[0],
-                            fontWeight: theme.fontWeights?.semibold ?? 600,
-                            fontFamily: theme.fonts?.body,
-                            color: section.color,
-                            marginBottom: spacing.xs,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
-                          }}
-                        >
-                          {section.title} ({section.files.length})
-                        </div>
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 0,
-                          }}
-                        >
-                          {section.files.map((rawPath) => {
-                            // Porcelain renames arrive as "old -> new"; use the
-                            // new path for opening/display.
-                            const filePath = rawPath.includes(' -> ')
-                              ? (rawPath.split(' -> ').pop() ?? rawPath)
-                              : rawPath;
-                            // A deleted file no longer exists on disk. A staged
-                            // deletion also appears under Staged, so gate on the
-                            // deleted set rather than the section title.
-                            const openable = !deletedSet.has(rawPath);
-                            return (
-                              <button
-                                key={rawPath}
-                                type="button"
-                                disabled={!openable}
-                                onClick={() =>
-                                  openable && openFileInTab(filePath)
-                                }
-                                title={openable ? `Open ${filePath}` : rawPath}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: spacing.xs,
-                                  padding: `${spacing.sm}px ${spacing.xs}px`,
-                                  backgroundColor: theme.colors.background,
-                                  border: 'none',
-                                  borderRadius: theme.radii?.[1] || 4,
-                                  fontSize: theme.fontSizes[0],
-                                  fontFamily: theme.fonts?.monospace,
-                                  textAlign: 'left',
-                                  width: '100%',
-                                  cursor: openable ? 'pointer' : 'default',
-                                  transition: 'background-color 0.15s ease',
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (openable)
-                                    e.currentTarget.style.backgroundColor =
-                                      theme.colors.backgroundSecondary;
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor =
-                                    theme.colors.background;
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    color: section.color,
-                                    flexShrink: 0,
-                                    width: 16,
-                                    textAlign: 'center',
-                                  }}
-                                >
-                                  {section.icon}
-                                </span>
-                                <span
-                                  style={{
-                                    color: theme.colors.text,
-                                    flex: 1,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  {filePath}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              }
-
-              // Otherwise show normal stats
               return (
                 <div
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
                     gap: spacing.md,
+                    flex: 1,
+                    overflow: 'auto',
                   }}
                 >
-                  {repositoryPath && (
-                    <RepositoryPackageList
-                      key={repositoryPath}
-                      repositoryPath={repositoryPath}
-                      onOpenFile={openFileInTab}
-                      onPackageHover={setHoveredPackagePath}
-                      onOpenBrowser={actions.openLocalhostBrowser}
-                    />
-                  )}
+                  {sections.map((section) => (
+                    <div key={section.title}>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          fontWeight: theme.fontWeights?.semibold ?? 600,
+                          fontFamily: theme.fonts?.body,
+                          color: section.color,
+                          marginBottom: spacing.xs,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                        }}
+                      >
+                        {section.title} ({section.files.length})
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 0,
+                        }}
+                      >
+                        {section.files.map((rawPath) => {
+                          // Porcelain renames arrive as "old -> new"; use the
+                          // new path for opening/display.
+                          const filePath = rawPath.includes(' -> ')
+                            ? (rawPath.split(' -> ').pop() ?? rawPath)
+                            : rawPath;
+                          // A deleted file no longer exists on disk. A staged
+                          // deletion also appears under Staged, so gate on the
+                          // deleted set rather than the section title.
+                          const openable = !deletedSet.has(rawPath);
+                          return (
+                            <button
+                              key={rawPath}
+                              type="button"
+                              disabled={!openable}
+                              onClick={() =>
+                                openable && openFileInTab(filePath)
+                              }
+                              title={openable ? `Open ${filePath}` : rawPath}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: spacing.xs,
+                                padding: `${spacing.sm}px ${spacing.xs}px`,
+                                backgroundColor: theme.colors.background,
+                                border: 'none',
+                                borderRadius: theme.radii?.[1] || 4,
+                                fontSize: theme.fontSizes[0],
+                                fontFamily: theme.fonts?.monospace,
+                                textAlign: 'left',
+                                width: '100%',
+                                cursor: openable ? 'pointer' : 'default',
+                                transition: 'background-color 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                if (openable)
+                                  e.currentTarget.style.backgroundColor =
+                                    theme.colors.backgroundSecondary;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  theme.colors.background;
+                              }}
+                            >
+                              <span
+                                style={{
+                                  color: section.color,
+                                  flexShrink: 0,
+                                  width: 16,
+                                  textAlign: 'center',
+                                }}
+                              >
+                                {section.icon}
+                              </span>
+                              <span
+                                style={{
+                                  color: theme.colors.text,
+                                  flex: 1,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {filePath}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               );
-            })()}
+            }
+
+            // Otherwise show normal stats
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: spacing.md,
+                }}
+              >
+                {repositoryPath && (
+                  <RepositoryPackageList
+                    key={repositoryPath}
+                    repositoryPath={repositoryPath}
+                    onOpenFile={openFileInTab}
+                    onPackageHover={setHoveredPackagePath}
+                    onOpenBrowser={actions.openLocalhostBrowser}
+                  />
+                )}
+              </div>
+            );
+          })()}
         </section>
 
         {/* File City 3D - Right */}

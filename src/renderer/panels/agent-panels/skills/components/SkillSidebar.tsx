@@ -3,7 +3,13 @@
  */
 import { Theme } from '@principal-ade/industry-theme';
 import { type PartialSkillMetadata } from '@principal-ade/markdown-utils';
-import { Globe, Folder, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Globe,
+  Folder,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import React from 'react';
 
 import type { MarkdownHeader } from '../utils/extractHeaders';
@@ -179,7 +185,8 @@ export const SkillSidebar: React.FC<SkillSidebarProps> = ({
           e.currentTarget.style.color = theme.colors.background;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+          e.currentTarget.style.backgroundColor =
+            theme.colors.backgroundSecondary;
           e.currentTarget.style.color = theme.colors.textSecondary;
         }}
         title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -196,311 +203,370 @@ export const SkillSidebar: React.FC<SkillSidebarProps> = ({
             backgroundColor: theme.colors.background,
           }}
         >
-        {headers.length > 0 && (
-          <button
-            onClick={() => setActiveTab('toc')}
-            style={{
-              flex: 1,
-              padding: theme.space[2],
-              background: activeTab === 'toc' ? theme.colors.background : 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'toc'
-                ? `2px solid ${theme.colors.primary}`
-                : '2px solid transparent',
-              color: activeTab === 'toc' ? theme.colors.primary : theme.colors.textSecondary,
-              fontFamily: theme.fonts.heading,
-              fontSize: theme.fontSizes[1],
-              fontWeight: activeTab === 'toc' ? 600 : 500,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              if (activeTab !== 'toc') {
-                e.currentTarget.style.color = theme.colors.text;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeTab !== 'toc') {
-                e.currentTarget.style.color = theme.colors.textSecondary;
-              }
-            }}
-          >
-            Contents
-          </button>
-        )}
-        {hasMetadata && (
-          <button
-            onClick={() => setActiveTab('metadata')}
-            style={{
-              flex: 1,
-              padding: theme.space[2],
-              background: activeTab === 'metadata' ? theme.colors.background : 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'metadata'
-                ? `2px solid ${theme.colors.primary}`
-                : '2px solid transparent',
-              color: activeTab === 'metadata' ? theme.colors.primary : theme.colors.textSecondary,
-              fontFamily: theme.fonts.heading,
-              fontSize: theme.fontSizes[1],
-              fontWeight: activeTab === 'metadata' ? 600 : 500,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              if (activeTab !== 'metadata') {
-                e.currentTarget.style.color = theme.colors.text;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeTab !== 'metadata') {
-                e.currentTarget.style.color = theme.colors.textSecondary;
-              }
-            }}
-          >
-            Metadata
-          </button>
-        )}
+          {headers.length > 0 && (
+            <button
+              onClick={() => setActiveTab('toc')}
+              style={{
+                flex: 1,
+                padding: theme.space[2],
+                background:
+                  activeTab === 'toc' ? theme.colors.background : 'transparent',
+                border: 'none',
+                borderBottom:
+                  activeTab === 'toc'
+                    ? `2px solid ${theme.colors.primary}`
+                    : '2px solid transparent',
+                color:
+                  activeTab === 'toc'
+                    ? theme.colors.primary
+                    : theme.colors.textSecondary,
+                fontFamily: theme.fonts.heading,
+                fontSize: theme.fontSizes[1],
+                fontWeight: activeTab === 'toc' ? 600 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'toc') {
+                  e.currentTarget.style.color = theme.colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'toc') {
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }
+              }}
+            >
+              Contents
+            </button>
+          )}
+          {hasMetadata && (
+            <button
+              onClick={() => setActiveTab('metadata')}
+              style={{
+                flex: 1,
+                padding: theme.space[2],
+                background:
+                  activeTab === 'metadata'
+                    ? theme.colors.background
+                    : 'transparent',
+                border: 'none',
+                borderBottom:
+                  activeTab === 'metadata'
+                    ? `2px solid ${theme.colors.primary}`
+                    : '2px solid transparent',
+                color:
+                  activeTab === 'metadata'
+                    ? theme.colors.primary
+                    : theme.colors.textSecondary,
+                fontFamily: theme.fonts.heading,
+                fontSize: theme.fontSizes[1],
+                fontWeight: activeTab === 'metadata' ? 600 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'metadata') {
+                  e.currentTarget.style.color = theme.colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'metadata') {
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }
+              }}
+            >
+              Metadata
+            </button>
+          )}
         </div>
       )}
 
       {/* Tab Content */}
       {!isCollapsed && (
         <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-        {activeTab === 'toc' && headers.length > 0 && (
-          <TableOfContents
-            headers={headers}
-            theme={theme}
-            onHeaderClick={onHeaderClick}
-          />
-        )}
+          {activeTab === 'toc' && headers.length > 0 && (
+            <TableOfContents
+              headers={headers}
+              theme={theme}
+              onHeaderClick={onHeaderClick}
+            />
+          )}
 
-        {activeTab === 'metadata' && hasMetadata && (
-          <div style={{ padding: theme.space[3] }}>
-            {metadata.compatibility && (
-              <div style={{ marginBottom: theme.space[3] }}>
-                <div
-                  style={{
-                    fontFamily: theme.fonts.heading,
-                    fontWeight: 600,
-                    fontSize: theme.fontSizes[0],
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    color: theme.colors.textSecondary,
-                    marginBottom: theme.space[1],
-                  }}
-                >
-                  Compatibility
+          {activeTab === 'metadata' && hasMetadata && (
+            <div style={{ padding: theme.space[3] }}>
+              {metadata.compatibility && (
+                <div style={{ marginBottom: theme.space[3] }}>
+                  <div
+                    style={{
+                      fontFamily: theme.fonts.heading,
+                      fontWeight: 600,
+                      fontSize: theme.fontSizes[0],
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      color: theme.colors.textSecondary,
+                      marginBottom: theme.space[1],
+                    }}
+                  >
+                    Compatibility
+                  </div>
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[1],
+                      color: theme.colors.text,
+                      fontFamily: theme.fonts.body,
+                    }}
+                  >
+                    {metadata.compatibility}
+                  </div>
                 </div>
-                <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.text, fontFamily: theme.fonts.body }}>
-                  {metadata.compatibility}
-                </div>
-              </div>
-            )}
+              )}
 
-            {metadata['allowed-tools'] && metadata['allowed-tools'].length > 0 && (
-              <div style={{ marginBottom: theme.space[3] }}>
-                <div
-                  style={{
-                    fontFamily: theme.fonts.heading,
-                    fontWeight: 600,
-                    fontSize: theme.fontSizes[0],
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    color: theme.colors.textSecondary,
-                    marginBottom: theme.space[1],
-                  }}
-                >
-                  Allowed Tools
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.space[1] }}>
-                  {metadata['allowed-tools'].map((tool, index) => (
-                    <span
-                      key={index}
+              {metadata['allowed-tools'] &&
+                metadata['allowed-tools'].length > 0 && (
+                  <div style={{ marginBottom: theme.space[3] }}>
+                    <div
                       style={{
-                        display: 'inline-block',
-                        paddingTop: theme.space[2],
-                        paddingBottom: theme.space[2],
-                        paddingLeft: theme.space[3],
-                        paddingRight: theme.space[3],
-                        background: theme.colors.primary,
-                        color: theme.colors.background,
-                        borderRadius: '4px',
+                        fontFamily: theme.fonts.heading,
+                        fontWeight: 600,
                         fontSize: theme.fontSizes[0],
-                        fontWeight: 500,
-                        fontFamily: theme.fonts.monospace,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: theme.space[1],
                       }}
                     >
-                      {tool}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {metadata.metadata && Object.keys(metadata.metadata).length > 0 && (
-              <div style={{ marginBottom: theme.space[3] }}>
-                <div
-                  style={{
-                    fontFamily: theme.fonts.heading,
-                    fontWeight: 600,
-                    fontSize: theme.fontSizes[0],
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    color: theme.colors.textSecondary,
-                    marginBottom: theme.space[1],
-                  }}
-                >
-                  Metadata
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: theme.space[1] }}>
-                  {Object.entries(metadata.metadata)
-                    .filter(([key]) => key !== 'last-updated')
-                    .map(([key, value]) => (
-                      <div key={key}>
-                        <div
+                      Allowed Tools
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: theme.space[1],
+                      }}
+                    >
+                      {metadata['allowed-tools'].map((tool) => (
+                        <span
+                          key={tool}
                           style={{
+                            display: 'inline-block',
+                            paddingTop: theme.space[2],
+                            paddingBottom: theme.space[2],
+                            paddingLeft: theme.space[3],
+                            paddingRight: theme.space[3],
+                            background: theme.colors.primary,
+                            color: theme.colors.background,
+                            borderRadius: '4px',
                             fontSize: theme.fontSizes[0],
-                            fontWeight: 600,
-                            color: theme.colors.textSecondary,
-                            fontFamily: theme.fonts.body,
-                          }}
-                        >
-                          {key}:
-                        </div>
-                        <div
-                          style={{
-                            fontSize: theme.fontSizes[1],
-                            color: theme.colors.text,
+                            fontWeight: 500,
                             fontFamily: theme.fonts.monospace,
                           }}
                         >
-                          {value}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
+                          {tool}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {/* Installed Locations section */}
-            {skill?.installedLocations && skill.installedLocations.length > 1 && (
-              <div>
-                <div
-                  style={{
-                    fontFamily: theme.fonts.heading,
-                    fontWeight: 600,
-                    fontSize: theme.fontSizes[0],
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    color: theme.colors.textSecondary,
-                    marginBottom: theme.space[2],
-                  }}
-                >
-                  Installed Locations ({skill.installedLocations.length})
-                </div>
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: theme.space[2],
-                }}>
-                  {skill.installedLocations.map((location, idx) => {
-                    const isPrimary = location.path === skill.path;
-                    const sourceConfig = getSourceConfig(location.source);
+              {metadata.metadata &&
+                Object.keys(metadata.metadata).length > 0 && (
+                  <div style={{ marginBottom: theme.space[3] }}>
+                    <div
+                      style={{
+                        fontFamily: theme.fonts.heading,
+                        fontWeight: 600,
+                        fontSize: theme.fontSizes[0],
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: theme.space[1],
+                      }}
+                    >
+                      Metadata
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: theme.space[1],
+                      }}
+                    >
+                      {Object.entries(metadata.metadata)
+                        .filter(([key]) => key !== 'last-updated')
+                        .map(([key, value]) => (
+                          <div key={key}>
+                            <div
+                              style={{
+                                fontSize: theme.fontSizes[0],
+                                fontWeight: 600,
+                                color: theme.colors.textSecondary,
+                                fontFamily: theme.fonts.body,
+                              }}
+                            >
+                              {key}:
+                            </div>
+                            <div
+                              style={{
+                                fontSize: theme.fontSizes[1],
+                                color: theme.colors.text,
+                                fontFamily: theme.fonts.monospace,
+                              }}
+                            >
+                              {value}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
 
-                    return (
-                      <div
-                        key={idx}
-                        style={{
-                          padding: theme.space[2],
-                          backgroundColor: isPrimary
-                            ? `${theme.colors.primary}08`
-                            : theme.colors.backgroundSecondary,
-                          borderRadius: '6px',
-                          border: `1px solid ${isPrimary
-                            ? theme.colors.primary + '40'
-                            : theme.colors.border}`,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: theme.space[1],
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.space[2], flexWrap: 'wrap' }}>
-                          {/* Source badge */}
+              {/* Installed Locations section */}
+              {skill?.installedLocations &&
+                skill.installedLocations.length > 1 && (
+                  <div>
+                    <div
+                      style={{
+                        fontFamily: theme.fonts.heading,
+                        fontWeight: 600,
+                        fontSize: theme.fontSizes[0],
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: theme.space[2],
+                      }}
+                    >
+                      Installed Locations ({skill.installedLocations.length})
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: theme.space[2],
+                      }}
+                    >
+                      {skill.installedLocations.map((location) => {
+                        const isPrimary = location.path === skill.path;
+                        const sourceConfig = getSourceConfig(location.source);
+
+                        return (
                           <div
+                            key={location.path}
                             style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: '2px 6px',
-                              borderRadius: theme.radii[1],
-                              backgroundColor: sourceConfig.bgColor,
-                              border: `1px solid ${sourceConfig.borderColor}`,
-                              fontSize: theme.fontSizes[0],
-                              color: sourceConfig.color,
-                              fontWeight: 500,
+                              padding: theme.space[2],
+                              backgroundColor: isPrimary
+                                ? `${theme.colors.primary}08`
+                                : theme.colors.backgroundSecondary,
+                              borderRadius: '6px',
+                              border: `1px solid ${
+                                isPrimary
+                                  ? theme.colors.primary + '40'
+                                  : theme.colors.border
+                              }`,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: theme.space[1],
                             }}
                           >
-                            <sourceConfig.icon size={10} />
-                            <span>{sourceConfig.label}</span>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: theme.space[2],
+                                flexWrap: 'wrap',
+                              }}
+                            >
+                              {/* Source badge */}
+                              <div
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '2px 6px',
+                                  borderRadius: theme.radii[1],
+                                  backgroundColor: sourceConfig.bgColor,
+                                  border: `1px solid ${sourceConfig.borderColor}`,
+                                  fontSize: theme.fontSizes[0],
+                                  color: sourceConfig.color,
+                                  fontWeight: 500,
+                                }}
+                              >
+                                <sourceConfig.icon size={10} />
+                                <span>{sourceConfig.label}</span>
+                              </div>
+
+                              {/* Primary indicator */}
+                              {isPrimary && (
+                                <span
+                                  style={{
+                                    fontSize: theme.fontSizes[0],
+                                    color: theme.colors.primary,
+                                    fontWeight: 600,
+                                    fontFamily: theme.fonts.body,
+                                  }}
+                                >
+                                  (Active)
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Path */}
+                            <div
+                              style={{
+                                fontSize: theme.fontSizes[0],
+                                color: theme.colors.textSecondary,
+                                fontFamily: theme.fonts.monospace,
+                                wordBreak: 'break-all',
+                              }}
+                            >
+                              {location.path}
+                            </div>
+
+                            {/* Metadata info if available */}
+                            {location.metadata?.installedAt && (
+                              <div
+                                style={{
+                                  fontSize: theme.fontSizes[0],
+                                  color: theme.colors.textMuted,
+                                  fontFamily: theme.fonts.body,
+                                }}
+                              >
+                                Installed:{' '}
+                                {formatRelativeTime(
+                                  location.metadata.installedAt,
+                                )}
+                              </div>
+                            )}
+
+                            {/* SHA if different from primary */}
+                            {location.metadata?.sha &&
+                              skill.metadata?.sha &&
+                              location.metadata.sha !== skill.metadata.sha && (
+                                <div
+                                  style={{
+                                    fontSize: theme.fontSizes[0],
+                                    color: '#f59e0b', // warning color
+                                    fontFamily: theme.fonts.monospace,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                  }}
+                                >
+                                  <AlertTriangle size={10} />
+                                  <span>
+                                    Different version (SHA:{' '}
+                                    {location.metadata.sha.substring(0, 7)})
+                                  </span>
+                                </div>
+                              )}
                           </div>
-
-                          {/* Primary indicator */}
-                          {isPrimary && (
-                            <span style={{
-                              fontSize: theme.fontSizes[0],
-                              color: theme.colors.primary,
-                              fontWeight: 600,
-                              fontFamily: theme.fonts.body,
-                            }}>
-                              (Active)
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Path */}
-                        <div style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                          fontFamily: theme.fonts.monospace,
-                          wordBreak: 'break-all',
-                        }}>
-                          {location.path}
-                        </div>
-
-                        {/* Metadata info if available */}
-                        {location.metadata?.installedAt && (
-                          <div style={{
-                            fontSize: theme.fontSizes[0],
-                            color: theme.colors.textMuted,
-                            fontFamily: theme.fonts.body,
-                          }}>
-                            Installed: {formatRelativeTime(location.metadata.installedAt)}
-                          </div>
-                        )}
-
-                        {/* SHA if different from primary */}
-                        {location.metadata?.sha && skill.metadata?.sha &&
-                         location.metadata.sha !== skill.metadata.sha && (
-                          <div style={{
-                            fontSize: theme.fontSizes[0],
-                            color: '#f59e0b', // warning color
-                            fontFamily: theme.fonts.monospace,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}>
-                            <AlertTriangle size={10} />
-                            <span>Different version (SHA: {location.metadata.sha.substring(0, 7)})</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+            </div>
+          )}
         </div>
       )}
     </div>

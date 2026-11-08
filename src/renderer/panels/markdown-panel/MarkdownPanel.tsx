@@ -333,7 +333,7 @@ const MarkdownPanelBody: React.FC<MarkdownPanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [noteKey?.repositoryPath, noteKey?.relativeFilePath, notesVersion]);
+  }, [noteKey, notesVersion]);
 
   // File change closes any open popover so we don't apply edits to the wrong doc.
   useEffect(() => {

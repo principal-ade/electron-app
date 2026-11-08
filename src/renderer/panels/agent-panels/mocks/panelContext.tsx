@@ -26,7 +26,7 @@ const mockGitStatusData = {
 const createMockSlice = <T,>(
   name: string,
   data: T,
-  scope: 'workspace' | 'repository' | 'global' = 'repository'
+  scope: 'workspace' | 'repository' | 'global' = 'repository',
 ): DataSlice<T> => ({
   scope,
   name,
@@ -117,7 +117,7 @@ export const createMockContext = (overrides?: any): any => {
     },
     refresh: async (
       scope?: 'workspace' | 'repository',
-      slice?: string
+      slice?: string,
     ): Promise<void> => {
       // eslint-disable-next-line no-console
       console.log('[Mock] Context refresh called', { scope, slice });
@@ -142,7 +142,7 @@ export const createMockContext = (overrides?: any): any => {
  * Mock Panel Actions for Storybook
  */
 export const createMockActions = (
-  overrides?: Partial<PanelActions>
+  overrides?: Partial<PanelActions>,
 ): PanelActions => ({
   openFile: (filePath: string) => {
     // eslint-disable-next-line no-console
@@ -187,7 +187,7 @@ export const createMockEvents = (): PanelEventEmitter => {
       if (!handlers.has(type)) {
         handlers.set(type, new Set());
       }
-      handlers.get(type)!.add(handler as (event: PanelEvent<unknown>) => void);
+      handlers.get(type)?.add(handler as (event: PanelEvent<unknown>) => void);
 
       // Return cleanup function
       return () => {
@@ -213,8 +213,7 @@ export const createMockEvents = (): PanelEventEmitter => {
  * Wraps components with mock context and ThemeProvider for Storybook
  */
 export const MockPanelProvider: React.FC<{
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  children: React.ReactNode | ((props: PanelComponentProps<any, any>) => React.ReactNode);
+  children: React.ReactNode | ((props: PanelComponentProps) => React.ReactNode);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   contextOverrides?: any;
   actionsOverrides?: Partial<PanelActions>;
@@ -222,7 +221,13 @@ export const MockPanelProvider: React.FC<{
   mockSlices?: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mockAdapters?: any;
-}> = ({ children, contextOverrides, actionsOverrides, mockSlices, mockAdapters }) => {
+}> = ({
+  children,
+  contextOverrides,
+  actionsOverrides,
+  mockSlices,
+  mockAdapters,
+}) => {
   // Convert mockSlices from plain object to direct slice properties
   const sliceOverrides: Record<string, DataSlice> = {};
   if (mockSlices) {
@@ -249,9 +254,10 @@ export const MockPanelProvider: React.FC<{
   const events = createMockEvents();
 
   // Support both render prop pattern and regular children
-  const content = typeof children === 'function'
-    ? children({ context, actions, events })
-    : children;
+  const content =
+    typeof children === 'function'
+      ? children({ context, actions, events })
+      : children;
 
   return <ThemeProvider>{content}</ThemeProvider>;
 };

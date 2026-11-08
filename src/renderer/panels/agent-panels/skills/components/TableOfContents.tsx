@@ -72,13 +72,13 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
           padding: 0,
         }}
       >
-        {headers.map((header, index) => {
+        {headers.map((header) => {
           const isActive = activeId === header.id;
           const indentLevel = Math.max(0, header.level - 1);
 
           return (
             <li
-              key={`${header.id}-${index}`}
+              key={header.id}
               style={{
                 marginBottom: theme.space[1],
                 marginLeft: `${indentLevel * 20}px`,
@@ -93,13 +93,24 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                   background: 'none',
                   border: 'none',
                   padding: `${theme.space[1]} ${theme.space[2]}`,
-                  fontSize: header.level === 1 ? theme.fontSizes[2] : header.level === 2 ? theme.fontSizes[1] : theme.fontSizes[0],
+                  fontSize:
+                    header.level === 1
+                      ? theme.fontSizes[2]
+                      : header.level === 2
+                        ? theme.fontSizes[1]
+                        : theme.fontSizes[0],
                   fontFamily: theme.fonts.body,
                   color: isActive ? theme.colors.primary : theme.colors.text,
                   cursor: 'pointer',
                   borderRadius: '4px',
                   transition: 'all 0.2s',
-                  fontWeight: isActive ? 600 : header.level === 1 ? 600 : header.level === 2 ? 500 : 400,
+                  fontWeight: isActive
+                    ? 600
+                    : header.level === 1
+                      ? 600
+                      : header.level === 2
+                        ? 500
+                        : 400,
                   backgroundColor: isActive
                     ? `${theme.colors.primary}15`
                     : 'transparent',
