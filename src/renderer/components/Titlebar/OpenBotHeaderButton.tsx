@@ -3,8 +3,6 @@ import { Bot } from 'lucide-react';
 import type { Theme } from '@principal-ade/industry-theme';
 import { useWorkspaceTabs } from '../../principal-window/PortalTabsContext';
 
-const OPENBOT_APP_PORT = 3010;
-
 export interface OpenBotHeaderButtonProps {
   theme: Theme;
 }
@@ -13,13 +11,13 @@ export interface OpenBotHeaderButtonProps {
 export const OpenBotHeaderButton: React.FC<OpenBotHeaderButtonProps> = ({
   theme,
 }) => {
-  const { openLocalhostBrowser } = useWorkspaceTabs();
+  const { openOpenBotChat } = useWorkspaceTabs();
 
   return (
     <button
       type="button"
-      onClick={() => openLocalhostBrowser(OPENBOT_APP_PORT, '/', 'OpenBot')}
-      title={`Open OpenBot in a tab (localhost:${OPENBOT_APP_PORT})`}
+      onClick={openOpenBotChat}
+      title="Open native OpenBot chat"
       aria-label="OpenBot"
       style={{
         // @ts-ignore - WebkitAppRegion is not in CSSProperties

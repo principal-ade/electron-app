@@ -10,9 +10,10 @@
   },
   "main": "dist/main/main.js",
   "overrides": {
-    "unicorn-magic": "^0.3.0"
+    "unicorn-magic": "^0.4.0"
   },
   "dependencies": {
+    "@ag-ui/client": "1.0.2",
     "@egoist/tipc": "^0.3.2",
     "@octokit/rest": "^22.0.1",
     "@opentelemetry/api": "^1.9.0",
@@ -31,6 +32,7 @@
     "@principal-ai/repository-abstraction": "^0.5.7",
     "@principal-ai/repository-monitoring-server": "^4.0.0",
     "@principal-ai/subsystems-core": "^0.51.2",
+    "@streamdown/code": "^2.0.0",
     "@usebruno/lang": "^0.35.0",
     "@usebruno/requests": "^0.16.0",
     "canvas": "^3.2.1",
@@ -44,6 +46,7 @@
     "node-fetch": "^3.3.2",
     "node-pty": "^1.1.0",
     "simple-git": "^3.30.0",
+    "streamdown": "^2.7.1",
     "ts-json-schema-generator": "^2.4.0"
   }
 }

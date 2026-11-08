@@ -69,6 +69,7 @@ import type { DocumentNotesAPI } from './DocumentNotesAPI';
 import type { DocumentAPI } from './DocumentAPI';
 import type { BrowserAPI } from './BrowserAPI';
 import type { BrunoAPI } from './BrunoAPI';
+import type { OpenBotChatAPI } from './OpenBotChatAPI';
 
 // Re-export for convenience
 export type {
@@ -133,6 +134,7 @@ export interface MainProcessAPI {
   document: DocumentAPI;
   browser: BrowserAPI;
   bruno: BrunoAPI;
+  openbotChat: OpenBotChatAPI;
   processes: ProcessRegistryAPI;
   pullRequestWatch: PullRequestWatchAPI;
 }

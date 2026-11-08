@@ -96,6 +96,7 @@ import { registerSkillLockHandlers } from './skills/skillLockHandlers';
 import { registerSkillEditingHandlers } from './skills/skillEditingHandlers';
 import { registerFileCityImageHandlers } from './stores/FileCityImageService';
 import { registerBrunoHandlers } from './bruno/brunoHandlers';
+import { registerOpenBotChatHandlers } from './openbot/openBotChatHandlers';
 import { registerDocumentNotesHandlers } from './document-notes/documentNotesHandlers';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
@@ -217,6 +218,7 @@ const registerAllIpcHandlers = async () => {
   registerAlexandriaHandlers();
   registerAlexandriaDocsHandlers();
   registerBrunoHandlers(); // Register Bruno panel HTTP request handlers
+  registerOpenBotChatHandlers(); // Register the native OpenBot chat bridge
 
   // Register execute-command handler for git operations
   ipcMain.handle(

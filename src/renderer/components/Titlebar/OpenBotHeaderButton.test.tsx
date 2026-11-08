@@ -20,14 +20,14 @@ const theme = {
   fonts: { body: 'sans-serif' },
 } as unknown as Theme;
 
-test('opens the OpenBot localhost page in a workspace tab', () => {
-  const openLocalhostBrowser = jest.fn();
+test('opens the native OpenBot chat tab', () => {
+  const openOpenBotChat = jest.fn();
   jest.mocked(useWorkspaceTabs).mockReturnValue({
-    openLocalhostBrowser,
+    openOpenBotChat,
   } as unknown as ReturnType<typeof useWorkspaceTabs>);
 
   render(<OpenBotHeaderButton theme={theme} />);
   fireEvent.click(screen.getByRole('button', { name: 'OpenBot' }));
 
-  expect(openLocalhostBrowser).toHaveBeenCalledWith(3010, '/', 'OpenBot');
+  expect(openOpenBotChat).toHaveBeenCalled();
 });

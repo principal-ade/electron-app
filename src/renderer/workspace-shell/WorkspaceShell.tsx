@@ -34,6 +34,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import type { DocumentRange } from '../../shared/documentRange';
 import {
   Globe,
+  Bot,
   Loader2,
   Network,
   PenTool,
@@ -123,6 +124,7 @@ import { ProcessesView } from '../principal-window/views/ProcessesView';
 import { SubsystemModelTabContent } from '../subsystem-models/SubsystemModelTabContent';
 import { C4SketchTabContent } from '../c4-sketches/C4SketchTabContent';
 import { LocalhostBrowserTabContent } from '../principal-window/views/ProcessesView/LocalhostBrowserTabContent';
+import { OpenBotChatTabContent } from '../dev-workspace/openbot-chat/OpenBotChatTabContent';
 import { BuildConfigurationTab } from '../panels/build-configurations/BuildConfigurationTab';
 import type {
   FeedTab,
@@ -130,6 +132,7 @@ import type {
   SubsystemModelTab,
   SkillTab,
   LocalhostBrowserTab,
+  OpenBotChatTab,
   BuildConfigurationTab as BuildConfigurationTabModel,
 } from '../events/portalTabs';
 import { customTabLabel } from '../events/portalTabs';
@@ -517,6 +520,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           return <PencilRuler size={14} />;
         case 'localhost-browser':
           return <Globe size={14} />;
+        case 'openbot-chat':
+          return <Bot size={14} />;
         case 'http-request':
           return <Send size={14} />;
         default:
@@ -638,6 +643,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             />
           );
         }
+        case 'openbot-chat':
+          return <OpenBotChatTabContent key={(tab as OpenBotChatTab).id} />;
         case 'skill': {
           const skillTab = tab as SkillTab;
           return (

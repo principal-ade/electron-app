@@ -57,6 +57,7 @@ import { documentNotesAPI } from './main-process-api-implementations/documentNot
 import { documentAPI } from './main-process-api-implementations/documentApi';
 import { browserAPI } from './main-process-api-implementations/browserApi';
 import { brunoAPI } from './main-process-api-implementations/brunoApi';
+import { openBotChatAPI } from './main-process-api-implementations/openBotChatApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
 
@@ -141,6 +142,7 @@ const mainProcessExposure: MainProcessAPI = {
   document: documentAPI,
   browser: browserAPI,
   bruno: brunoAPI,
+  openbotChat: openBotChatAPI,
 };
 
 // Mermaid removed from preload - will be loaded in renderer instead

@@ -39,6 +39,7 @@ import type {
   C4SketchTab,
   BuildConfigurationTab,
   LocalhostBrowserTab,
+  OpenBotChatTab,
   HttpRequestTab,
 } from '../events/portalTabs';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
@@ -82,6 +83,7 @@ export type WorkspaceTab =
   | BuildConfigurationTab
   // Processes
   | LocalhostBrowserTab
+  | OpenBotChatTab
   | HttpRequestTab;
 
 // ----------------------------------------------------------------------------
@@ -162,6 +164,8 @@ export interface WorkspaceTabsContextValue {
     label?: string,
     processId?: string,
   ) => string;
+  /** Open or focus the native chat surface for the local OpenBot instance. */
+  openOpenBotChat: () => void;
   /**
    * Rename the active tab (or clear the rename with an empty name). Sets
    * `customLabel`, which the tab strip and Home prefer over the computed
@@ -651,6 +655,15 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [],
   );
 
+  const openOpenBotChat = useCallback(() => {
+    openTab('openbot-chat', () => ({
+      id: 'openbot-chat',
+      label: 'OpenBot',
+      contentType: 'openbot-chat',
+      closable: true,
+    } as OpenBotChatTab));
+  }, [openTab]);
+
   const openHttpRequest = useCallback(
     (request: SavedRequest) => {
       const id = `http-request-${request.id}`;
@@ -713,6 +726,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openC4Sketch,
       openBuildConfiguration,
       openLocalhostBrowser,
+      openOpenBotChat,
     }),
     [
       requestPins,
@@ -735,6 +749,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openC4Sketch,
       openBuildConfiguration,
       openLocalhostBrowser,
+      openOpenBotChat,
     ],
   );
 }

@@ -230,6 +230,11 @@ export interface LocalhostBrowserTab extends BaseTab {
   navigationRevision?: number;
 }
 
+/** Native chat surface connected to the locally running OpenBot instance. */
+export interface OpenBotChatTab extends BaseTab {
+  contentType: 'openbot-chat';
+}
+
 /** Union of all tab types the Projects surface renders. */
 export type FeedTab =
   | TerminalTab
@@ -239,6 +244,7 @@ export type FeedTab =
   | UserProfileTab
   | OrgProfileTab
   | FileCityGuideTab
+  | OpenBotChatTab
   | MarkdownDocTab
   | SourceFileTab
   | MediaTab

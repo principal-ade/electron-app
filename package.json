@@ -167,6 +167,7 @@
     ]
   },
   "dependencies": {
+    "@ag-ui/client": "1.0.2",
     "@backlog-md/core": "^0.3.21",
     "@egoist/tipc": "^0.3.2",
     "@electron/notarize": "^3.0.0",
@@ -228,6 +229,7 @@
     "@react-spring/three": "^9.7.5",
     "@react-three/drei": "^10.0.0",
     "@react-three/fiber": "^9.0.0",
+    "@streamdown/code": "^2.0.0",
     "@usebruno/lang": "^0.35.0",
     "@usebruno/requests": "^0.16.0",
     "@xterm/addon-fit": "^0.10.0",
@@ -286,6 +288,7 @@
     "simple-git": "^3.30.0",
     "socket.io-client": "^4.8.1",
     "stream-browserify": "^3.0.0",
+    "streamdown": "^2.7.1",
     "themed-markdown": "0.1.127",
     "three": "^0.172.0",
     "uuid": "^11.1.0",
@@ -524,6 +527,6 @@
     "quit": "q"
   },
   "overrides": {
-    "unicorn-magic": "^0.3.0"
+    "unicorn-magic": "^0.4.0"
   }
 }
