@@ -10,12 +10,24 @@
  */
 import path from 'path';
 import fs from 'fs';
-import { app, protocol, ipcMain, dialog, BrowserWindow, nativeImage } from 'electron';
+import {
+  app,
+  autoUpdater as electronAutoUpdater,
+  protocol,
+  ipcMain,
+  dialog,
+  BrowserWindow,
+  nativeImage,
+} from 'electron';
 import log from 'electron-log';
 import { windowSwitcher } from './window/windowSwitcher';
 import { quickOpen } from './window/quickOpen';
 import { splashScreen } from './window/splashScreen';
 import { getPostUpdateDetector } from './app-version/postUpdateDetection';
+import {
+  flushUpdateLifecycleTelemetry,
+  recordUpdateLifecycleStage,
+} from './app-version/updateLifecycleTelemetry';
 import {
   createWindow,
   applicationWindows,
@@ -359,6 +371,14 @@ app.on('window-all-closed', async () => {
 // Flag to track if quit confirmation is in progress
 let isQuitting = false;
 
+// Updates close windows and quit through Electron's updater. Mark that quit as
+// intentional so the normal user-initiated quit confirmation cannot interfere
+// with installing or relaunching the updated app.
+electronAutoUpdater.on('before-quit-for-update', () => {
+  log.info('[Main Process] Update quit requested; skipping quit confirmation.');
+  isQuitting = true;
+});
+
 // Add a handler for 'before-quit' to show confirmation dialog
 app.on('before-quit', async (event) => {
   // If already quitting or dialog already shown, don't show again
@@ -470,6 +490,13 @@ app.on('open-url', (event, url) => {
 app
   .whenReady()
   .then(async () => {
+    recordUpdateLifecycleStage('startup.app_ready', {
+      'app.version': app.getVersion(),
+      'app.is_packaged': app.isPackaged,
+      'process.pid': process.pid,
+      'process.title': process.title,
+    });
+
     // Dev builds: badge the dock icon (macOS) so a dev app is visually
     // distinct from a production install. Packaged builds are untouched.
     // The dev main bundle lives in .erb/dll, so resolve the asset against
@@ -542,27 +569,70 @@ app
     // registerHandlers() are both idempotent, so the later calls during
     // initializeServices() are harmless no-ops.
     try {
+      recordUpdateLifecycleStage(
+        'startup.early_storage_initialization_started',
+      );
       const {
         initializeStorage,
         getTypedStorageManagerInstance,
       } = require('./stores/initialization');
       await initializeStorage();
       const typedStore = await getTypedStorageManagerInstance();
+      const { refreshTelemetrySettingsFromStore } =
+        require('./telemetry/settings-cache') as typeof import('./telemetry/settings-cache');
+      await refreshTelemetrySettingsFromStore(typedStore);
+      recordUpdateLifecycleStage('startup.early_storage_initialized');
+
+      // Start telemetry before the longer startup path. Keep it non-blocking;
+      // once the provider is ready, replay update lifecycle stages persisted
+      // before telemetry became available.
+      void import('./telemetry')
+        .then(async ({ nodeTelemetry }) => {
+          await nodeTelemetry.initialize();
+          await flushUpdateLifecycleTelemetry();
+        })
+        .catch((error) => {
+          recordUpdateLifecycleStage(
+            'startup.telemetry_initialization_failed',
+            {
+              'error.name': error instanceof Error ? error.name : 'unknown',
+            },
+          );
+        });
+
       const {
         UserPreferencesHandler,
       } = require('./stores/userPreferencesHandler');
       new UserPreferencesHandler(typedStore).registerHandlers();
       log.info('[Main] User preferences handler registered early for splash');
     } catch (err) {
-      log.error('[Main] Failed to register early user preferences handler:', err);
+      recordUpdateLifecycleStage(
+        'startup.early_storage_initialization_failed',
+        {
+          'error.name': err instanceof Error ? err.name : 'unknown',
+        },
+      );
+      log.error(
+        '[Main] Failed to register early user preferences handler:',
+        err,
+      );
     }
 
     // Show splash screen IMMEDIATELY - before any heavy initialization
     const postUpdateDetector = getPostUpdateDetector();
-    postUpdateDetector.checkForPostUpdate();
+    const postUpdateInfo = postUpdateDetector.checkForPostUpdate();
+    if (postUpdateInfo.isPostUpdate) {
+      recordUpdateLifecycleStage('startup.post_update_detected', {
+        'update.previous_version': postUpdateInfo.previousVersion ?? 'unknown',
+        'update.current_version': postUpdateInfo.currentVersion,
+      });
+    }
+    recordUpdateLifecycleStage('startup.splash_creation_started');
     await splashScreen.show();
+    recordUpdateLifecycleStage('startup.splash_shown');
 
     // Initialize auth services FIRST before other services
+    recordUpdateLifecycleStage('startup.auth_services_initialization_started');
     console.log('[Main] Initializing auth services...');
     const AuthStateManager = require('./services/AuthStateManager').default;
     const { authService } = require('./services/AuthService');
@@ -573,6 +643,7 @@ app
       authService: !!authService,
       authStateManager: !!authStateManager,
     });
+    recordUpdateLifecycleStage('startup.auth_services_initialized');
 
     // SecureTokenIPC will be initialized lazily on first use
     // No need to require it here anymore
@@ -588,17 +659,27 @@ app
     }
 
     // Initialize all services (this initializes UserPreferencesHandler)
+    recordUpdateLifecycleStage('startup.services_initialization_started');
     await initializeServices();
+    recordUpdateLifecycleStage('startup.services_initialized');
 
     // Initialize auth state (tokens in plaintext userData file, mode 0o600)
     await authService.initializeAuthState();
     console.log('[Main] Auth state initialized');
+    recordUpdateLifecycleStage('startup.auth_initialized');
 
     // Window handlers are now registered in initializeServices() via modernWindowHandlers
 
     // Note: Window switcher shortcuts are registered via per-window keyboard listeners below
 
-    createWindow();
+    recordUpdateLifecycleStage('startup.main_window_creation_requested');
+    const mainWindow = await createWindow();
+    recordUpdateLifecycleStage('startup.main_window_created', {
+      'app.main_window_created': mainWindow !== null,
+      'app.window_count': BrowserWindow.getAllWindows().filter(
+        (window) => !window.isDestroyed(),
+      ).length,
+    });
 
     app.on('activate', () => {
       if (getIsRestarting()) {
@@ -632,4 +713,9 @@ app
       }
     });
   })
-  .catch(console.log);
+  .catch((error) => {
+    recordUpdateLifecycleStage('startup.initialization_failed', {
+      'error.name': error instanceof Error ? error.name : 'unknown',
+    });
+    console.log(error);
+  });

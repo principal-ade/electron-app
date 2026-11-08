@@ -66,6 +66,7 @@ import {
   refreshTelemetrySettingsFromStore,
 } from './telemetry/settings-cache';
 import { AppVersionManagerAPIEvent } from '../window/main-process-api-implementations/appVersionManagerApi';
+import { flushUpdateLifecycleTelemetry } from './app-version/updateLifecycleTelemetry';
 import { registerDockerHandlers } from './services/ipc/docker/dockerHandlers';
 import { registerOptimizedDockerHandlers } from './services/ipc/docker/optimizedDockerHandlers';
 import {
@@ -393,6 +394,7 @@ export const initializeServices = async () => {
     try {
       const { nodeTelemetry } = await import('./telemetry');
       await nodeTelemetry.initialize();
+      await flushUpdateLifecycleTelemetry();
     } catch (error) {
       console.error(
         '[Main Process] Failed to initialize app telemetry:',

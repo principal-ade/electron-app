@@ -20,6 +20,11 @@ import { ElectronWindowManagerAdapter } from './windowManagerHandlers';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 import MenuBuilder from '../menu';
 import { getAppVersionManagerInstance } from '../app-version';
+import {
+  collectPostUpdateRuntimeDiagnostics,
+  completeUpdateLifecycleAttempt,
+  recordUpdateLifecycleStage,
+} from '../app-version/updateLifecycleTelemetry';
 import { splashScreen } from './splashScreen';
 
 // Import shared types and data structures
@@ -467,6 +472,12 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     );
 
     this.window.webContents.on('render-process-gone', (_event, details) => {
+      if (this.window.id === getMainWindowId()) {
+        recordUpdateLifecycleStage('startup.main_renderer_exited', {
+          'renderer.exit_reason': details.reason,
+          'renderer.exit_code': details.exitCode,
+        });
+      }
       console.error(`[ModernWindow] Render process gone:`, details);
       console.error(`[ModernWindow] Crash reason: ${details.reason}`);
       console.error(`[ModernWindow] Exit code: ${details.exitCode}`);
@@ -489,6 +500,13 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     this.window.webContents.on(
       'did-fail-load',
       (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+        if (this.window.id === getMainWindowId()) {
+          recordUpdateLifecycleStage('startup.main_window_load_failed', {
+            'window.load_error_code': errorCode,
+            'window.load_error': errorDescription.slice(0, 160),
+            'window.load_is_main_frame': isMainFrame,
+          });
+        }
         console.error(`[ModernWindow] Failed to load:`, {
           errorCode,
           errorDescription,
@@ -556,6 +574,12 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     const windowId = this.window.id;
     const tracer = getTracer('principal-ade-main');
 
+    this.window.webContents.on('did-finish-load', () => {
+      if (windowId === getMainWindowId()) {
+        recordUpdateLifecycleStage('startup.main_window_load_finished');
+      }
+    });
+
     // Prevent white flash
     this.window.once('ready-to-show', () => {
       const showSpan = tracer.startSpan('window.ready-to-show', {
@@ -574,6 +598,16 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         this.window.show();
       }
       showSpan.end();
+
+      if (windowId === getMainWindowId()) {
+        recordUpdateLifecycleStage('startup.main_window_ready_to_show', {
+          'window.visible': this.window.isVisible(),
+          'window.show_on_ready': showOnReady,
+        });
+        void collectPostUpdateRuntimeDiagnostics().finally(() => {
+          void completeUpdateLifecycleAttempt();
+        });
+      }
 
       // Close splash screen when main window is ready
       if (splashScreen.isShowing()) {
@@ -722,6 +756,9 @@ export async function createWindow(
     const baseHtmlPath = resolveHtmlPath(htmlFileName);
     const htmlPath = baseHtmlPath;
     appWindow.window.loadURL(htmlPath);
+    if (isMainWindow) {
+      recordUpdateLifecycleStage('startup.main_window_load_requested');
+    }
     console.log(`[ModernWindow] Window ${appWindow.id} loading: ${htmlPath}`);
 
     // Initialize updater for first window only

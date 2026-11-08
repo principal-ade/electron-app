@@ -10,10 +10,16 @@
  * app restart.
  */
 
-import { BasicTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import {
+  BasicTracerProvider,
+  BatchSpanProcessor,
+} from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+} from '@opentelemetry/semantic-conventions';
 import { trace } from '@opentelemetry/api';
 import { app } from 'electron';
 import { defaultTelemetryConfig } from '../../telemetry/config';
@@ -25,6 +31,7 @@ import {
 class NodeTelemetryProvider {
   private provider: BasicTracerProvider | null = null;
   private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
   private unsubscribeSettings: (() => void) | null = null;
 
   /**
@@ -44,6 +51,19 @@ class NodeTelemetryProvider {
       return;
     }
 
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    this.initializationPromise = this.initializeProvider();
+    try {
+      await this.initializationPromise;
+    } finally {
+      this.initializationPromise = null;
+    }
+  }
+
+  private async initializeProvider(): Promise<void> {
     const settings = getTelemetrySettings();
     if (!settings.enabled) {
       console.log('[Telemetry] Main process telemetry disabled via settings');
@@ -55,7 +75,11 @@ class NodeTelemetryProvider {
     // Check if collector is available
     const collectorAvailable = await this.checkCollectorHealth(endpoint);
     if (!collectorAvailable) {
-      console.warn('[Telemetry] Collector not available at', endpoint, '- telemetry disabled');
+      console.warn(
+        '[Telemetry] Collector not available at',
+        endpoint,
+        '- telemetry disabled',
+      );
       return;
     }
 

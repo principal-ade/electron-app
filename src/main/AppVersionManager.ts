@@ -1,4 +1,9 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import {
+  app,
+  autoUpdater as electronAutoUpdater,
+  BrowserWindow,
+  ipcMain,
+} from 'electron';
 import {
   autoUpdater,
   ProgressInfo,
@@ -11,6 +16,12 @@ import { Span, SpanStatusCode } from '@opentelemetry/api';
 import { AppVersionManagerAPIEvent } from '../window/main-process-api-implementations/appVersionManagerApi';
 import { getTracer } from './telemetry';
 import { goodbyeScreen } from './window/goodbyeScreen';
+import { getPostUpdateDetector } from './app-version/postUpdateDetection';
+import {
+  beginUpdateLifecycleAttempt,
+  failUpdateLifecycleAttempt,
+  recordUpdateLifecycleStage,
+} from './app-version/updateLifecycleTelemetry';
 
 type WindowEventData =
   | UpdateInfo
@@ -29,6 +40,7 @@ export default class AppVersionManager {
   private activeCheckSpan: Span | null = null;
   private activeDownloadSpan: Span | null = null;
   private activeInstallSpan: Span | null = null;
+  private updateAttemptId: string | null = null;
 
   // Track last known available version for telemetry
   private lastAvailableVersion: string = '';
@@ -182,6 +194,19 @@ export default class AppVersionManager {
   }
 
   private setupEventHandlers() {
+    electronAutoUpdater.once('before-quit-for-update', () => {
+      recordUpdateLifecycleStage(
+        'update.quit_for_install',
+        {
+          'process.pid': process.pid,
+          'process.title': process.title,
+        },
+        this.updateAttemptId ?? undefined,
+      );
+      this.activeInstallSpan?.addEvent('app_updates.install.quit_for_update');
+      this.endInstallSpan(SpanStatusCode.OK);
+    });
+
     autoUpdater.on('checking-for-update', () => {
       log.info('[AppUpdater] Checking for update - HTTP request started');
 
@@ -292,6 +317,12 @@ export default class AppVersionManager {
         this.emitErrorEvent('check', err);
       } else if (this.activeDownloadSpan) {
         this.emitErrorEvent('download', err);
+      } else if (this.activeInstallSpan) {
+        this.emitErrorEvent('install', err);
+        void failUpdateLifecycleAttempt(
+          err instanceof Error ? err.name : 'unknown',
+          this.updateAttemptId ?? undefined,
+        );
       }
     });
   }
@@ -449,11 +480,23 @@ export default class AppVersionManager {
     log.info('[AppUpdater] Install update requested via TIPC');
     console.log('[AppUpdater] Installing update and restarting...');
 
+    const targetVersion = this.lastAvailableVersion || 'unknown';
+    this.updateAttemptId = beginUpdateLifecycleAttempt(targetVersion);
+    if (targetVersion !== 'unknown') {
+      getPostUpdateDetector().markPendingUpdate(targetVersion);
+    }
+
     // Start install workflow span
     this.activeInstallSpan = tracer.startSpan('app_updates.install');
     this.activeInstallSpan.addEvent('app_updates.install.started', {
-      version: this.lastAvailableVersion,
+      version: targetVersion,
+      'update.attempt_id': this.updateAttemptId,
     });
+    recordUpdateLifecycleStage(
+      'update.goodbye_screen_requested',
+      {},
+      this.updateAttemptId,
+    );
 
     // Show goodbye screen instead of directly calling quitAndInstall
     // The goodbye screen will close other windows and then call quitAndInstall
