@@ -122,6 +122,28 @@ test('does not show commit history playback controls in the repository profile',
   expect(screen.queryByRole('button', { name: 'Full Year' })).toBeNull();
 });
 
+test('shows the file count between repository age and commits', async () => {
+  jest.mocked(actions.getLocalFileTree).mockResolvedValue({
+    allFiles: [{ name: 'one.ts' }, { name: 'two.ts' }],
+  } as unknown as Awaited<ReturnType<RepositoryProfilePanelActions['getLocalFileTree']>>);
+
+  render(
+    <RepositoryProfilePanel
+      context={context()}
+      actions={actions}
+      events={events}
+    />,
+  );
+
+  const filesLabel = await screen.findByText('files');
+  expect(filesLabel.previousElementSibling?.textContent).toBe('2');
+  expect(
+    Array.from(filesLabel.parentElement!.parentElement!.children).map(
+      (stat) => stat.lastElementChild?.textContent,
+    ),
+  ).toEqual(['old', 'files', 'commits']);
+});
+
 test('spotlights only package files without zooming and restores existing layers on leave', async () => {
   const paths = ['packages/ui/index.ts', 'packages/ui/nested/button.ts', 'packages/ui-other/index.ts', 'package.json', 'src/changed.ts'];
   const city = { buildings: paths.map(path => ({ path })) } as CityData;

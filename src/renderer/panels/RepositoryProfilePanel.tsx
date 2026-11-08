@@ -1218,6 +1218,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   }
 
   const initials = getInitials(repositoryData.name);
+  const fileCount = (localFileTree ?? remoteFileTree)?.allFiles?.length;
   return (
     <div
       style={{
@@ -2242,6 +2243,31 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   }}
                 >
                   old
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[3],
+                    fontWeight: theme.fontWeights?.semibold ?? 600,
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '24px',
+                  }}
+                >
+                  {formatNumber(fileCount)}
+                </div>
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  files
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
