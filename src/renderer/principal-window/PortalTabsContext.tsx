@@ -18,7 +18,6 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import type { TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import type { DocumentRange } from '../../shared/documentRange';
 import type { Skill } from '../panels/agent-panels/skills/hooks/useSkillsData';
 import type {
@@ -39,6 +38,7 @@ import type {
   C4SketchTab,
   BuildConfigurationTab,
   LocalhostBrowserTab,
+  TerminalTab,
   OpenBotChatTab,
   HttpRequestTab,
 } from '../events/portalTabs';

@@ -501,11 +501,11 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       const projectsIcon = renderProjectsTabIcon(tab as FeedTab);
       if (projectsIcon) return projectsIcon;
       switch (tab.contentType) {
-        case 'terminal':
-          if (tab.agent) {
-            return renderAgentIcon(tab.agent, 14) ?? <Terminal size={14} />;
-          }
-          return <Terminal size={14} />;
+        case 'terminal': {
+          return tab.agent ? (
+            renderAgentIcon(tab.agent, 14) ?? <Terminal size={14} />
+          ) : <Terminal size={14} />;
+        }
         case 'topics-home':
           return <TopicsIcon size={14} />;
         case 'local-topic':
@@ -679,7 +679,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   );
   type BridgeAwareTerminalTabOpenRequest = TerminalTabOpenRequest & {
     requestId?: string;
-    agent?: string;
     startupNotice?: {
       message: string;
       subtitle?: string;
@@ -1406,7 +1405,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onOpenTabHandled={handleOpenTabHandled}
               renderTabContent={renderTabContent}
               renderTabIcon={renderTabIcon}
-              renderAgentIcon={renderAgentIcon}
               renderTabLabel={renderTabLabel}
               renderEmptyState={renderTerminalEmptyState}
               bottomBarContent={bottomBarContent}
@@ -1459,7 +1457,6 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       handleOpenHomeEntry,
       renderTabContent,
       renderTabIcon,
-      renderAgentIcon,
       renderTabLabel,
       bottomBarContent,
       baseDefaultDirectory,

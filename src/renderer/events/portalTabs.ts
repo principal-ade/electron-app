@@ -13,7 +13,7 @@
  */
 import type {
   BaseTab,
-  TerminalTab,
+  TerminalTab as TerminalPanelTab,
 } from '@industry-theme/xterm-terminal-panel';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
@@ -26,6 +26,9 @@ import type { RequestPanelState } from '@principal-ade/bruno-panels';
 import type { RequestTarget } from '../../shared/requests/preparedRequest';
 import type { DocumentRange } from '../../shared/documentRange';
 import type { Skill } from '../panels/agent-panels/skills/hooks/useSkillsData';
+
+/** Terminal tab shape re-exported from the panel's public tab contract. */
+export type TerminalTab = TerminalPanelTab;
 
 export interface HttpRequestTab extends BaseTab {
   contentType: 'http-request';

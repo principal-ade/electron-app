@@ -2,7 +2,12 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import type { Purl } from '@principal-ai/alexandria-core-library';
 import type { HomePinnedTab } from '../../../shared/types/userPreferences.types';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
-import { buildHomeTabEntries, entryFromTab, resolveRepoPath } from './homeTabEntries';
+import type { TerminalTab } from '../../events/portalTabs';
+import {
+  buildHomeTabEntries,
+  entryFromTab,
+  resolveRepoPath,
+} from './homeTabEntries';
 import type { ProcessEntry } from '../../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 import type { HttpRequestTab } from '../../events/portalTabs';
 
@@ -97,7 +102,7 @@ test('requests appear only in target groups, never under the originating repo, w
   expect(open.requests[0].identifiers[0].requests[0].open).toBe(true);
 });
 
-function terminal(directory = '/work/app'): WorkspaceTab {
+function terminal(directory = '/work/app'): TerminalTab {
   return {
     id: 'terminal-1',
     label: 'Terminal',
@@ -304,12 +309,12 @@ describe('buildHomeTabEntries', () => {
   });
 
   it('preserves a host-assigned terminal custom label instead of numbering it', () => {
-    const named = {
+    const named: TerminalTab = {
       ...terminal(),
       label: 'Fix login',
       customLabel: 'Fix login',
       agent: 'opencode',
-    } as WorkspaceTab;
+    };
     const { repos } = buildHomeTabEntries([entry], [], [named], []);
 
     expect(repos[0].openTabs[0]).toMatchObject({
