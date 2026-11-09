@@ -476,6 +476,11 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     backgroundColor: theme.colors.border,
     margin: '5px 10px 0',
   };
+  const homeSectionDividerStyle: React.CSSProperties = {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    margin: '4px 0',
+  };
 
   const tabNumbers = useMemo(
     () => new Map(tabs.map((tab, index) => [tab.id, index + 1])),
@@ -654,13 +659,21 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 </div>
               )}
               {inProgressGroups.length > 0 &&
-                inProgressGroups.map(([owner, repos]) => {
+                inProgressGroups.map(([owner, repos], index) => {
                   const isUntracked = owner === 'Untracked';
                   const identity = resolveOwnerIdentity(owner, ownerDirectory);
                   return (
                     <div key={owner}>
+                      {index > 0 && (
+                        <div
+                          role="separator"
+                          aria-orientation="horizontal"
+                          style={homeSectionDividerStyle}
+                        />
+                      )}
                       <OrgSectionHeaderCard
                         flush
+                        showDivider={false}
                         showTooltips={false}
                         header={{
                           orgName: identity.label,
@@ -813,6 +826,15 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 
               {homeTabs.processes.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
+                  {(homeTabs.requests.length > 0 ||
+                    inProgressGroups.length > 0 ||
+                    watchedPullRequests.length > 0) && (
+                    <div
+                      role="separator"
+                      aria-orientation="horizontal"
+                      style={homeSectionDividerStyle}
+                    />
+                  )}
                   <div style={tabSectionStyle}>Processes</div>
                   {homeTabs.processes.map((process) => (
                     <HomeProcessRow
@@ -827,11 +849,20 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               {/* Open tabs that don't belong to a repository. */}
               {homeTabs.openTabs.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
+                  {(homeTabs.requests.length > 0 ||
+                    inProgressGroups.length > 0 ||
+                    watchedPullRequests.length > 0 ||
+                    homeTabs.processes.length > 0) && (
+                    <div
+                      role="separator"
+                      aria-orientation="horizontal"
+                      style={homeSectionDividerStyle}
+                    />
+                  )}
                   <div style={tabSectionStyle}>
                     <PanelsTopLeft size={22} color={theme.colors.textSecondary} />
                     <span>Open Tabs</span>
                   </div>
-                  <div role="separator" style={tabSectionDividerStyle} />
                   {homeTabs.openTabs.map((tab) => renderTabEntry(tab, true))}
                 </div>
               )}
@@ -839,11 +870,21 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               {/* Pinned entries whose tab is currently closed. */}
               {homeTabs.pinnedTabs.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
+                  {(homeTabs.requests.length > 0 ||
+                    inProgressGroups.length > 0 ||
+                    watchedPullRequests.length > 0 ||
+                    homeTabs.processes.length > 0 ||
+                    homeTabs.openTabs.length > 0) && (
+                    <div
+                      role="separator"
+                      aria-orientation="horizontal"
+                      style={homeSectionDividerStyle}
+                    />
+                  )}
                   <div style={tabSectionStyle}>
                     <Bookmark size={22} aria-hidden="true" />
                     <span>Pinned</span>
                   </div>
-                  <div role="separator" style={tabSectionDividerStyle} />
                   {homeTabs.pinnedTabs.map((tab) => renderTabEntry(tab, false))}
                 </div>
               )}

@@ -256,36 +256,67 @@ test('Untracked stays expanded and does not open an organization profile', () =>
   expect(screen.getByText('app')).toBeTruthy();
 });
 
-test.each(['Open Tabs', 'Pinned'])(
-  'separates the %s heading from its content with an owner-style divider',
+test('owner groups are separated from each other, not from their repositories', () => {
+  const secondRepo = {
+    ...repo,
+    key: '/work/second',
+    payload: {
+      ...repo.payload,
+      purl: 'pkg:github/zowner/second',
+      github: { owner: 'zowner', name: 'second' },
+      localEntry: { name: 'second', path: '/work/second' },
+    },
+  } as unknown as HomeRepoRow;
+  jest.mocked(buildHomeTabEntries).mockReturnValueOnce({
+    repos: [repo, secondRepo],
+    requests: [],
+    processTabs: new Map(),
+    processes: [],
+    openTabs: [],
+    pinnedTabs: [],
+  });
+
+  renderHome();
+
+  const ownerHeading = screen
+    .getByText('Owner organization')
+    .closest('[role="button"]');
+  const secondHeading = screen.getByText('zowner').closest('[role="button"]');
+  const separator = screen.getByRole('separator');
+  expect(ownerHeading?.nextElementSibling).toBeNull();
+  expect(separator.nextElementSibling).toBe(secondHeading?.parentElement);
+  expect(separator.style.marginLeft).toBe('0px');
+  expect(separator.style.marginRight).toBe('0px');
+});
+
+test.each(['Processes', 'Open Tabs', 'Pinned'] as const)(
+  'separates the %s section from the preceding section, not its content',
   (heading) => {
     const entries: HomeRepoRow['pinnedTabs'] = [
       { id: 'topic', kind: 'topic', label: 'Standalone topic', topicId: 't1' },
     ];
-    renderHome(
-      repo,
-      jest.fn(),
-      heading === 'Pinned' ? entries : [],
-      heading === 'Open Tabs' ? entries : [],
-    );
+    const process = {
+      id: 'process-1',
+    } as unknown as HomeRepoRow['processes'][number];
+    jest.mocked(buildHomeTabEntries).mockReturnValueOnce({
+      repos: [repo],
+      requests: [],
+      processTabs: new Map(),
+      processes: heading === 'Processes' ? [process] : [],
+      openTabs: heading === 'Open Tabs' ? entries : [],
+      pinnedTabs: heading === 'Pinned' ? entries : [],
+    });
+    renderHome();
+
     const divider = screen.getByRole('separator');
     const header = screen.getByText(heading).parentElement;
-    const icon = header?.querySelector('svg');
-    expect(icon?.getAttribute('width')).toBe('22');
-    expect(icon?.getAttribute('height')).toBe('22');
-    expect(header?.style.paddingTop).toBe('12px');
-    expect(header?.style.paddingBottom).toBe('10px');
-    expect(screen.getByText(heading).parentElement?.nextElementSibling).toBe(
-      divider,
+    expect(divider.nextElementSibling).toBe(header);
+    expect(header?.nextElementSibling?.getAttribute('role')).not.toBe(
+      'separator',
     );
     expect(divider.style.height).toBe('1px');
     expect(divider.style.backgroundColor).toBe('rgb(18, 52, 86)');
-    expect(divider.style.margin).toBe('5px 10px 0px');
-    expect(
-      divider.nextElementSibling?.contains(
-        screen.getByText('Standalone topic'),
-      ),
-    ).toBe(true);
+    expect(divider.style.margin).toBe('4px 0px');
   },
 );
 

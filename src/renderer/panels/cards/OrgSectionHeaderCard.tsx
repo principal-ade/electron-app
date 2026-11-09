@@ -21,6 +21,8 @@ export interface OrgSectionHeaderCardProps {
   header: OrgSectionHeaderCardData;
   /** Edge-to-edge heading with its spacing inside the hover target. */
   flush?: boolean;
+  /** Render the hairline divider below the heading. */
+  showDivider?: boolean;
   showTooltips?: boolean;
   isCollapsed?: boolean;
   onToggle?: () => void;
@@ -37,6 +39,7 @@ export interface OrgSectionHeaderCardProps {
 export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
   header,
   flush = false,
+  showDivider = true,
   showTooltips = true,
   isCollapsed = false,
   onToggle,
@@ -169,13 +172,15 @@ export const OrgSectionHeaderCard: React.FC<OrgSectionHeaderCardProps> = ({
         )}
       </div>
 
-      <div
-        style={{
-          height: 1,
-          backgroundColor: theme.colors.border,
-          margin: flush ? '0 10px' : '5px 10px 0',
-        }}
-      />
+      {showDivider && (
+        <div
+          style={{
+            height: 1,
+            backgroundColor: theme.colors.border,
+            margin: flush ? '0 10px' : '5px 10px 0',
+          }}
+        />
+      )}
     </div>
   );
 };
