@@ -36,7 +36,7 @@ import {
   ToolCase,
 } from 'lucide-react';
 import { TopicsIcon } from '../../components/TopicsIcon';
-import { OpenCodeIcon } from '../../components/OpenCodeIcon';
+import { AgentSessionIcon } from '../../sessions-view/AgentSessionIcon';
 import {
   agentContextDragText,
   drawingContextDragText,
@@ -138,7 +138,15 @@ export function homeTabIcon(
       return <Hammer size={size} color={color} />;
     case 'terminal':
       if (entry.agent === 'opencode') {
-        return <OpenCodeIcon size={size} color={color} />;
+        return <AgentSessionIcon agent="OpenCode" size={size} color={color} />;
+      }
+      if (entry.agent === 'claude') {
+        return (
+          <AgentSessionIcon agent="Claude Code" size={size} color={color} />
+        );
+      }
+      if (entry.agent === 'cursor') {
+        return <AgentSessionIcon agent="Cursor" size={size} color={color} />;
       }
       return <Terminal size={size} color={color} />;
     case 'repo-tab':
@@ -175,6 +183,8 @@ export interface HomeTabRowProps {
   /** Whether the build represented by this entry is currently running. */
   working?: boolean;
   pinned: boolean;
+  /** A resumed terminal tab associated with a bookmarked history session. */
+  sessionBookmarked?: boolean;
   /** Extra left padding for child rows nested under a repo row. */
   depth?: number;
   /** Optionally disable pinning for otherwise pinnable tab kinds. */
@@ -209,6 +219,7 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
   programStatus,
   working = false,
   pinned,
+  sessionBookmarked = false,
   depth = 0,
   pinnable = true,
   wrapLabel = false,
@@ -265,7 +276,7 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
     </span>
   ) : null;
   const pinButton =
-    pinnable && isHomeTabPinnable(entry) ? (
+    pinnable && (sessionBookmarked || isHomeTabPinnable(entry)) ? (
       <button
         type="button"
         onClick={(e) => {

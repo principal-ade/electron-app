@@ -383,6 +383,7 @@ export const IntegratedShell: React.FC = () => {
           agent: payload.agent,
           startupNotice: payload.startupNotice,
           command: payload.command,
+          tabId: payload.tabId,
           requestId: payload.requestId,
         });
         return;
@@ -395,6 +396,7 @@ export const IntegratedShell: React.FC = () => {
         agent: payload.agent,
         startupNotice: payload.startupNotice,
         command: payload.command,
+        tabId: payload.tabId,
         requestId: payload.requestId,
       });
     });

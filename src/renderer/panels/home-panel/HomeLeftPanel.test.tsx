@@ -1,6 +1,14 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import type { AgentSessionBookmark } from '../../../shared/types/userPreferences.types';
+import { agentSessionBookmarkTabId } from '../../../shared/agentSessionBookmark';
 import { OpenBotChatService } from '../../main-process-api/OpenBotChatService';
 import type { HomeRepoRow, HomeTabEntry } from './homeTabEntries';
 import { HomeLeftPanel, type HomeLeftPanelProps } from './HomeLeftPanel';
@@ -8,6 +16,8 @@ import { buildHomeTabEntries } from './homeTabEntries';
 
 const mockOpenOrgProfile = jest.fn();
 const mockOpenOpenBotChat = jest.fn();
+const mockSessionBookmarks: AgentSessionBookmark[] = [];
+const mockToggleSessionBookmark = jest.fn();
 jest.mock('../../main-process-api/OpenBotChatService', () => ({
   OpenBotChatService: { listChannels: jest.fn() },
 }));
@@ -69,6 +79,12 @@ jest.mock('./useHomePins', () => ({
     pinnedRepos: [],
     pinnedRepoKeys: new Set(),
     toggleRepoPin: jest.fn(),
+  }),
+}));
+jest.mock('../../sessions-view/useSessionBookmarks', () => ({
+  useSessionBookmarks: () => ({
+    bookmarks: mockSessionBookmarks,
+    toggleSessionBookmark: mockToggleSessionBookmark,
   }),
 }));
 jest.mock('../../principal-window/PortalTabsContext', () => ({
@@ -133,6 +149,7 @@ function renderHome(
     processes: [],
     openTabs,
     pinnedTabs,
+    pinnedSessionBookmarks: mockSessionBookmarks,
   });
   const emit = jest.fn();
   render(
@@ -154,6 +171,8 @@ function renderHome(
 beforeEach(() => {
   mockOpenOrgProfile.mockClear();
   mockOpenOpenBotChat.mockClear();
+  mockSessionBookmarks.splice(0, mockSessionBookmarks.length);
+  mockToggleSessionBookmark.mockClear();
   jest
     .mocked(OpenBotChatService.listChannels)
     .mockReset()
@@ -162,6 +181,110 @@ beforeEach(() => {
     configurable: true,
     value: undefined,
   });
+});
+
+test('shows bookmarked agent sessions in Pinned and resumes or unpins them', async () => {
+  const bookmark: AgentSessionBookmark = {
+    id: 'claude-session-123',
+    title: 'Fix the login flow',
+    directory: '/work/app',
+    agent: 'Claude Code',
+  };
+  mockSessionBookmarks.push(bookmark);
+  const resume = jest.fn().mockResolvedValue(undefined);
+  Object.defineProperty(window, 'mainProcess', {
+    configurable: true,
+    value: { claudeSessionHistory: { resume } },
+  });
+
+  renderHome();
+
+  const session = screen.getByRole('button', {
+    name: 'Resume Claude Code session: Fix the login flow',
+  });
+  expect(screen.getByText('Pinned')).toBeTruthy();
+  expect(session.querySelector('[data-agent-icon="claude"]')).not.toBeNull();
+  fireEvent.click(session);
+  await waitFor(() => {
+    expect(resume).toHaveBeenCalledWith(
+      '/work/app',
+      'claude-session-123',
+      agentSessionBookmarkTabId(bookmark),
+    );
+  });
+
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Unpin Fix the login flow' }),
+  );
+  expect(mockToggleSessionBookmark).toHaveBeenCalledWith(bookmark);
+});
+
+test('renders repo-associated session bookmarks as nested repo rows', () => {
+  const bookmark: AgentSessionBookmark = {
+    id: 'opencode-session-456',
+    title: 'Update the docs',
+    directory: '/work/app',
+    agent: 'OpenCode',
+  };
+  const repoWithSession = { ...repo, sessionBookmarks: [bookmark] };
+  jest.mocked(buildHomeTabEntries).mockReturnValueOnce({
+    repos: [repoWithSession],
+    requests: [],
+    processTabs: new Map(),
+    processes: [],
+    openTabs: [],
+    pinnedTabs: [],
+    pinnedSessionBookmarks: [],
+  });
+
+  renderHome(repoWithSession);
+
+  const session = screen.getByRole('button', {
+    name: 'Resume OpenCode session: Update the docs',
+  });
+  expect(within(session).queryByText('app')).toBeNull();
+  expect(screen.queryByText('Pinned')).toBeNull();
+});
+
+test('keeps a resumed session bookmark on its open terminal row', () => {
+  const bookmark: AgentSessionBookmark = {
+    id: 'claude-session-open',
+    title: 'Fix the login flow',
+    directory: '/work/app',
+    agent: 'Claude Code',
+  };
+  mockSessionBookmarks.push(bookmark);
+  const entry: HomeTabEntry = {
+    id: agentSessionBookmarkTabId(bookmark),
+    kind: 'terminal',
+    label: 'Claude Code · Fix the login flow',
+    agent: 'claude',
+    repoPath: '/work/app',
+  };
+  const repoWithTab = { ...repo, openTabs: [entry] };
+  jest.mocked(buildHomeTabEntries).mockReturnValueOnce({
+    repos: [repoWithTab],
+    requests: [],
+    processTabs: new Map(),
+    processes: [],
+    openTabs: [],
+    pinnedTabs: [],
+    pinnedSessionBookmarks: [],
+  });
+
+  renderHome(repoWithTab);
+
+  const terminal = screen.getByRole('button', {
+    name: 'Open Claude Code · Fix the login flow',
+  });
+  expect(terminal.querySelector('[data-agent-icon="claude"]')).not.toBeNull();
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'Unpin Claude Code · Fix the login flow',
+    }),
+  );
+  expect(mockToggleSessionBookmark).toHaveBeenCalledWith(bookmark);
+  expect(screen.queryByText('Pinned')).toBeNull();
 });
 
 test('shows OpenBot first in Home when connected and opens its tab', async () => {

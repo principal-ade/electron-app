@@ -503,8 +503,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       switch (tab.contentType) {
         case 'terminal': {
           return tab.agent ? (
-            renderAgentIcon(tab.agent, 14) ?? <Terminal size={14} />
-          ) : <Terminal size={14} />;
+            (renderAgentIcon(tab.agent, 14) ?? <Terminal size={14} />)
+          ) : (
+            <Terminal size={14} />
+          );
         }
         case 'topics-home':
           return <TopicsIcon size={14} />;
@@ -980,7 +982,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   // a repo payload, or undefined when the terminal isn't rooted in a registered
   // clone.
   const resolveActiveTerminalRepoPayload = useCallback(():
-    RepositorySelectedPayload | undefined => {
+    | RepositorySelectedPayload
+    | undefined => {
     if (!activeTabDirectory) return undefined;
     try {
       return resolveRepoPayloadForDirectory(activeTabDirectory);
@@ -1206,6 +1209,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         agent: event.payload?.agent,
         startupNotice: event.payload?.startupNotice,
         command: event.payload?.command,
+        tabId: event.payload?.tabId,
         requestId: event.payload?.requestId,
       };
       const nextRequests = [...requestOpenTabsRef.current, openRequest];
@@ -1405,6 +1409,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               renderTabContent={renderTabContent}
               renderTabIcon={renderTabIcon}
               renderTabLabel={renderTabLabel}
+              showCloseButtons
               renderEmptyState={renderTerminalEmptyState}
               bottomBarContent={bottomBarContent}
             />

@@ -34,5 +34,5 @@ export interface OpenCodeSessionHistoryAPI {
     directory: string,
     sessionId: string,
   ): Promise<OpenCodeResumeTarget>;
-  resume(directory: string, sessionId: string): Promise<void>;
+  resume(directory: string, sessionId: string, tabId?: string): Promise<void>;
 }

@@ -344,6 +344,7 @@ const OnboardingPanelFrameworkInner: React.FC<
             directory={terminalDirectory}
             renderer={terminalImplementation}
             programStatus={programStatus}
+            showCloseButtons
             initialTabs={tabs}
             onTabsChange={handleTabsChange}
             renderTabContent={renderTabContent}

@@ -21,6 +21,8 @@
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { Purl } from '@principal-ai/alexandria-core-library';
 import type { HomePinnedTab } from '../../../shared/types/userPreferences.types';
+import type { AgentSessionBookmark } from '../../../shared/types/userPreferences.types';
+import { agentSessionBookmarkTabId } from '../../../shared/agentSessionBookmark';
 import type { CodingAgentId } from '../../../shared/agentSessionTypes';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
 import { customTabLabel } from '../../events/portalTabs';
@@ -64,6 +66,8 @@ export interface HomeRepoRow extends HomeRepository {
   openTabs: HomeTabEntry[];
   /** Closed repo pins: labeled children for topics/models, icons otherwise. */
   pinnedTabs: HomeTabEntry[];
+  /** Bookmarked agent-history sessions rooted in this repository. */
+  sessionBookmarks?: AgentSessionBookmark[];
   /** Whether the user pinned this repo (keeps a clean, tab-less row visible). */
   pinned: boolean;
 }
@@ -81,6 +85,8 @@ export interface HomeTabEntries {
   openTabs: HomeTabEntry[];
   /** Pinned entries with no open tab and no owning repo. */
   pinnedTabs: HomeTabEntry[];
+  /** Bookmarked sessions whose directory does not belong to a registered repo. */
+  pinnedSessionBookmarks?: AgentSessionBookmark[];
 }
 
 /**
@@ -252,6 +258,7 @@ export function buildHomeTabEntries(
   rememberedRequests: readonly SavedRequest[] = [],
   pinnedRepoScopes: ReadonlyMap<string, string> = new Map(),
   detachedTabs: readonly HomeTabEntry[] = [],
+  sessionBookmarks: readonly AgentSessionBookmark[] = [],
 ): HomeTabEntries {
   const rows = new Map<string, HomeRepoRow>();
   const rowFor = (repo: HomeRepository): HomeRepoRow => {
@@ -273,6 +280,23 @@ export function buildHomeTabEntries(
     tabs.filter((tab) => tab.contentType !== 'http-request'),
   )) {
     rowFor(repo);
+  }
+
+  const pinnedSessionBookmarks: AgentSessionBookmark[] = [];
+  const openTabIds = new Set([
+    ...tabs.map((tab) => tab.id),
+    ...detachedTabs.map((tab) => tab.id),
+  ]);
+  for (const bookmark of sessionBookmarks) {
+    if (openTabIds.has(agentSessionBookmarkTabId(bookmark))) continue;
+    const repoPath = resolveRepoPath(bookmark.directory, repositories);
+    const repo = repoPath ? findRepoByPath(repoPath, repositories) : undefined;
+    if (!repoPath || !repo) {
+      pinnedSessionBookmarks.push(bookmark);
+      continue;
+    }
+    const row = rowFor({ key: repoPath, payload: payloadFromLocalEntry(repo) });
+    (row.sessionBookmarks ??= []).push(bookmark);
   }
 
   const scopedRow = (id: string): HomeRepoRow | undefined => {
@@ -493,5 +517,6 @@ export function buildHomeTabEntries(
     repos: [...rows.values()],
     openTabs,
     pinnedTabs,
+    ...(pinnedSessionBookmarks.length > 0 ? { pinnedSessionBookmarks } : {}),
   };
 }

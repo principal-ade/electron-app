@@ -277,6 +277,10 @@ export interface UserPreferences {
      * pinning their repo, never individually.
      */
     homePinnedRepos?: string[];
+    /** Stable identities of bookmarked agent-history sessions. */
+    sessionBookmarks?: string[];
+    /** Display metadata for session bookmarks shown in the Home pinned list. */
+    sessionBookmarkDetails?: AgentSessionBookmark[];
   };
 
   // Onboarding state and completion tracking
@@ -328,6 +332,19 @@ export interface UserPreferences {
   // - validationConfigs: src/renderer/services/validation/ConfiguredValidationService.ts:13
   // - customArchitectureLayers: src/renderer/services/storage/CustomLayersStorageService.ts:3
   // - sessionContexts: src/renderer/services/sessionContextService.ts (with pattern `sessionContexts:${directory}`)
+}
+
+export type AgentSessionBookmarkProvider =
+  | 'OpenCode'
+  | 'Claude Code'
+  | 'Cursor';
+
+/** Enough metadata to show and reopen an agent-history session from Home. */
+export interface AgentSessionBookmark {
+  id: string;
+  title: string;
+  directory: string;
+  agent: AgentSessionBookmarkProvider;
 }
 
 /** Which workspace tab a {@link HomePinnedTab} refers to. */

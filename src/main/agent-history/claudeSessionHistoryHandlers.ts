@@ -12,7 +12,7 @@ export function registerClaudeSessionHistoryHandlers(): void {
   );
   ipcMain.handle(
     ClaudeSessionHistoryEvents.RESUME,
-    async (event, directory: string, sessionId: string) => {
+    async (event, directory: string, sessionId: string, tabId?: string) => {
       const session = await claudeSessionHistoryService.resume(
         directory,
         sessionId,
@@ -21,6 +21,8 @@ export function registerClaudeSessionHistoryHandlers(): void {
         directory: session.directory,
         label: `Claude Code · ${session.title}`,
         command: `claude --resume ${session.id}`,
+        agent: 'claude',
+        tabId,
       });
     },
   );

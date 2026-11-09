@@ -16,6 +16,7 @@ import { UserPreferencesService } from '../../main-process-api/UserPreferencesSe
 import { GitService } from '../../main-process-api/GitService';
 import { BuildConfigurationService } from '../../main-process-api/BuildConfigurationService';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
+import { SessionHistoryService } from '../../main-process-api/SessionHistoryService';
 import {
   extractLocalClones,
   type RepositorySelectedPayload,
@@ -59,8 +60,12 @@ import { PushToRemoteModal } from '../components/PushToRemoteModal';
 import { useProcessRegistry } from '../../hooks/useProcessRegistry';
 import { HomeProcessRow } from './HomeProcessRow';
 import { HomePullRequestRow } from './HomePullRequestRow';
+import { HomeSessionBookmarkRow } from './HomeSessionBookmarkRow';
 import { useWatchedPullRequests } from '../../hooks/useWatchedPullRequests';
 import { requestDefinition } from '../../../shared/requests/preparedRequest';
+import { useSessionBookmarks } from '../../sessions-view/useSessionBookmarks';
+import type { AgentSessionBookmark } from '../../../shared/types/userPreferences.types';
+import { agentSessionBookmarkTabId } from '../../../shared/agentSessionBookmark';
 
 // ---------------------------------------------------------------------------
 // HomeLeftPanel — the home left rail, the user-based sibling of the
@@ -85,6 +90,31 @@ export interface HomeLeftPanelProps {
   onActivateTab: (tabId: string) => void;
   /** Reopen a pinned tab whose tab has been closed. */
   onOpenEntry: (entry: HomeTabEntry) => void;
+}
+
+async function resumeSessionBookmark(
+  session: AgentSessionBookmark,
+): Promise<void> {
+  const tabId = agentSessionBookmarkTabId(session);
+  if (session.agent === 'OpenCode') {
+    await SessionHistoryService.openCode.resume(
+      session.directory,
+      session.id,
+      tabId,
+    );
+  } else if (session.agent === 'Claude Code') {
+    await SessionHistoryService.claude.resume(
+      session.directory,
+      session.id,
+      tabId,
+    );
+  } else {
+    await SessionHistoryService.cursor.resume(
+      session.directory,
+      session.id,
+      tabId,
+    );
+  }
 }
 
 export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
@@ -167,6 +197,18 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     pinnedRepoKeys,
     toggleRepoPin,
   } = useHomePins();
+  const { bookmarks: sessionBookmarks, toggleSessionBookmark } =
+    useSessionBookmarks();
+  const sessionBookmarksByTabId = useMemo(
+    () =>
+      new Map(
+        sessionBookmarks.map((bookmark) => [
+          agentSessionBookmarkTabId(bookmark),
+          bookmark,
+        ]),
+      ),
+    [sessionBookmarks],
+  );
   const {
     savedRequests,
     catalogRequests,
@@ -273,6 +315,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
         catalogRequests,
         pinnedRepoScopes,
         detachedEntries,
+        sessionBookmarks,
       ),
     [
       repositories,
@@ -284,6 +327,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       catalogRequests,
       pinnedRepoScopes,
       detachedEntries,
+      sessionBookmarks,
     ],
   );
   // Repos the monitoring worker is watching — these have live git status;
@@ -532,6 +576,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
 
   const renderTabEntry = (entry: HomeTabEntry, open: boolean, depth = 0) => {
     const detachedWindowId = detachedTabs.get(entry.id)?.windowId;
+    const sessionBookmark = sessionBookmarksByTabId.get(entry.id);
     return (
       <HomeTabRow
         key={entry.id}
@@ -550,7 +595,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
           !!entry.configId &&
           runningBuildConfigIds.has(entry.configId)
         }
-        pinned={pinnedTabIds.has(entry.id)}
+        pinned={pinnedTabIds.has(entry.id) || sessionBookmark !== undefined}
+        sessionBookmarked={sessionBookmark !== undefined}
         depth={depth}
         // Topic and subsystem-model titles are user-authored and often long;
         // wrap rather than truncate them in the narrow rail.
@@ -564,7 +610,11 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
             onOpenEntry(entry);
           }
         }}
-        onTogglePin={() => toggleTabPin(entry)}
+        onTogglePin={() =>
+          sessionBookmark
+            ? toggleSessionBookmark(sessionBookmark)
+            : toggleTabPin(entry)
+        }
         onDropAssociation={topicDropHandler(entry)}
       />
     );
@@ -744,6 +794,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                           status,
                           openTabs,
                           pinnedTabs,
+                          sessionBookmarks: repoSessionBookmarks,
                           processes: repoProcesses,
                         }) => {
                           const entry = payload.localEntry;
@@ -834,6 +885,15 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                                     pin.kind === 'subsystem-model',
                                 )
                                 .map((pin) => renderTabEntry(pin, false, 1))}
+                              {repoSessionBookmarks?.map((bookmark) => (
+                                <HomeSessionBookmarkRow
+                                  key={`session:${bookmark.agent}:${bookmark.directory}:${bookmark.id}`}
+                                  bookmark={bookmark}
+                                  depth={1}
+                                  onResume={resumeSessionBookmark}
+                                  onUnpin={toggleSessionBookmark}
+                                />
+                              ))}
                               {repoProcesses.map((process) => (
                                 <HomeProcessRow
                                   key={process.id}
@@ -887,7 +947,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                       style={homeSectionDividerStyle}
                     />
                   )}
-                  <div style={tabSectionStyle}>Processes</div>
+                  <div style={tabSectionStyle}>
+                    <span>Processes</span>
+                  </div>
                   {homeTabs.processes.map((process) => (
                     <HomeProcessRow
                       key={process.id}
@@ -923,7 +985,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               )}
 
               {/* Pinned entries whose tab is currently closed. */}
-              {homeTabs.pinnedTabs.length > 0 && (
+              {(homeTabs.pinnedTabs.length > 0 ||
+                (homeTabs.pinnedSessionBookmarks?.length ?? 0) > 0) && (
                 <div style={{ marginBottom: 8 }}>
                   {(homeTabs.requests.length > 0 ||
                     inProgressGroups.length > 0 ||
@@ -941,6 +1004,14 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                     <span>Pinned</span>
                   </div>
                   {homeTabs.pinnedTabs.map((tab) => renderTabEntry(tab, false))}
+                  {homeTabs.pinnedSessionBookmarks?.map((bookmark) => (
+                    <HomeSessionBookmarkRow
+                      key={`session:${bookmark.agent}:${bookmark.directory}:${bookmark.id}`}
+                      bookmark={bookmark}
+                      onResume={resumeSessionBookmark}
+                      onUnpin={toggleSessionBookmark}
+                    />
+                  ))}
                 </div>
               )}
 
@@ -949,7 +1020,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 watchedPullRequests.length === 0 &&
                 homeTabs.processes.length === 0 &&
                 homeTabs.openTabs.length === 0 &&
-                homeTabs.pinnedTabs.length === 0 && (
+                homeTabs.pinnedTabs.length === 0 &&
+                (homeTabs.pinnedSessionBookmarks?.length ?? 0) === 0 && (
                   <div
                     style={{
                       padding: '24px 16px',
@@ -958,8 +1030,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                       lineHeight: 1.5,
                     }}
                   >
-                    Nothing in progress — no open or pinned tabs, uncommitted
-                    changes, unpushed commits, or active or pinned processes.
+                    Nothing in progress — no open tabs, pinned items,
+                    uncommitted changes, or unpushed commits.
                   </div>
                 )}
             </div>

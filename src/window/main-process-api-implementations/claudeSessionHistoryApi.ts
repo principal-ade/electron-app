@@ -8,6 +8,17 @@ export const claudeSessionHistoryAPI: ClaudeSessionHistoryAPI = {
   list: () => ipcRenderer.invoke(ClaudeSessionHistoryEvents.LIST),
   search: (query) =>
     ipcRenderer.invoke(ClaudeSessionHistoryEvents.SEARCH, query),
-  resume: (directory, sessionId) =>
-    ipcRenderer.invoke(ClaudeSessionHistoryEvents.RESUME, directory, sessionId),
+  resume: (directory, sessionId, tabId) =>
+    tabId
+      ? ipcRenderer.invoke(
+          ClaudeSessionHistoryEvents.RESUME,
+          directory,
+          sessionId,
+          tabId,
+        )
+      : ipcRenderer.invoke(
+          ClaudeSessionHistoryEvents.RESUME,
+          directory,
+          sessionId,
+        ),
 };

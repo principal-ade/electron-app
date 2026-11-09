@@ -23,10 +23,17 @@ export const openCodeSessionHistoryAPI: OpenCodeSessionHistoryAPI = {
       directory,
       sessionId,
     ),
-  resume: (directory, sessionId) =>
-    ipcRenderer.invoke(
-      OpenCodeSessionHistoryEvents.RESUME,
-      directory,
-      sessionId,
-    ),
+  resume: (directory, sessionId, tabId) =>
+    tabId
+      ? ipcRenderer.invoke(
+          OpenCodeSessionHistoryEvents.RESUME,
+          directory,
+          sessionId,
+          tabId,
+        )
+      : ipcRenderer.invoke(
+          OpenCodeSessionHistoryEvents.RESUME,
+          directory,
+          sessionId,
+        ),
 };

@@ -1,6 +1,10 @@
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { Purl } from '@principal-ai/alexandria-core-library';
-import type { HomePinnedTab } from '../../../shared/types/userPreferences.types';
+import type {
+  AgentSessionBookmark,
+  HomePinnedTab,
+} from '../../../shared/types/userPreferences.types';
+import { agentSessionBookmarkTabId } from '../../../shared/agentSessionBookmark';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
 import type { TerminalTab } from '../../events/portalTabs';
 import {
@@ -17,6 +21,98 @@ const entry = {
   path: '/work/app',
   purl,
 } as AlexandriaEntry;
+
+test('groups bookmarked sessions under the closest registered repository', () => {
+  const nestedRepo = {
+    name: 'nested',
+    path: '/work/app/packages/nested',
+    purl: 'pkg:github/acme/nested',
+  } as AlexandriaEntry;
+  const bookmark: AgentSessionBookmark = {
+    id: 'claude-1',
+    title: 'Fix nested package',
+    directory: '/work/app/packages/nested/src',
+    agent: 'Claude Code',
+  };
+
+  const result = buildHomeTabEntries(
+    [entry, nestedRepo],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    new Map(),
+    [],
+    [bookmark],
+  );
+
+  expect(result.repos).toHaveLength(1);
+  expect(result.repos[0].key).toBe('/work/app/packages/nested');
+  expect(result.repos[0].sessionBookmarks).toEqual([bookmark]);
+  expect(result.pinnedSessionBookmarks).toBeUndefined();
+});
+
+test('keeps a bookmarked session in Pinned when no registered repo matches', () => {
+  const bookmark: AgentSessionBookmark = {
+    id: 'cursor-1',
+    title: 'Update the docs',
+    directory: '/work/elsewhere',
+    agent: 'Cursor',
+  };
+
+  const result = buildHomeTabEntries(
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    new Map(),
+    [],
+    [bookmark],
+  );
+
+  expect(result.pinnedSessionBookmarks).toEqual([bookmark]);
+});
+
+test('represents an open bookmarked session by its terminal tab only', () => {
+  const bookmark: AgentSessionBookmark = {
+    id: 'claude-2',
+    title: 'Fix the tab association',
+    directory: '/work/app',
+    agent: 'Claude Code',
+  };
+  const terminalTab = {
+    ...terminal(bookmark.directory),
+    id: agentSessionBookmarkTabId(bookmark),
+    agent: 'claude',
+  };
+
+  const result = buildHomeTabEntries(
+    [entry],
+    [],
+    [terminalTab],
+    [],
+    [],
+    [],
+    [],
+    new Map(),
+    [],
+    [bookmark],
+  );
+
+  expect(result.repos[0].openTabs).toHaveLength(1);
+  expect(result.repos[0].openTabs[0]).toMatchObject({
+    id: agentSessionBookmarkTabId(bookmark),
+    kind: 'terminal',
+    agent: 'claude',
+  });
+  expect(result.repos[0].sessionBookmarks).toBeUndefined();
+  expect(result.pinnedSessionBookmarks).toBeUndefined();
+});
 
 test('requests appear only in target groups, never under the originating repo, without payloads', () => {
   const request: HttpRequestTab = {

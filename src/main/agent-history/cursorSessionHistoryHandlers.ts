@@ -12,12 +12,14 @@ export function registerCursorSessionHistoryHandlers(): void {
   );
   ipcMain.handle(
     CursorSessionHistoryEvents.RESUME,
-    async (event, directory: string, sessionId: string) => {
+    async (event, directory: string, sessionId: string, tabId?: string) => {
       await cursorSessionHistoryService.resume(directory, sessionId);
       event.sender.send(WindowEvent.OPEN_TERMINAL_TAB, {
         directory,
         label: `Cursor · ${sessionId.slice(0, 8)}`,
         command: `agent --resume=${sessionId}`,
+        agent: 'cursor',
+        tabId,
       });
     },
   );

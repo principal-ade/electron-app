@@ -1,9 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { History, RefreshCw, Search, X } from 'lucide-react';
+import {
+  Bookmark,
+  BookmarkCheck,
+  History,
+  RefreshCw,
+  Search,
+  X,
+} from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { agentSessionBookmarkTabId } from '../../shared/agentSessionBookmark';
+import type { AgentSessionBookmarkProvider } from '../../shared/types/userPreferences.types';
 import { extractLocalClones } from '../events/repositorySelected';
 import { SessionHistoryService } from '../main-process-api/SessionHistoryService';
+import { AgentSessionIcon } from './AgentSessionIcon';
+import { sessionBookmarkKey, useSessionBookmarks } from './useSessionBookmarks';
 
 type Theme = ReturnType<typeof useTheme>['theme'];
 
@@ -17,7 +28,7 @@ interface SessionHistoryEntry {
   directory: string;
   createdAt: number;
   updatedAt: number;
-  agent: 'OpenCode' | 'Claude Code' | 'Cursor';
+  agent: AgentSessionBookmarkProvider;
   canResume: boolean;
 }
 
@@ -131,8 +142,10 @@ const FilterBar: React.FC<{
 const SessionRow: React.FC<{
   session: SessionHistoryEntry;
   resuming: boolean;
+  bookmarked: boolean;
   onResume: () => void;
-}> = ({ session, resuming, onResume }) => {
+  onToggleBookmark: () => void;
+}> = ({ session, resuming, bookmarked, onResume, onToggleBookmark }) => {
   const { theme } = useTheme();
   const spacing = useSpacing(theme);
   const [hovered, setHovered] = useState(false);
@@ -141,102 +154,139 @@ const SessionRow: React.FC<{
   const timeLabel = timestamp > 0 ? timeAgo(timestamp) : '';
 
   return (
-    <button
-      type="button"
-      onClick={onResume}
+    <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      disabled={resuming || !session.canResume}
-      aria-label={
-        session.canResume
-          ? `Open ${session.agent} session: ${session.title}`
-          : `${session.agent} IDE session: ${session.title} (cannot resume from CLI)`
-      }
       style={{
         display: 'flex',
-        alignItems: 'center',
-        gap: spacing.sm,
+        alignItems: 'flex-start',
         width: '100%',
-        padding: `${spacing.sm * 1.5}px ${spacing.sm * 2}px`,
         boxSizing: 'border-box',
         backgroundColor: hovered
           ? theme.colors.backgroundSecondary
           : 'transparent',
-        border: 'none',
         borderBottom: `1px solid ${theme.colors.border}`,
         color: theme.colors.text,
-        cursor: resuming ? 'wait' : 'pointer',
-        textAlign: 'left',
         transition: 'background-color 0.15s ease',
       }}
     >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
+      <button
+        type="button"
+        onClick={onResume}
+        disabled={resuming || !session.canResume}
+        aria-label={
+          session.canResume
+            ? `Open ${session.agent} session: ${session.title}`
+            : `${session.agent} IDE session: ${session.title} (cannot resume from CLI)`
+        }
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing.sm,
+          flex: 1,
+          minWidth: 0,
+          padding: `${spacing.sm * 1.5}px ${spacing.sm * 2}px`,
+          boxSizing: 'border-box',
+          background: 'transparent',
+          border: 'none',
+          color: theme.colors.text,
+          cursor: resuming ? 'wait' : 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[2],
+              fontWeight: 500,
+              marginBottom: 2,
+            }}
+          >
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {session.title}
+            </span>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: spacing.sm,
+              fontFamily: theme.fonts.monospace,
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.textMuted,
+            }}
+          >
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {projectName(session.directory)}
+            </span>
+            {timeLabel && <span style={{ flexShrink: 0 }}>{timeLabel}</span>}
+          </div>
+        </div>
+      </button>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          flexShrink: 0,
+          gap: spacing.xs,
+          paddingTop: spacing.sm * 1.5,
+          paddingRight: spacing.sm * 2,
+        }}
+      >
+        <button
+          type="button"
+          aria-label={`${bookmarked ? 'Remove bookmark from' : 'Bookmark'} ${session.agent} session: ${session.title}`}
+          aria-pressed={bookmarked}
+          title={bookmarked ? 'Remove bookmark' : 'Bookmark session'}
+          onClick={onToggleBookmark}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: spacing.sm,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[2],
-            fontWeight: 500,
-            marginBottom: 2,
+            justifyContent: 'center',
+            flexShrink: 0,
+            padding: spacing.xs,
+            background: 'transparent',
+            border: 'none',
+            color: bookmarked
+              ? theme.colors.primary
+              : theme.colors.textSecondary,
+            cursor: 'pointer',
           }}
         >
-          <span
-            style={{
-              flex: 1,
-              minWidth: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {session.title}
-          </span>
-          <span
-            aria-hidden="true"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              flexShrink: 0,
-              color: hovered ? theme.colors.text : theme.colors.textSecondary,
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[1],
-            }}
-          >
-            {resuming
-              ? 'Opening…'
-              : session.canResume
-                ? session.agent
-                : 'Cursor IDE'}
-          </span>
-        </div>
-        <div
+          {bookmarked ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+        </button>
+        <span
           style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            gap: spacing.sm,
-            fontFamily: theme.fonts.monospace,
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.textMuted,
+            display: 'inline-flex',
+            alignItems: 'center',
+            flexShrink: 0,
+            color: hovered ? theme.colors.text : theme.colors.textSecondary,
           }}
         >
-          <span
-            style={{
-              flex: 1,
-              minWidth: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {projectName(session.directory)}
-          </span>
-          {timeLabel && <span style={{ flexShrink: 0 }}>{timeLabel}</span>}
-        </div>
+          {resuming ? 'Opening…' : <AgentSessionIcon agent={session.agent} />}
+        </span>
       </div>
-    </button>
+    </div>
   );
 };
 
@@ -251,6 +301,8 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [resumingId, setResumingId] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
+  const { isBookmarked, toggleSessionBookmark, syncBookmarkDetails } =
+    useSessionBookmarks();
 
   const directories = useMemo(
     () =>
@@ -358,32 +410,66 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
     };
   }, [directories, query, refreshToken]);
 
-  const resume = useCallback(async (session: SessionHistoryEntry) => {
-    setResumingId(session.id);
-    setError(null);
-    try {
-      if (session.agent === 'OpenCode') {
-        await SessionHistoryService.openCode.resume(
-          session.directory,
-          session.id,
-        );
-      } else if (session.agent === 'Claude Code') {
-        await SessionHistoryService.claude.resume(
-          session.directory,
-          session.id,
-        );
-      } else {
-        await SessionHistoryService.cursor.resume(
-          session.directory,
-          session.id,
-        );
+  useEffect(() => {
+    if (sessions.length > 0) syncBookmarkDetails(sessions);
+  }, [sessions, syncBookmarkDetails]);
+
+  const resume = useCallback(
+    async (session: SessionHistoryEntry) => {
+      setResumingId(session.id);
+      setError(null);
+      const tabId = isBookmarked(sessionBookmarkKey(session))
+        ? agentSessionBookmarkTabId(session)
+        : undefined;
+      try {
+        if (session.agent === 'OpenCode') {
+          if (tabId) {
+            await SessionHistoryService.openCode.resume(
+              session.directory,
+              session.id,
+              tabId,
+            );
+          } else {
+            await SessionHistoryService.openCode.resume(
+              session.directory,
+              session.id,
+            );
+          }
+        } else if (session.agent === 'Claude Code') {
+          if (tabId) {
+            await SessionHistoryService.claude.resume(
+              session.directory,
+              session.id,
+              tabId,
+            );
+          } else {
+            await SessionHistoryService.claude.resume(
+              session.directory,
+              session.id,
+            );
+          }
+        } else {
+          if (tabId) {
+            await SessionHistoryService.cursor.resume(
+              session.directory,
+              session.id,
+              tabId,
+            );
+          } else {
+            await SessionHistoryService.cursor.resume(
+              session.directory,
+              session.id,
+            );
+          }
+        }
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : String(reason));
+      } finally {
+        setResumingId(null);
       }
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
-    } finally {
-      setResumingId(null);
-    }
-  }, []);
+    },
+    [isBookmarked],
+  );
 
   const renderContent = () => {
     if (loading && sessions.length === 0) return <EmptyState text="Loading…" />;
@@ -399,14 +485,31 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
         />
       );
     }
-    return sessions.map((session) => (
-      <SessionRow
-        key={`${session.directory}:${session.id}`}
-        session={session}
-        resuming={resumingId === session.id}
-        onResume={() => void resume(session)}
-      />
-    ));
+    return [...sessions]
+      .sort((a, b) => {
+        const bookmarkOrder =
+          Number(isBookmarked(sessionBookmarkKey(b))) -
+          Number(isBookmarked(sessionBookmarkKey(a)));
+        return (
+          bookmarkOrder ||
+          b.updatedAt - a.updatedAt ||
+          a.title.localeCompare(b.title)
+        );
+      })
+      .map((session) => {
+        const bookmarkKey = sessionBookmarkKey(session);
+        const bookmarked = isBookmarked(bookmarkKey);
+        return (
+          <SessionRow
+            key={`${session.directory}:${session.id}`}
+            session={session}
+            resuming={resumingId === session.id}
+            bookmarked={bookmarked}
+            onResume={() => void resume(session)}
+            onToggleBookmark={() => toggleSessionBookmark(session)}
+          />
+        );
+      });
   };
 
   return (

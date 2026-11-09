@@ -8,23 +8,44 @@ export class SessionHistoryService {
         directories,
         query,
       ),
-    resume: (directory: string, sessionId: string) =>
-      window.mainProcess.openCodeSessionHistory.resume(directory, sessionId),
+    resume: (directory: string, sessionId: string, tabId?: string) =>
+      tabId
+        ? window.mainProcess.openCodeSessionHistory.resume(
+            directory,
+            sessionId,
+            tabId,
+          )
+        : window.mainProcess.openCodeSessionHistory.resume(
+            directory,
+            sessionId,
+          ),
   };
 
   static claude = {
     list: () => window.mainProcess.claudeSessionHistory.list(),
     search: (query: string) =>
       window.mainProcess.claudeSessionHistory.search(query),
-    resume: (directory: string, sessionId: string) =>
-      window.mainProcess.claudeSessionHistory.resume(directory, sessionId),
+    resume: (directory: string, sessionId: string, tabId?: string) =>
+      tabId
+        ? window.mainProcess.claudeSessionHistory.resume(
+            directory,
+            sessionId,
+            tabId,
+          )
+        : window.mainProcess.claudeSessionHistory.resume(directory, sessionId),
   };
 
   static cursor = {
     list: () => window.mainProcess.cursorSessionHistory.list(),
     search: (query: string) =>
       window.mainProcess.cursorSessionHistory.search(query),
-    resume: (directory: string, sessionId: string) =>
-      window.mainProcess.cursorSessionHistory.resume(directory, sessionId),
+    resume: (directory: string, sessionId: string, tabId?: string) =>
+      tabId
+        ? window.mainProcess.cursorSessionHistory.resume(
+            directory,
+            sessionId,
+            tabId,
+          )
+        : window.mainProcess.cursorSessionHistory.resume(directory, sessionId),
   };
 }

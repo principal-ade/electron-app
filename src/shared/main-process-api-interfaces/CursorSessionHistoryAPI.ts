@@ -16,5 +16,5 @@ export enum CursorSessionHistoryEvents {
 export interface CursorSessionHistoryAPI {
   list(): Promise<CursorSessionSummary[]>;
   search(query: string): Promise<CursorSessionSummary[]>;
-  resume(directory: string, sessionId: string): Promise<void>;
+  resume(directory: string, sessionId: string, tabId?: string): Promise<void>;
 }

@@ -48,6 +48,8 @@ export interface OpenTerminalTabPayload {
   startupNotice?: TerminalStartupNotice;
   /** Correlation ID for bridge requests that wait for the tab to open. */
   requestId?: string;
+  /** Optional stable tab identity for reopening a bookmarked agent session. */
+  tabId?: string;
 }
 
 export interface OpenRepositoryExplorerPayload {

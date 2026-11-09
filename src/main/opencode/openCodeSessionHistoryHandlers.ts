@@ -31,7 +31,7 @@ export function registerOpenCodeSessionHistoryHandlers(): void {
   );
   ipcMain.handle(
     OpenCodeSessionHistoryEvents.RESUME,
-    async (event, directory: string, sessionId: string) => {
+    async (event, directory: string, sessionId: string, tabId?: string) => {
       const target = await openCodeSessionHistoryService.getResumeTarget(
         directory,
         sessionId,
@@ -40,6 +40,8 @@ export function registerOpenCodeSessionHistoryHandlers(): void {
         directory: target.cwd,
         label: `OpenCode · ${target.title}`,
         command: `${target.executable} ${target.args.join(' ')}`,
+        agent: 'opencode',
+        tabId,
       });
     },
   );

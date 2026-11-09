@@ -154,6 +154,8 @@ export interface TerminalNewPayload {
   startupNotice?: TerminalStartupNotice;
   /** Correlation ID for bridge requests awaiting tab creation. */
   requestId?: string;
+  /** Stable tab id used to associate a resumed bookmarked session. */
+  tabId?: string;
 }
 
 /** Emit a {@link PORTAL_INTENTS.terminalNew} intent. */

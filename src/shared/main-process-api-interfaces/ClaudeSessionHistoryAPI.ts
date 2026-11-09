@@ -15,5 +15,9 @@ export enum ClaudeSessionHistoryEvents {
 export interface ClaudeSessionHistoryAPI {
   list(): Promise<ClaudeSessionSummary[]>;
   search(query: string): Promise<ClaudeSessionSummary[]>;
-  resume(directory: string, sessionId: string): Promise<ClaudeSessionSummary>;
+  resume(
+    directory: string,
+    sessionId: string,
+    tabId?: string,
+  ): Promise<ClaudeSessionSummary>;
 }

@@ -4,7 +4,19 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import type { ClaudeSessionHistoryAPI } from '../../shared/main-process-api-interfaces/ClaudeSessionHistoryAPI';
 import type { CursorSessionHistoryAPI } from '../../shared/main-process-api-interfaces/CursorSessionHistoryAPI';
 import type { OpenCodeSessionHistoryAPI } from '../../shared/main-process-api-interfaces/OpenCodeSessionHistoryAPI';
+import { agentSessionBookmarkTabId } from '../../shared/agentSessionBookmark';
 import { SessionsLeftPanel } from './SessionsLeftPanel';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+
+jest.mock('../main-process-api/UserPreferencesService', () => ({
+  UserPreferencesService: {
+    getPreferences: jest.fn().mockResolvedValue({
+      interactiveShell: { sessionBookmarks: [] },
+    }),
+    updatePreferences: jest.fn().mockResolvedValue(undefined),
+    onPreferencesUpdated: jest.fn(() => jest.fn()),
+  },
+}));
 
 jest.mock('@principal-ade/industry-theme', () => ({
   useTheme: () => ({
@@ -12,11 +24,14 @@ jest.mock('@principal-ade/industry-theme', () => ({
       colors: {
         text: '#111',
         textSecondary: '#666',
+        textMuted: '#999',
         background: '#fff',
+        backgroundSecondary: '#eee',
         border: '#ddd',
+        primary: '#08f',
       },
       fonts: { body: 'sans-serif' },
-      fontSizes: ['12px', '14px'],
+      fontSizes: ['12px', '14px', '16px'],
     },
   }),
 }));
@@ -27,6 +42,10 @@ describe('SessionsLeftPanel', () => {
   let cursorHistory: jest.Mocked<CursorSessionHistoryAPI>;
 
   beforeEach(() => {
+    jest.clearAllMocks();
+    (UserPreferencesService.getPreferences as jest.Mock).mockResolvedValue({
+      interactiveShell: { sessionBookmarks: [] },
+    });
     history = {
       list: jest.fn(),
       listProjects: jest.fn(),
@@ -76,6 +95,17 @@ describe('SessionsLeftPanel', () => {
 
     expect(await screen.findByText('Fix the session picker')).toBeTruthy();
     expect(history.listProjects).toHaveBeenCalledWith(['/work/example']);
+    expect(
+      document.querySelector('[data-agent-icon="opencode"]'),
+    ).not.toBeNull();
+    const bookmark = screen.getByRole('button', {
+      name: 'Bookmark OpenCode session: Fix the session picker',
+    });
+    expect(
+      bookmark.nextElementSibling?.querySelector(
+        '[data-agent-icon="opencode"]',
+      ),
+    ).not.toBeNull();
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -87,6 +117,72 @@ describe('SessionsLeftPanel', () => {
         '/work/example',
         'ses_history1',
       );
+    });
+  });
+
+  it('bookmarks a session in user preferences and exposes its pinned state', async () => {
+    history.listProjects.mockResolvedValue([
+      {
+        id: 'ses_history1',
+        title: 'Fix the session picker',
+        directory: '/work/example',
+        createdAt: 100,
+        updatedAt: 200,
+      },
+    ]);
+
+    render(
+      <SessionsLeftPanel
+        repositories={[{ path: '/work/example' } as AlexandriaEntry]}
+      />,
+    );
+
+    const bookmark = await screen.findByRole('button', {
+      name: 'Bookmark OpenCode session: Fix the session picker',
+    });
+    fireEvent.click(bookmark);
+
+    expect(bookmark.getAttribute('aria-pressed')).toBe('true');
+    expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
+      interactiveShell: {
+        sessionBookmarks: [
+          JSON.stringify(['OpenCode', '/work/example', 'ses_history1']),
+        ],
+        sessionBookmarkDetails: [
+          {
+            id: 'ses_history1',
+            title: 'Fix the session picker',
+            directory: '/work/example',
+            agent: 'OpenCode',
+          },
+        ],
+      },
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open OpenCode session: Fix the session picker',
+      }),
+    );
+    await waitFor(() => {
+      expect(history.resume).toHaveBeenCalledWith(
+        '/work/example',
+        'ses_history1',
+        agentSessionBookmarkTabId({
+          agent: 'OpenCode',
+          directory: '/work/example',
+          id: 'ses_history1',
+        }),
+      );
+    });
+
+    fireEvent.click(bookmark);
+    expect(bookmark.getAttribute('aria-pressed')).toBe('false');
+    expect(UserPreferencesService.updatePreferences).toHaveBeenLastCalledWith({
+      interactiveShell: {
+        sessionBookmarks: [],
+        sessionBookmarkDetails: [],
+      },
     });
   });
 
@@ -138,11 +234,11 @@ describe('SessionsLeftPanel', () => {
       />,
     );
 
-    fireEvent.click(
-      await screen.findByRole('button', {
-        name: 'Open Claude Code session: Fix the login flow',
-      }),
-    );
+    const claudeSession = await screen.findByRole('button', {
+      name: 'Open Claude Code session: Fix the login flow',
+    });
+    expect(document.querySelector('[data-agent-icon="claude"]')).not.toBeNull();
+    fireEvent.click(claudeSession);
     await waitFor(() => {
       expect(claudeHistory.resume).toHaveBeenCalledWith(
         '/work/example',
@@ -169,11 +265,11 @@ describe('SessionsLeftPanel', () => {
       />,
     );
 
-    fireEvent.click(
-      await screen.findByRole('button', {
-        name: 'Open Cursor session: Update package scripts',
-      }),
-    );
+    const cursorSession = await screen.findByRole('button', {
+      name: 'Open Cursor session: Update package scripts',
+    });
+    expect(document.querySelector('[data-agent-icon="cursor"]')).not.toBeNull();
+    fireEvent.click(cursorSession);
     await waitFor(() => {
       expect(cursorHistory.resume).toHaveBeenCalledWith(
         '/work/example',

@@ -8,6 +8,17 @@ export const cursorSessionHistoryAPI: CursorSessionHistoryAPI = {
   list: () => ipcRenderer.invoke(CursorSessionHistoryEvents.LIST),
   search: (query) =>
     ipcRenderer.invoke(CursorSessionHistoryEvents.SEARCH, query),
-  resume: (directory, sessionId) =>
-    ipcRenderer.invoke(CursorSessionHistoryEvents.RESUME, directory, sessionId),
+  resume: (directory, sessionId, tabId) =>
+    tabId
+      ? ipcRenderer.invoke(
+          CursorSessionHistoryEvents.RESUME,
+          directory,
+          sessionId,
+          tabId,
+        )
+      : ipcRenderer.invoke(
+          CursorSessionHistoryEvents.RESUME,
+          directory,
+          sessionId,
+        ),
 };

@@ -2729,6 +2729,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               activeTabId={activeTabId}
               onActiveTabChange={setActiveTabId}
               programStatus={programStatus}
+              showCloseButtons
               showAllTerminals={showAllTerminals}
               onShowAllTerminalsChange={setShowAllTerminals}
             />
