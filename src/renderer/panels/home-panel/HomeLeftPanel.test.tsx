@@ -77,10 +77,6 @@ jest.mock('../../requests/RequestGroupList', () => ({
   RequestGroupList: () => null,
 }));
 jest.mock('./useWatchedRepos', () => ({ useWatchedRepos: () => new Set() }));
-jest.mock('./HomeSearch', () => ({
-  HomeSearchBar: () => null,
-  HomeSearchResults: () => null,
-}));
 jest.mock('../components/PushToRemoteModal', () => ({
   PushToRemoteModal: () => null,
 }));

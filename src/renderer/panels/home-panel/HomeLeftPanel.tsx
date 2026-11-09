@@ -2,7 +2,7 @@
  * HomeLeftPanel
  *
  * The Home surface's left panel. Shows a UserAboutCard (GitHub profile), the
- * In Progress bar, a search bar, and the list of in-progress repositories
+ * In Progress bar and the list of in-progress repositories
  * (open tabs / uncommitted changes / unpushed commits), grouped by owner with
  * `OrgSectionHeaderCard` and rendered with the Projects-surface rows
  * (`OrgRepoItemCard`).
@@ -12,16 +12,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ProgramStatusRecord } from '@industry-theme/xterm-terminal-panel';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { githubIdToPurl } from '@principal-ai/alexandria-core-library';
-import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { GitService } from '../../main-process-api/GitService';
 import { BuildConfigurationService } from '../../main-process-api/BuildConfigurationService';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import {
   extractLocalClones,
-  payloadFromGithub,
-  payloadFromLocalEntry,
   type RepositorySelectedPayload,
 } from '../../events/repositorySelected';
 import { useTheme } from '@principal-ade/industry-theme';
@@ -31,11 +27,7 @@ import { OrgRepoItemCard } from '../cards/OrgRepoItemCard';
 import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
 import { emitTerminalNew } from '../../events/portalIntents';
 import { shellQuote } from '../../utils/shellQuote';
-import {
-  useGithubOrganizations,
-  useGithubProjectSections,
-  useGithubStarred,
-} from '../../hooks/useGithubGraph';
+import { useGithubOrganizations } from '../../hooks/useGithubGraph';
 import { resolveOwnerIdentity } from '../ownerIdentity';
 import { UserAboutCard } from './UserAboutCard';
 import { type UserAboutInfo } from './useUserAboutInfo';
@@ -62,7 +54,6 @@ import {
 import { savedDefinition } from '../../requests/requestTabs';
 import { RequestGroupList } from '../../requests/RequestGroupList';
 import { useWatchedRepos } from './useWatchedRepos';
-import { HomeSearchBar, HomeSearchResults } from './HomeSearch';
 import { PushToRemoteModal } from '../components/PushToRemoteModal';
 import { useProcessRegistry } from '../../hooks/useProcessRegistry';
 import { HomeProcessRow } from './HomeProcessRow';
@@ -272,18 +263,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // unwatched repos receive staggered refreshes while Home is visible.
   const watchedPaths = useWatchedRepos();
 
-  // Search across projects / clones / starred. The nav cards hide while a
-  // query is active.
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchActive = searchQuery.trim().length > 0;
-
-  // Starred repos are loaded lazily by the shared graph store the first time the
-  // user searches (same cache the Projects list's Starred filter uses).
-  const { starredRepos, ensure: ensureStarred } = useGithubStarred();
-  useEffect(() => {
-    if (searchActive) ensureStarred();
-  }, [searchActive, ensureStarred]);
-
   // Base directory for off-convention detection
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
     string | null
@@ -354,9 +333,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     }, 320);
   }, []);
 
-  // GitHub repo sections for the search — served from the shared graph store
-  // (the same fan-out the Projects list uses), not a second copy of it.
-  const projectSections = useGithubProjectSections();
   const githubLogin = authUser?.login ?? null;
 
   // Orgs (with display names + avatars) for the in-progress section headers.
@@ -372,69 +348,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
       orgs,
     }),
     [githubLogin, profile, orgs],
-  );
-
-  // Build the proper repository:selected payload for a GitHub repo, matching
-  // against local clones when available (so the profile panel knows the path).
-  const emitRepoSelected = useCallback(
-    (repo: GitHubRepository) => {
-      const purl = githubIdToPurl(repo.full_name);
-      const matchingEntries = repositories.filter((entry) => {
-        const entryPurl = entry.purl ?? entry.github?.purl;
-        if (entryPurl) return entryPurl === purl;
-        if (entry.github?.owner && entry.github?.name) {
-          return (
-            githubIdToPurl(`${entry.github.owner}/${entry.github.name}`) ===
-            purl
-          );
-        }
-        return false;
-      });
-      const localEntry = matchingEntries[0];
-      const payload = localEntry
-        ? payloadFromLocalEntry(localEntry, matchingEntries)
-        : payloadFromGithub({
-            owner: repo.owner.login,
-            name: repo.name,
-            description: repo.description ?? undefined,
-            stars: repo.stargazers_count ?? 0,
-            primaryLanguage: repo.language ?? undefined,
-            isPublic: !repo.private,
-            defaultBranch: repo.default_branch,
-            lastUpdated: repo.updated_at,
-            createdAt: repo.created_at,
-          });
-      setSelectedRepo(payload);
-      events.emit({
-        type: 'repository:guide-open',
-        source: 'home-panel',
-        timestamp: Date.now(),
-        payload,
-      });
-    },
-    [events, repositories],
-  );
-
-  const emitLocalEntrySelected = useCallback(
-    (entry: AlexandriaEntry) => {
-      const matchingEntries = repositories.filter((e) => {
-        const ep = e.purl ?? e.github?.purl;
-        const ip = entry.purl ?? entry.github?.purl;
-        return ep && ip && ep === ip;
-      });
-      const payload = payloadFromLocalEntry(
-        entry,
-        matchingEntries.length > 0 ? matchingEntries : undefined,
-      );
-      setSelectedRepo(payload);
-      events.emit({
-        type: 'repository:guide-open',
-        source: 'home-panel',
-        timestamp: Date.now(),
-        payload,
-      });
-    },
-    [events, repositories],
   );
 
   // Right-clicking an in-progress row opens its repo profile tab.
@@ -694,22 +607,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
           }}
         >
           <UserAboutCard info={aboutUser} loading={userLoading} />
-          {/* Search bar — first thing under the about card. */}
-          <HomeSearchBar
-            query={searchQuery}
-            onQueryChange={setSearchQuery}
-            onFocus={ensureStarred}
-          />
-          {searchActive ? (
-            <HomeSearchResults
-              query={searchQuery}
-              projectSections={projectSections}
-              repositories={repositories}
-              starredRepos={starredRepos}
-              onSelectRepo={emitRepoSelected}
-              onSelectEntry={emitLocalEntrySelected}
-            />
-          ) : (
+          <>
             <div
               style={{
                 display: 'flex',
@@ -792,9 +690,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                           const hasActiveTab =
                             activeTabId !== null &&
                             (openTabs.some((tab) => tab.id === activeTabId) ||
-                              pinnedTabs.some(
-                                (pin) => pin.id === activeTabId,
-                              ) ||
+                              pinnedTabs.some((pin) => pin.id === activeTabId) ||
                               repoProcesses.some(
                                 (process) =>
                                   homeTabs.processTabs.get(process.id)?.id ===
@@ -932,10 +828,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               {homeTabs.openTabs.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
                   <div style={tabSectionStyle}>
-                    <PanelsTopLeft
-                      size={22}
-                      color={theme.colors.textSecondary}
-                    />
+                    <PanelsTopLeft size={22} color={theme.colors.textSecondary} />
                     <span>Open Tabs</span>
                   </div>
                   <div role="separator" style={tabSectionDividerStyle} />
@@ -974,7 +867,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                   </div>
                 )}
             </div>
-          )}
+          </>
         </div>
       </div>
 
