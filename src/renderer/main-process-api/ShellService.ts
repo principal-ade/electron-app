@@ -9,9 +9,15 @@ import type {
   StudioLaunchMode,
   StudioLaunchOptions,
   StudioLaunchResult,
+  StudioStatusResult,
 } from '../../shared/main-process-api-interfaces/ShellAPI';
 
-export type { StudioLaunchMode, StudioLaunchOptions, StudioLaunchResult };
+export type {
+  StudioLaunchMode,
+  StudioLaunchOptions,
+  StudioLaunchResult,
+  StudioStatusResult,
+};
 
 export class ShellService {
   /**
@@ -197,5 +203,10 @@ export class ShellService {
   ): Promise<StudioLaunchResult> {
     console.info(`[ShellService] Launching Studio (${options.mode})`);
     return window.mainProcess.shell.launchStudio(options);
+  }
+
+  /** Read Studio's local health endpoint without activating its window. */
+  static async getStudioStatus(): Promise<StudioStatusResult> {
+    return window.mainProcess.shell.getStudioStatus();
   }
 }

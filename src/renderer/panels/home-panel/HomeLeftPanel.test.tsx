@@ -1,11 +1,16 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import { OpenBotChatService } from '../../main-process-api/OpenBotChatService';
 import type { HomeRepoRow, HomeTabEntry } from './homeTabEntries';
 import { HomeLeftPanel, type HomeLeftPanelProps } from './HomeLeftPanel';
 import { buildHomeTabEntries } from './homeTabEntries';
 
 const mockOpenOrgProfile = jest.fn();
+const mockOpenOpenBotChat = jest.fn();
+jest.mock('../../main-process-api/OpenBotChatService', () => ({
+  OpenBotChatService: { listChannels: jest.fn() },
+}));
 
 jest.mock('@industry-theme/xterm-terminal-panel', () => ({
   ProgramStatusBadge: ({ record }: { record: { state: string } }) => (
@@ -71,6 +76,7 @@ jest.mock('../../principal-window/PortalTabsContext', () => ({
     savedRequests: [],
     catalogRequests: [],
     openOrgProfile: mockOpenOrgProfile,
+    openOpenBotChat: mockOpenOpenBotChat,
   }),
 }));
 jest.mock('../../requests/RequestGroupList', () => ({
@@ -147,6 +153,30 @@ function renderHome(
 
 beforeEach(() => {
   mockOpenOrgProfile.mockClear();
+  mockOpenOpenBotChat.mockClear();
+  jest
+    .mocked(OpenBotChatService.listChannels)
+    .mockReset()
+    .mockRejectedValue(new Error('OpenBot unavailable'));
+  Object.defineProperty(window, 'mainProcess', {
+    configurable: true,
+    value: undefined,
+  });
+});
+
+test('shows OpenBot first in Home when connected and opens its tab', async () => {
+  jest.mocked(OpenBotChatService.listChannels).mockResolvedValue([]);
+
+  renderHome();
+
+  const openBotRow = await screen.findByRole('button', {
+    name: 'Open OpenBot',
+  });
+  expect(screen.getAllByRole('button')[0]).toBe(openBotRow);
+  fireEvent.click(openBotRow);
+
+  expect(OpenBotChatService.listChannels).toHaveBeenCalled();
+  expect(mockOpenOpenBotChat).toHaveBeenCalledTimes(1);
 });
 
 test.each(

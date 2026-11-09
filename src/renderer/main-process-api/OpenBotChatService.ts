@@ -5,15 +5,19 @@ import type {
   OpenBotChatRunEvent,
 } from '../../shared/main-process-api-interfaces/OpenBotChatAPI';
 
-const api: OpenBotChatAPI = window.mainProcess.openbotChat;
+const getApi = (): OpenBotChatAPI => {
+  const api = window.mainProcess?.openbotChat;
+  if (!api) throw new Error('OpenBot chat is unavailable in this window.');
+  return api;
+};
 
 export class OpenBotChatService {
   static listChannels(): Promise<OpenBotChatChannel[]> {
-    return api.listChannels();
+    return getApi().listChannels();
   }
 
   static getConversation(channelId: string): Promise<OpenBotConversation> {
-    return api.getConversation(channelId);
+    return getApi().getConversation(channelId);
   }
 
   static sendMessage(
@@ -21,12 +25,12 @@ export class OpenBotChatService {
     text: string,
     requestId: string,
   ): Promise<OpenBotConversation> {
-    return api.sendMessage(channelId, text, requestId);
+    return getApi().sendMessage(channelId, text, requestId);
   }
 
   static onRunEvent(
     callback: (event: OpenBotChatRunEvent) => void,
   ): () => void {
-    return api.onRunEvent(callback);
+    return getApi().onRunEvent(callback);
   }
 }

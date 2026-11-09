@@ -13,6 +13,7 @@ export type InteractiveShellNavigationView =
   | 'onboarding'
   | 'settings'
   | 'monitoring'
+  | 'integrations'
   | 'auth'
   | 'processes'
   | 'requests'
@@ -23,7 +24,7 @@ export type InteractiveShellNavigationView =
 /** Sidebar destinations whose order and visibility can be customized. */
 export type SidebarNavigationItem = Exclude<
   InteractiveShellNavigationView,
-  'home' | 'auth' | 'settings' | 'monitoring'
+  'home' | 'auth' | 'settings' | 'monitoring' | 'integrations'
 >;
 
 // Onboarding state types
@@ -341,6 +342,7 @@ export type HomePinnedTabKind =
   | 'skill'
   | 'localhost-browser'
   | 'terminal'
+  | 'openbot-chat'
   | 'repo-tab'
   | 'build-configuration';
 

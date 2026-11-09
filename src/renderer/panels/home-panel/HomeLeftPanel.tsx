@@ -46,6 +46,7 @@ import {
 import { useHomePins } from './useHomePins';
 import { detachedTabEntry, useDetachedTabs } from './useDetachedTabs';
 import { WindowService } from '../../main-process-api/WindowService';
+import { OpenBotChatService } from '../../main-process-api/OpenBotChatService';
 import { usePinnedRepoScopes } from './usePinnedRepoScopes';
 import {
   useWorkspaceTabs,
@@ -100,6 +101,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // Principal app OAuth — re-runs the profile load on sign-in.
   const { user: authUser, profile } = useAuthUser();
   const { theme } = useTheme();
+  const [openBotConnected, setOpenBotConnected] = useState(false);
   const [selectedRepo, setSelectedRepo] =
     useState<RepositorySelectedPayload | null>(null);
   const [repoCardExiting, setRepoCardExiting] = useState(false);
@@ -173,17 +175,42 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     requestPinError,
     refreshSavedRequests,
     openOrgProfile,
+    openOpenBotChat,
   } = useWorkspaceTabs();
+  const openBotTab = tabs.find((tab) => tab.contentType === 'openbot-chat');
+
+  // OpenBot appears as the first Home tab only while its local chat service is
+  // reachable. Recheck on focus so starting OpenBot while Home is open reveals it.
+  useEffect(() => {
+    let cancelled = false;
+    const checkOpenBotConnection = async () => {
+      try {
+        await OpenBotChatService.listChannels();
+        if (!cancelled) setOpenBotConnected(true);
+      } catch {
+        if (!cancelled) setOpenBotConnected(false);
+      }
+    };
+
+    void checkOpenBotConnection();
+    window.addEventListener('focus', checkOpenBotConnection);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', checkOpenBotConnection);
+    };
+  }, []);
   const pinnedTabEntries = useMemo(
     () => [
       ...preferencePins.filter((entry) => entry.kind !== 'http-request'),
-      ...savedRequests.map((request): HomeTabEntry => ({
-        id: `http-request-${request.id}`,
-        kind: 'http-request',
-        savedRequestId: request.id,
-        label: request.title,
-        repoPath: request.repositoryPath,
-      })),
+      ...savedRequests.map(
+        (request): HomeTabEntry => ({
+          id: `http-request-${request.id}`,
+          kind: 'http-request',
+          savedRequestId: request.id,
+          label: request.title,
+          repoPath: request.repositoryPath,
+        }),
+      ),
     ],
     [preferencePins, savedRequests],
   );
@@ -612,6 +639,29 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
           }}
         >
           <UserAboutCard info={aboutUser} loading={userLoading} />
+          {openBotConnected && (
+            <div style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
+              <HomeTabRow
+                entry={{
+                  id: 'openbot-chat',
+                  kind: 'openbot-chat',
+                  label: 'OpenBot',
+                }}
+                open={!!openBotTab}
+                active={!!openBotTab && activeTabId === openBotTab.id}
+                tabNumber={
+                  openBotTab ? tabNumbers.get(openBotTab.id) : undefined
+                }
+                pinned={false}
+                pinnable={false}
+                onActivate={() => {
+                  if (openBotTab) onActivateTab(openBotTab.id);
+                  else openOpenBotChat();
+                }}
+                onTogglePin={() => {}}
+              />
+            </div>
+          )}
           <>
             <div
               style={{
@@ -703,7 +753,9 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                           const hasActiveTab =
                             activeTabId !== null &&
                             (openTabs.some((tab) => tab.id === activeTabId) ||
-                              pinnedTabs.some((pin) => pin.id === activeTabId) ||
+                              pinnedTabs.some(
+                                (pin) => pin.id === activeTabId,
+                              ) ||
                               repoProcesses.some(
                                 (process) =>
                                   homeTabs.processTabs.get(process.id)?.id ===
@@ -860,7 +912,10 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                     />
                   )}
                   <div style={tabSectionStyle}>
-                    <PanelsTopLeft size={22} color={theme.colors.textSecondary} />
+                    <PanelsTopLeft
+                      size={22}
+                      color={theme.colors.textSecondary}
+                    />
                     <span>Open Tabs</span>
                   </div>
                   {homeTabs.openTabs.map((tab) => renderTabEntry(tab, true))}

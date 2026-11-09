@@ -44,6 +44,7 @@ test('Requests is always available in navigation and uses workspace navigation',
   const { rerender } = render(
     <NavigationSidebar
       activeView="home-panel"
+      activeOverlay={null}
       onViewChange={onViewChange}
       leftPanelCollapsed={false}
       onToggleLeftPanel={onToggleLeftPanel}
@@ -58,6 +59,7 @@ test('Requests is always available in navigation and uses workspace navigation',
   rerender(
     <NavigationSidebar
       activeView="requests"
+      activeOverlay={null}
       onViewChange={onViewChange}
       leftPanelCollapsed={false}
       onToggleLeftPanel={onToggleLeftPanel}
@@ -69,12 +71,33 @@ test('Requests is always available in navigation and uses workspace navigation',
   expect(onToggleLeftPanel).toHaveBeenCalledTimes(1);
 });
 
+test('Integrations is a top-level standalone navigation item', async () => {
+  const onViewChange = jest.fn();
+  render(
+    <NavigationSidebar
+      activeView="home-panel"
+      activeOverlay={null}
+      onViewChange={onViewChange}
+      leftPanelCollapsed={false}
+      onToggleLeftPanel={jest.fn()}
+    />,
+  );
+
+  await waitFor(() =>
+    expect(UserPreferencesService.getPreferences).toHaveBeenCalled(),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Integrations' }));
+
+  expect(onViewChange).toHaveBeenCalledWith('integrations');
+});
+
 test('entering Requests from a collapsed sidebar expands the left panel', async () => {
   const onViewChange = jest.fn();
   const onToggleLeftPanel = jest.fn();
   render(
     <NavigationSidebar
       activeView="projects"
+      activeOverlay={null}
       onViewChange={onViewChange}
       leftPanelCollapsed
       onToggleLeftPanel={onToggleLeftPanel}

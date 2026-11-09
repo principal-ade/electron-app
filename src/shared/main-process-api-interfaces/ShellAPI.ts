@@ -14,6 +14,7 @@ export enum ShellAPIEvent {
   OPEN_KEYCHAIN_ACCESS = 'shell:open-keychain-access',
   OPEN_PRIVACY_SETTINGS = 'shell:open-privacy-settings',
   LAUNCH_STUDIO = 'shell:launch-studio',
+  GET_STUDIO_STATUS = 'shell:get-studio-status',
 }
 
 /** How to launch Subsystems Studio. */
@@ -23,8 +24,8 @@ export interface StudioLaunchOptions {
   /** `dev` runs the source checkout, `installed` runs the published build. */
   mode: StudioLaunchMode;
   /**
-   * Override the path to the Studio source checkout (dev mode only). When
-   * omitted the main process uses its default checkout location.
+   * Override the root of the Studio source checkout (dev mode only). When
+   * omitted the main process uses its default subsystem-modeling checkout.
    */
   devPath?: string;
 }
@@ -36,6 +37,13 @@ export interface StudioLaunchResult {
   target?: string;
   error?: string;
 }
+
+export interface StudioStatusResult {
+  running: boolean;
+  mode?: StudioLaunchMode;
+  port?: number;
+}
+
 export interface ShellAPI {
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
   runCommand: (
@@ -130,4 +138,6 @@ export interface ShellAPI {
    * detached from the desktop app.
    */
   launchStudio: (options: StudioLaunchOptions) => Promise<StudioLaunchResult>;
+  /** Probe Studio's read-only local health endpoint without focusing its window. */
+  getStudioStatus: () => Promise<StudioStatusResult>;
 }

@@ -45,6 +45,7 @@ export type HomeTabEntry = HomePinnedTab;
 export function isHomeTabPinnable(entry: HomeTabEntry): boolean {
   return (
     entry.kind !== 'terminal' &&
+    entry.kind !== 'openbot-chat' &&
     !(entry.kind === 'repo-tab' && entry.variant === 'project-info')
   );
 }
@@ -173,6 +174,10 @@ export function entryFromTab(
       };
     case 'skill':
       return { ...base, kind: 'skill', skillId: tab.skillId };
+    // OpenBot has a connection-gated Home shortcut, rendered before the rest of
+    // the rail rather than in the generic Open Tabs section.
+    case 'openbot-chat':
+      return null;
     case 'localhost-browser':
       return {
         ...base,
@@ -221,7 +226,8 @@ export function resolveRepoPath(
           path.startsWith(String(repo.path).replace(/\/+$/, '') + '/')),
     )
     .sort((a, b) => String(b.path).length - String(a.path).length)[0]?.path as
-    string | undefined;
+    | string
+    | undefined;
 }
 
 function findRepoByPath(

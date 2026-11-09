@@ -9,6 +9,7 @@ interface RepositoryAvatarProps {
   repository?: Repository;
   localClone?: LocalClone;
   customAvatarUrl?: string | null;
+  alt?: string;
   size?: number;
   type: 'owner' | 'repository' | 'clone';
   fallbackIcon?: React.ReactNode;
@@ -23,6 +24,7 @@ interface RepositoryAvatarProps {
 export const RepositoryAvatar: React.FC<RepositoryAvatarProps> = ({
   repository,
   customAvatarUrl,
+  alt,
   size = 40,
   type,
   fallbackIcon,
@@ -39,7 +41,10 @@ export const RepositoryAvatar: React.FC<RepositoryAvatarProps> = ({
       return (
         <img
           src={customAvatarUrl}
-          alt={type === 'clone' ? 'Clone' : repository?.name || 'Repository'}
+          alt={
+            alt ??
+            (type === 'clone' ? 'Clone' : repository?.name || 'Repository')
+          }
           style={{
             width: '100%',
             height: '100%',
@@ -54,7 +59,7 @@ export const RepositoryAvatar: React.FC<RepositoryAvatarProps> = ({
       return (
         <img
           src={repository.avatarUrl}
-          alt={repository.owner || repository.name || 'Repository'}
+          alt={alt ?? repository.owner ?? repository.name ?? 'Repository'}
           style={{
             width: '100%',
             height: '100%',

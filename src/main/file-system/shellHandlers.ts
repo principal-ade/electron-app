@@ -8,6 +8,7 @@ import {
   type StudioLaunchOptions,
   type StudioLaunchResult,
   type StudioLaunchMode,
+  type StudioStatusResult,
 } from '../../shared/main-process-api-interfaces/ShellAPI';
 import path from 'path';
 import {
@@ -35,8 +36,46 @@ const STUDIO_REPO_DIR =
   process.env.PRINCIPAL_STUDIO_REPO ??
   path.join(os.homedir(), 'Developer/principal-ai/subsystem-modeling');
 
-/** The dev-served package inside the monorepo (`bun start` runs Electrobun). */
-const STUDIO_DEV_DIR = path.join(STUDIO_REPO_DIR, 'packages/subsystems-studio');
+const STUDIO_HTTP_PORTS = [3045, 3046] as const;
+
+async function studioHealthAnswers(port: number): Promise<boolean> {
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/health`, {
+      signal: AbortSignal.timeout(750),
+    });
+    if (!response.ok) return false;
+    const payload = (await response.json()) as {
+      status?: unknown;
+      graphify?: unknown;
+    };
+    // Other local services can answer `/health`; graphify is Studio-specific.
+    return payload.status === 'ok' && payload.graphify !== undefined;
+  } catch {
+    return false;
+  }
+}
+
+async function getStudioStatus(): Promise<StudioStatusResult> {
+  const configuredPort = Number(process.env.PRINCIPAL_STUDIO_HTTP_PORT);
+  const ports = [
+    ...(Number.isInteger(configuredPort) && configuredPort > 0
+      ? [configuredPort]
+      : []),
+    ...STUDIO_HTTP_PORTS,
+  ].filter((port, index, all) => all.indexOf(port) === index);
+
+  for (const port of ports) {
+    if (await studioHealthAnswers(port)) {
+      return {
+        running: true,
+        mode: port === 3046 ? 'dev' : port === 3045 ? 'installed' : undefined,
+        port,
+      };
+    }
+  }
+
+  return { running: false };
+}
 
 /**
  * Build an environment whose PATH includes the locations where `bun`,
@@ -164,12 +203,19 @@ async function launchStudio(
   const env = buildStudioEnv();
 
   if (mode === 'dev') {
-    const devDir = options.devPath ?? STUDIO_DEV_DIR;
-    if (!existsSync(devDir)) {
+    const devRepoDir = options.devPath ?? STUDIO_REPO_DIR;
+    const studioPackageDir = path.join(
+      devRepoDir,
+      'packages/subsystems-studio',
+    );
+    if (
+      !existsSync(path.join(devRepoDir, 'package.json')) ||
+      !existsSync(path.join(studioPackageDir, 'package.json'))
+    ) {
       return {
         success: false,
         mode,
-        error: `Studio source checkout not found at ${devDir}. Pass devPath or set PRINCIPAL_STUDIO_REPO.`,
+        error: `Studio source checkout not found at ${devRepoDir}. Pass devPath or set PRINCIPAL_STUDIO_REPO.`,
       };
     }
     const bun = findInPath('bun', env);
@@ -180,13 +226,22 @@ async function launchStudio(
         error: 'Could not find "bun" on PATH. Install it from https://bun.sh',
       };
     }
-    const error = await spawnDetachedChecked(bun, ['start'], {
-      cwd: devDir,
+    const error = await spawnDetachedChecked(bun, ['run', 'dev:studio'], {
+      cwd: devRepoDir,
       env,
     });
     return error
-      ? { success: false, mode, error, target: `${bun} start (${devDir})` }
-      : { success: true, mode, target: `${bun} start (${devDir})` };
+      ? {
+          success: false,
+          mode,
+          error,
+          target: `${bun} run dev:studio (${devRepoDir})`,
+        }
+      : {
+          success: true,
+          mode,
+          target: `${bun} run dev:studio (${devRepoDir})`,
+        };
   }
 
   // Installed: prefer the principal-ai CLI, invoked through its real path.
@@ -783,5 +838,10 @@ export function setupShellHandlers() {
         return { success: false, error: message };
       }
     },
+  );
+
+  ipcMain.handle(
+    ShellAPIEvent.GET_STUDIO_STATUS,
+    async (): Promise<StudioStatusResult> => getStudioStatus(),
   );
 }

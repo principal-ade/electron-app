@@ -17,6 +17,7 @@ import {
 } from '@industry-theme/xterm-terminal-panel';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
+  Bot,
   Bookmark,
   BookmarkCheck,
   Building2,
@@ -85,6 +86,7 @@ function homeTabLabel(entry: HomeTabEntry): string {
  */
 function showsTabNumber(entry: HomeTabEntry): boolean {
   if (entry.kind === 'topic' || entry.kind === 'subsystem-model') return true;
+  if (entry.kind === 'openbot-chat') return true;
   return (
     entry.kind === 'repo-tab' &&
     (entry.variant === 'project-info' || entry.variant === 'repo-explorer')
@@ -128,6 +130,8 @@ export function homeTabIcon(
       return <Network size={size} color={color} />;
     case 'skill':
       return <ToolCase size={size} color={color} />;
+    case 'openbot-chat':
+      return <Bot size={size} color={color} />;
     case 'localhost-browser':
       return <Globe size={size} color={color} />;
     case 'build-configuration':

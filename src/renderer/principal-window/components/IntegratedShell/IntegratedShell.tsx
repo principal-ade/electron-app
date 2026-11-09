@@ -5,6 +5,7 @@ import { IntegratedTitlebar } from './IntegratedTitlebar';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Settings, type SettingsCategory } from '../../views/Settings';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
+import { IntegrationsView } from '../../views/SystemMonitor/IntegrationsView';
 import { AuthView } from '../../views/AuthView';
 import { OnboardingView } from '../../views/OnboardingView';
 import { HomeView } from '../../views/HomeView';
@@ -53,6 +54,7 @@ const OVERLAY_VIEWS: OverlayView[] = [
   'onboarding',
   'settings',
   'monitoring',
+  'integrations',
   'auth',
 ];
 
@@ -69,6 +71,7 @@ const VIEW_OPTIONS = [
   'onboarding',
   'settings',
   'monitoring',
+  'integrations',
   'auth',
   'processes',
   'requests',
@@ -226,6 +229,7 @@ export const IntegratedShell: React.FC = () => {
     onboarding: { left: false, right: false },
     auth: { left: false, right: false },
     monitoring: { left: false, right: false },
+    integrations: { left: false, right: false },
     settings: { left: false, right: false },
     processes: { left: false, right: false },
     requests: { left: false, right: false },
@@ -832,6 +836,7 @@ export const IntegratedShell: React.FC = () => {
     >
       <NavigationSidebar
         activeView={surface}
+        activeOverlay={overlay}
         onViewChange={requestView}
         leftPanelCollapsed={sidebarCollapsed}
         onToggleLeftPanel={() => {
@@ -983,6 +988,7 @@ export const IntegratedShell: React.FC = () => {
                     {overlay === 'monitoring' && (
                       <SystemMonitor sidebarCollapsed={sidebarCollapsed} />
                     )}
+                    {overlay === 'integrations' && <IntegrationsView />}
                     {overlay === 'settings' && (
                       <Settings initialCategory={settingsCategory} />
                     )}

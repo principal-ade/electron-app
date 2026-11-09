@@ -10,12 +10,13 @@ import {
   Home,
   Network,
   Send,
+  Puzzle,
 } from 'lucide-react';
 import { TopicsIcon } from '../../../components/TopicsIcon';
 import { GitIcon } from '../../../components/GitIcon';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { GithubService } from '../../../main-process-api/GithubService';
-import type { NavigationView } from './IntegratedShell';
+import type { NavigationView, OverlayView } from './IntegratedShell';
 import React, { useEffect, useState } from 'react';
 import { useProcessRegistry } from '../../../hooks/useProcessRegistry';
 import { blurAfterPointerActivation } from '../../../utils/blurAfterPointerActivation';
@@ -29,6 +30,7 @@ interface NavigationSidebarProps {
    * it (the surface is still where you are).
    */
   activeView: NavigationView | null;
+  activeOverlay: OverlayView | null;
   onViewChange: (view: NavigationView) => void;
   leftPanelCollapsed: boolean;
   onToggleLeftPanel: () => void;
@@ -93,6 +95,7 @@ const RepositoryOwnerAvatar: React.FC<{ owner: string }> = ({ owner }) => {
 
 export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   activeView,
+  activeOverlay,
   onViewChange,
   leftPanelCollapsed,
   onToggleLeftPanel,
@@ -212,6 +215,11 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       label: 'Monitor',
     },
     {
+      id: 'integrations',
+      icon: <Puzzle size={20} />,
+      label: 'Integrations',
+    },
+    {
       id: 'settings',
       icon: <Settings size={20} />,
       label: 'Settings',
@@ -235,10 +243,16 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   }
 
   const renderNavItem = (item: NavItem) => {
+    const isStandaloneView =
+      item.id === 'monitoring' ||
+      item.id === 'integrations' ||
+      item.id === 'settings';
     const active =
       item.id === 'repository'
         ? isRepositoryActive
-        : !isRepositoryActive && activeView === item.id;
+        : isStandaloneView
+          ? activeOverlay === item.id
+          : !isRepositoryActive && activeView === item.id;
     const hovered = hoveredNavItemId === item.id;
 
     return (

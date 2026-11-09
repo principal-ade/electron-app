@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.848",
+  "version": "0.0.866",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -105,7 +105,7 @@
     "typecheck:watch": "tsc --build --watch --noEmit",
     "typecheck:strict:watch": "tsc --project tsconfig.strict.json --noEmit --watch",
     "knip": "knip",
-    "storybook": "storybook dev -p 6006",
+    "storybook": "cross-env NODE_ENV=development storybook dev -p 6006",
     "build-storybook": "storybook build",
     "prepare": "husky"
   },
@@ -183,7 +183,7 @@
     "@industry-theme/github-panels": "^0.4.5",
     "@industry-theme/localhost-panels": "^0.2.5",
     "@industry-theme/repository-composition-panels": "^0.7.92",
-    "@industry-theme/xterm-terminal-panel": "^0.12.1",
+    "@industry-theme/xterm-terminal-panel": "^0.12.2",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
     "@octokit/rest": "^22.0.1",

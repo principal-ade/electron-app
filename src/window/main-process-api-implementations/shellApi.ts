@@ -4,6 +4,7 @@ import type { TerminalId } from '../../shared/types/terminal.types';
 import {
   ShellAPIEvent,
   type StudioLaunchOptions,
+  type StudioStatusResult,
 } from '../../shared/main-process-api-interfaces/ShellAPI';
 
 export const shellAPI = {
@@ -81,4 +82,7 @@ export const shellAPI = {
   // Launch Subsystems Studio (dev source checkout or installed build)
   launchStudio: async (options: StudioLaunchOptions) =>
     ipcRenderer.invoke(ShellAPIEvent.LAUNCH_STUDIO, options),
+
+  getStudioStatus: async (): Promise<StudioStatusResult> =>
+    ipcRenderer.invoke(ShellAPIEvent.GET_STUDIO_STATUS),
 };

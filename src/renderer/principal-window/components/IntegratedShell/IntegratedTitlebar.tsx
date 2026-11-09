@@ -4,8 +4,6 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
 import { Radar } from 'lucide-react';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
-import { StudioHeaderButton } from '../../../components/Titlebar/StudioHeaderButton';
-import { OpenBotHeaderButton } from '../../../components/Titlebar/OpenBotHeaderButton';
 import { TerminalDaemonUpdateIndicator } from '../../../components/Titlebar/TerminalDaemonUpdateIndicator';
 import { blurAfterPointerActivation } from '../../../utils/blurAfterPointerActivation';
 
@@ -168,8 +166,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         }}
       >
         <TerminalDaemonUpdateIndicator />
-        <OpenBotHeaderButton theme={theme} />
-        <StudioHeaderButton theme={theme} />
         {showSidebarControl && onToggleSidebar && (
           <ViewSidebarControls
             isCollapsed={sidebarCollapsed}
