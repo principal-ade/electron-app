@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import {
   describeDaemonBuildMismatch,
+  describeDaemonStatusMismatch,
   hashBundleFile,
   type DaemonBuildInfo,
 } from './buildIdentity';
@@ -52,6 +53,31 @@ describe('describeDaemonBuildMismatch', () => {
     expect(
       describeDaemonBuildMismatch(build('old'), build(null)),
     ).not.toBeNull();
+  });
+});
+
+describe('describeDaemonStatusMismatch', () => {
+  const available = build('new');
+
+  it('does not infer a mismatch when the status request failed', () => {
+    expect(describeDaemonStatusMismatch(null, available)).toBeNull();
+    expect(describeDaemonStatusMismatch(undefined, available)).toBeNull();
+  });
+
+  it('still treats a responding legacy daemon without build metadata as stale', () => {
+    expect(describeDaemonStatusMismatch({}, available)).toEqual({
+      running: null,
+      available,
+    });
+  });
+
+  it('compares build metadata from a responding daemon', () => {
+    expect(
+      describeDaemonStatusMismatch({ build: build('old') }, available),
+    ).toEqual({ running: build('old'), available });
+    expect(
+      describeDaemonStatusMismatch({ build: build('new') }, available),
+    ).toBeNull();
   });
 });
 

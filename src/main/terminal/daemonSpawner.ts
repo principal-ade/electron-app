@@ -19,8 +19,9 @@ import {
   DAEMON_START_POLL_INTERVAL_MS,
 } from '../../shared/pty-daemon/constants';
 import type { DaemonStatusInfo } from '../../shared/pty-daemon/protocol';
+import { resolveDaemonRuntimePath } from '../../shared/pty-daemon/daemonRuntimePath';
 import {
-  describeDaemonBuildMismatch,
+  describeDaemonStatusMismatch,
   hashBundleFile,
   type DaemonBuildInfo,
   type DaemonBuildMismatch,
@@ -164,6 +165,13 @@ export async function getDaemonPid(): Promise<number | null> {
  */
 export async function spawnDaemon(): Promise<void> {
   const daemonPath = getDaemonPath();
+  const daemonRuntimePath = resolveDaemonRuntimePath({
+    platform: process.platform,
+    executablePath: process.execPath,
+    appName: app.getName(),
+    isPackaged: app.isPackaged,
+    existsSync: fs.existsSync,
+  });
   console.log(`[daemonSpawner] Daemon path: ${daemonPath}`);
 
   // Check if daemon file exists
@@ -208,7 +216,7 @@ export async function spawnDaemon(): Promise<void> {
   logHeader && fs.writeSync(logFd, logHeader);
 
   console.log(`[daemonSpawner] Daemon log: ${DAEMON_LOG_FILE}`);
-  console.log(`[daemonSpawner] Using execPath: ${process.execPath}`);
+  console.log(`[daemonSpawner] Using daemon runtime: ${daemonRuntimePath}`);
   console.log(`[daemonSpawner] Using daemonPath: ${daemonPath}`);
   console.log(
     `[daemonSpawner] CWD: ${app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked') : 'default'}`,
@@ -219,7 +227,7 @@ export async function spawnDaemon(): Promise<void> {
 
   // Spawn daemon as detached process
   // Use Electron's embedded Node.js runtime (process.execPath)
-  const child = spawn(process.execPath, [daemonPath], {
+  const child = spawn(daemonRuntimePath, [daemonPath], {
     detached: true,
     stdio: ['ignore', logFd, logFd], // Redirect stdout/stderr to log file
     env: daemonEnv,
@@ -284,10 +292,13 @@ export async function ensureDaemonRunning(): Promise<EnsureDaemonResult> {
   if (await isDaemonRunning()) {
     console.log('[daemonSpawner] Daemon already running');
     const status = await getDaemonStatus();
-    const outdated = describeDaemonBuildMismatch(
-      status?.build,
-      await getLocalDaemonBuild(),
-    );
+    const available = await getLocalDaemonBuild();
+    const outdated = describeDaemonStatusMismatch(status, available);
+    if (!status) {
+      console.warn(
+        '[daemonSpawner] Daemon answered ping but status is unavailable; preserving it because its sessions/build are unknown',
+      );
+    }
     if (outdated) {
       console.log(
         `[daemonSpawner] Running daemon is outdated (running ${describeBuild(outdated.running)}, available ${describeBuild(outdated.available)}; ${status?.sessionCount ?? '?'} sessions)`,

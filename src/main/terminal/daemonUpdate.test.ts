@@ -125,6 +125,21 @@ describe('outdated PTY daemon replacement', () => {
     expect(manager.hasPendingDaemonUpdate()).toBe(false);
   });
 
+  it('does not replace a daemon when its status (and session count) is unknown', async () => {
+    const manager = setup();
+    mockedEnsure.mockResolvedValue({
+      spawned: false,
+      status: null,
+      outdated: null,
+    });
+
+    await manager['initializeDaemonConnection']();
+
+    expect(mockedRestart).not.toHaveBeenCalled();
+    expect(workerMessages(manager)).toEqual(['CONNECT_DAEMON']);
+    expect(manager.hasPendingDaemonUpdate()).toBe(false);
+  });
+
   it('replaces an outdated daemon at launch when it owns no sessions', async () => {
     const manager = setup();
     mockedEnsure.mockResolvedValue({

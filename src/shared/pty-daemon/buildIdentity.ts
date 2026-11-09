@@ -25,6 +25,19 @@ export interface DaemonBuildMismatch {
 }
 
 /**
+ * A responding daemon status may omit `build` if it predates build reporting.
+ * A missing status is different: it means the probe failed, so its session
+ * count and build are both unknown and must not trigger a destructive replace.
+ */
+export function describeDaemonStatusMismatch(
+  status: { build?: DaemonBuildInfo } | null | undefined,
+  available: DaemonBuildInfo,
+): DaemonBuildMismatch | null {
+  if (!status) return null;
+  return describeDaemonBuildMismatch(status.build, available);
+}
+
+/**
  * Hash a bundle file. Resolves null on any read error so a missing or
  * unreadable bundle degrades to "unknown" rather than failing the caller.
  */
