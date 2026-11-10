@@ -70,20 +70,40 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         />
       )}
 
-      {/* Sky View toggle — left side, clear of the macOS traffic lights. Opens
-          the Sky View overlay (`home` view), or drops back to the last
-          workspace surface when it's already showing. Sidebar "Home" is the
-          separate home-panel browse surface. */}
-      {onToggleHome && (
+      {/* Centered GitHub Search Bar */}
+      {!hideSearch && (
         <div
           style={{
+            position: 'fixed',
+            left: '50vw',
+            transform: 'translateX(-50%)',
+            top: '0',
+            height: '56px',
             display: 'flex',
             alignItems: 'center',
-            paddingLeft: '12px',
             WebkitAppRegion:
               'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            zIndex: 101,
           }}
         >
+          <TitlebarGitHubSearch />
+        </div>
+      )}
+
+      {/* Right controls */}
+      <div
+        style={{
+          marginLeft: 'auto',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
+        {/* Sky View toggle. Opens the Sky View overlay (`home` view), or drops
+            back to the last workspace surface when it's already showing.
+            Sidebar "Home" is the separate home-panel browse surface. */}
+        {onToggleHome && (
           <button
             onClick={(event) => {
               blurAfterPointerActivation(event);
@@ -132,39 +152,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             <Radar size={16} />
             <span>Sky View</span>
           </button>
-        </div>
-      )}
-
-      {/* Centered GitHub Search Bar */}
-      {!hideSearch && (
-        <div
-          style={{
-            position: 'fixed',
-            left: '50vw',
-            transform: 'translateX(-50%)',
-            top: '0',
-            height: '56px',
-            display: 'flex',
-            alignItems: 'center',
-            WebkitAppRegion:
-              'no-drag' as React.CSSProperties['WebkitAppRegion'],
-            zIndex: 101,
-          }}
-        >
-          <TitlebarGitHubSearch />
-        </div>
-      )}
-
-      {/* Right controls */}
-      <div
-        style={{
-          marginLeft: 'auto',
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          gap: '8px',
-        }}
-      >
+        )}
         <TerminalDaemonUpdateIndicator />
         {showSidebarControl && onToggleSidebar && (
           <ViewSidebarControls

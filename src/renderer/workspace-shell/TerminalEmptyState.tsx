@@ -45,6 +45,7 @@ export interface TerminalEmptyStateProps {
 
 /** Shortcut tips for the principal workspace terminal. */
 export const DEFAULT_TERMINAL_EMPTY_STATE_TIPS: TerminalEmptyStateTip[] = [
+  { keys: ['⌘', '⇧', 'S'], label: 'Open Sky View' },
   { keys: ['⌘', 'T'], label: 'Open a new terminal tab' },
   { keys: ['⌘', 'W'], label: 'Close the current terminal' },
   { keys: ['⌘', '1–9'], label: 'Jump to a terminal by number' },
