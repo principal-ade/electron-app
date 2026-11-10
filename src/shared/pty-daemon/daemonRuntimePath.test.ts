@@ -12,7 +12,9 @@ describe('resolveDaemonRuntimePath', () => {
       resolveDaemonRuntimePath({
         platform: 'darwin',
         executablePath,
-        appName: 'Principal AI',
+        // Electron reports the package name here in the packaged app, not the
+        // product name used for its helper bundle.
+        appName: 'principal-ade-electron',
         isPackaged: true,
         existsSync: (filePath) => filePath === helperPath,
       }),

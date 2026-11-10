@@ -24,8 +24,17 @@ export function resolveDaemonRuntimePath({
 }: DaemonRuntimePathOptions): string {
   if (platform !== 'darwin') return executablePath;
 
-  // In development electron-builder has not renamed Electron's helper bundle.
-  const helperName = isPackaged ? `${appName} Helper` : 'Electron Helper';
+  // Packaged app.getName() can be the package name (e.g. "principal-ade-electron"),
+  // while electron-builder names this helper from the app bundle (e.g.
+  // "Principal AI Helper"). Derive the packaged helper name from the actual
+  // .app bundle path instead. In development electron-builder has not renamed
+  // Electron's helper bundle.
+  const appBundleName = path
+    .basename(path.resolve(path.dirname(executablePath), '..', '..'))
+    .replace(/\.app$/i, '');
+  const helperName = isPackaged
+    ? `${appBundleName || appName} Helper`
+    : 'Electron Helper';
   const helperExecutablePath = path.resolve(
     path.dirname(executablePath),
     '..',
