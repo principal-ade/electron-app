@@ -420,6 +420,20 @@ describe('buildHomeTabEntries', () => {
     });
   });
 
+  it('keeps a resumed agent session name instead of numbering it', () => {
+    const session: TerminalTab = {
+      ...terminal(),
+      label: 'Claude Code · Fix the login flow',
+      agent: 'claude',
+    };
+    const { repos } = buildHomeTabEntries([entry], [], [session], []);
+
+    expect(repos[0].openTabs[0]).toMatchObject({
+      label: 'Claude Code · Fix the login flow',
+      agent: 'claude',
+    });
+  });
+
   it('keeps a standalone terminal in Open Tabs with its cwd', () => {
     const { repos, openTabs } = buildHomeTabEntries(
       [],

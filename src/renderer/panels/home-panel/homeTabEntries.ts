@@ -403,9 +403,12 @@ export function buildHomeTabEntries(
       // Repo-nested terminals already sit under a row naming their location,
       // so the tab-bar position is the useful label there. A standalone
       // terminal has no repo row, so keep its cwd (the only thing that tells
-      // two of them apart). A host rename wins over the position either way.
+      // two of them apart). A host rename wins over the position either way,
+      // and so does a coding session's own name (e.g. "Claude Code · Fix
+      // login"): the agent icon already says which tool, and the session title
+      // is what tells resumed sessions apart.
       const terminalNumber = terminalNumbers.get(tab.id);
-      if (terminalNumber != null && !entry.customLabel) {
+      if (terminalNumber != null && !entry.customLabel && !entry.agent) {
         entry.label = `Tab ${terminalNumber}`;
       }
     }
