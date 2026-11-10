@@ -27,20 +27,20 @@ function response() {
   return res;
 }
 
-test('PATCH renames a managed process', () => {
+test.each(['process-1', 'detected:5173'])('PATCH renames process %s', (id) => {
   const setLabel = jest.fn(() => ({ success: true }));
   const handler = patchHandler({ setLabel } as unknown as ProcessRegistry);
   const res = response();
 
   handler(
     {
-      params: { id: 'process-1' },
+      params: { id },
       body: { label: 'Frontend server' },
     } as unknown as Request,
     res as unknown as Response,
   );
 
-  expect(setLabel).toHaveBeenCalledWith('process-1', 'Frontend server');
+  expect(setLabel).toHaveBeenCalledWith(id, 'Frontend server');
   expect(res.status).toHaveBeenCalledWith(200);
   expect(res.json).toHaveBeenCalledWith({ success: true });
 });

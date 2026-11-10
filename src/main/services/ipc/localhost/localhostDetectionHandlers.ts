@@ -9,6 +9,7 @@ import {
   RunningServer,
 } from '../../../../shared/main-process-api-interfaces/LocalhostDetectionAPI';
 import { applicationWindows } from '../../../window/modernWindowManager';
+import { getProcessRegistry } from '../../../processes/ProcessRegistry';
 
 const execAsync = promisify(exec);
 
@@ -116,6 +117,9 @@ async function detectRunningServers(
       pid: processInfo?.pid,
       cwd: processInfo?.cwd,
       command: processInfo?.command,
+      displayName: getProcessRegistry().getDetectedLabel(
+        `detected:${processInfo?.pid ?? port}`,
+      ),
     });
   }
 

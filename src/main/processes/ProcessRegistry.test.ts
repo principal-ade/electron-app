@@ -199,3 +199,17 @@ describe('pinned launch configurations', () => {
     jest.restoreAllMocks();
   });
 });
+
+test('sets and serves display-name overrides for externally detected processes', () => {
+  const registry = new ProcessRegistry();
+
+  expect(registry.setLabel('detected:5173', '  Storybook  ')).toEqual({
+    success: true,
+  });
+  expect(registry.getDetectedLabel('detected:5173')).toBe('Storybook');
+  expect(registry.setLabel('detected:0', 'Invalid').success).toBe(false);
+  expect(registry.setLabel('detected:not-a-pid', 'Invalid').success).toBe(
+    false,
+  );
+  expect(registry.setLabel('detected:5174', '  ').success).toBe(false);
+});

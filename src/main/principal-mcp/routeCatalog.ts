@@ -719,17 +719,18 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
       {
         method: 'PATCH',
         path: '/api/processes/:id',
-        summary: 'Set the display name shown for a managed process in Home.',
+        summary:
+          'Set the display name for a managed process or an externally detected localhost process.',
         body: { label: 'string (required): non-empty display name.' },
         response: '{ success: true }',
         errors: {
           '400': 'body.label is missing, empty, or whitespace-only.',
-          '404': 'Unknown managed process id.',
+          '404': 'Unknown managed process id or invalid detected-process id.',
           '500':
             'Could not securely save the display name for a pinned process.',
         },
         notes: [
-          'The new label appears in the Home process list and is retained when the process is restarted. Pinned processes save the updated label with their launch configuration.',
+          'For a managed process, the label appears in Home and pinned processes save it with their launch configuration. For an external process, use its detected id (`detected:<pid-or-port>`); the custom name applies while Principal is running and that process remains detectable.',
         ],
         example: { label: 'Frontend dev server' },
       },

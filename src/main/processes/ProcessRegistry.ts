@@ -80,6 +80,8 @@ function inferKind(command: string, args: string[]): ProcessKind {
 
 export class ProcessRegistry extends EventEmitter {
   private entries = new Map<string, ProcessEntry>();
+  /** Display-name overrides for localhost processes discovered outside the app. */
+  private detectedLabels = new Map<string, string>();
   private children = new Map<string, ChildProcess>();
   /** The original start request per id, so restart can re-run it. */
   private descriptors = new Map<string, ProcessStartRequest>();
@@ -163,17 +165,25 @@ export class ProcessRegistry extends EventEmitter {
     return [...(this.logs.get(id) ?? [])];
   }
 
-  /** Update the Home display label for a managed process. */
+  /** Update a managed-process label or an external process display override. */
   setLabel(id: string, label: string): ProcessControlResult {
+    const normalizedLabel = label.trim();
+    if (!normalizedLabel) {
+      return { success: false, error: 'label must not be empty' };
+    }
+
+    // Detected processes are owned by another program, so only their display
+    // name is mutable here. Their IDs are `detected:<pid-or-port>`.
+    if (/^detected:\d+$/.test(id) && Number(id.slice('detected:'.length)) > 0) {
+      this.detectedLabels.set(id, normalizedLabel);
+      this.emitChanged();
+      return { success: true };
+    }
+
     const entry = this.entries.get(id);
     const descriptor = this.descriptors.get(id);
     if (!entry || entry.origin !== 'managed' || !descriptor) {
       return { success: false, error: 'unknown managed process id' };
-    }
-
-    const normalizedLabel = label.trim();
-    if (!normalizedLabel) {
-      return { success: false, error: 'label must not be empty' };
     }
 
     const updatedDescriptor = { ...descriptor, label: normalizedLabel };
@@ -210,6 +220,11 @@ export class ProcessRegistry extends EventEmitter {
     entry.label = normalizedLabel;
     this.emitChanged();
     return { success: true };
+  }
+
+  /** Custom display name for a detected localhost process, if one was set. */
+  getDetectedLabel(id: string): string | undefined {
+    return this.detectedLabels.get(id);
   }
 
   /**

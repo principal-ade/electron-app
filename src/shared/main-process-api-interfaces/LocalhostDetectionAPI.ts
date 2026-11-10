@@ -20,6 +20,8 @@ export interface RunningServer {
   cwd?: string;
   /** Command that started the process (e.g., 'node', 'npm') */
   command?: string;
+  /** User-assigned display name for an externally detected process. */
+  displayName?: string;
 }
 
 export interface DetectServersOptions {

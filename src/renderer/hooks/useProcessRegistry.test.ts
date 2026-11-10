@@ -59,6 +59,28 @@ test.each([
   },
 );
 
+test('uses a user-assigned display name for a detected process', async () => {
+  jest
+    .mocked(LocalhostDetectionService.detectRunningServers)
+    .mockResolvedValue({
+      servers: [
+        {
+          port: 5173,
+          command: 'node',
+          displayName: 'Frontend preview',
+          protocol: 'http',
+          responsive: true,
+        },
+      ],
+      scannedPorts: [5173],
+      scanDuration: 1,
+    });
+
+  const { result } = renderHook(() => useProcessRegistry());
+  await waitFor(() => expect(result.current.entries).toHaveLength(1));
+  expect(result.current.entries[0].label).toBe('Frontend preview');
+});
+
 test('preserves managed process labels', async () => {
   jest.mocked(ProcessRegistryService.list).mockResolvedValue([
     {
