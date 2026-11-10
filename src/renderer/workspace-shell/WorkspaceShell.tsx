@@ -151,6 +151,7 @@ import { DRAWING_EVENTS } from '../drawings-view/drawingsStorage';
 import type { HomeTabEntry } from '../panels/home-panel/homeTabEntries';
 import { TerminalEmptyState } from './TerminalEmptyState';
 import { SessionsLeftPanel } from '../sessions-view/SessionsLeftPanel';
+import { OpenBotBotsPanel } from '../dev-workspace/openbot-chat/OpenBotBotsPanel';
 
 /** Which surface's left panel + landing the shell currently shows. */
 export type WorkspaceView =
@@ -162,7 +163,8 @@ export type WorkspaceView =
   | 'skills'
   | 'processes'
   | 'requests'
-  | 'subsystem-models';
+  | 'subsystem-models'
+  | 'bots';
 
 /**
  * Stable identity for the terminal panel's `renderEmptyState` — the panel
@@ -645,8 +647,16 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             />
           );
         }
-        case 'openbot-chat':
-          return <OpenBotChatTabContent key={(tab as OpenBotChatTab).id} />;
+        case 'openbot-chat': {
+          const openBotTab = tab as OpenBotChatTab;
+          return (
+            <OpenBotChatTabContent
+              key={openBotTab.id}
+              agentId={openBotTab.agentId}
+              botName={openBotTab.botName}
+            />
+          );
+        }
         case 'skill': {
           const skillTab = tab as SkillTab;
           return (
@@ -1325,7 +1335,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
                       ? 'Skills'
                       : activeView === 'subsystem-models'
                         ? 'Subsystem Models'
-                        : activeView === 'processes'
+                        : activeView === 'bots'
+                          ? 'Bots'
+                          : activeView === 'processes'
                           ? 'Processes'
                           : activeView === 'requests'
                             ? 'Requests'
@@ -1368,6 +1380,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               events={portalEvents}
               activeTabId={activeTabId}
             />
+          ) : activeView === 'bots' ? (
+            <OpenBotBotsPanel />
           ) : activeView === 'processes' ? (
             <ProcessesView />
           ) : activeView === 'requests' ? (

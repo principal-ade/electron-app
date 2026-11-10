@@ -236,6 +236,10 @@ export interface LocalhostBrowserTab extends BaseTab {
 /** Native chat surface connected to the locally running OpenBot instance. */
 export interface OpenBotChatTab extends BaseTab {
   contentType: 'openbot-chat';
+  /** Runtime agent id the tab is scoped to. Omit for the all-bots legacy tab. */
+  agentId?: string;
+  /** Display name for the scoped bot, kept on the tab so it survives reopens. */
+  botName?: string;
 }
 
 /** Union of all tab types the Projects surface renders. */

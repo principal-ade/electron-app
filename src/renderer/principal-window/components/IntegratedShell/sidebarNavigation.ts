@@ -8,6 +8,7 @@ export const SIDEBAR_NAVIGATION_ITEMS: ReadonlyArray<{
   { id: 'projects', label: 'Projects' },
   { id: 'topics', label: 'Topics' },
   { id: 'subsystem-models', label: 'Models' },
+  { id: 'bots', label: 'Bots' },
   { id: 'drawings', label: 'Drawings' },
   { id: 'requests', label: 'Requests' },
   { id: 'onboarding', label: 'Tutorials' },

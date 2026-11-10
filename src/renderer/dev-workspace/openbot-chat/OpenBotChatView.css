@@ -394,11 +394,6 @@
   white-space: nowrap;
 }
 
-.openbot-chat__name-chevron {
-  flex: 0 0 auto;
-  color: var(--openbot-muted-foreground);
-}
-
 .openbot-chat__computer-button {
   gap: 7px;
   min-height: 30px;

@@ -2,6 +2,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   Settings,
   Activity,
+  Bot,
   Cpu,
   History,
   ToolCase,
@@ -187,6 +188,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       icon: <Network size={20} />,
       label: 'Models',
     },
+    { id: 'bots', icon: <Bot size={20} />, label: 'Bots' },
     { id: 'topics', icon: <TopicsIcon />, label: 'Topics' },
     { id: 'drawings', icon: <PenTool size={20} />, label: 'Drawings' },
     { id: 'requests', icon: <Send size={20} />, label: 'Requests' },

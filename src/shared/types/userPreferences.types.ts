@@ -19,7 +19,8 @@ export type InteractiveShellNavigationView =
   | 'requests'
   | 'skills'
   | 'drawings'
-  | 'subsystem-models';
+  | 'subsystem-models'
+  | 'bots';
 
 /** Sidebar destinations whose order and visibility can be customized. */
 export type SidebarNavigationItem = Exclude<

@@ -1,4 +1,5 @@
 import type {
+  OpenBotAgent,
   OpenBotChatAPI,
   OpenBotChatChannel,
   OpenBotConversation,
@@ -12,6 +13,10 @@ const getApi = (): OpenBotChatAPI => {
 };
 
 export class OpenBotChatService {
+  static listBots(): Promise<OpenBotAgent[]> {
+    return getApi().listBots();
+  }
+
   static listChannels(): Promise<OpenBotChatChannel[]> {
     return getApi().listChannels();
   }

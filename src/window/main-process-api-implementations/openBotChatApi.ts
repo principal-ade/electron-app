@@ -1,6 +1,7 @@
 import { ipcRenderer } from 'electron';
 import {
   OpenBotChatAPIEvent,
+  type OpenBotAgent,
   type OpenBotChatAPI,
   type OpenBotChatChannel,
   type OpenBotConversation,
@@ -8,11 +9,16 @@ import {
 } from '../../shared/main-process-api-interfaces/OpenBotChatAPI';
 
 export const openBotChatAPI: OpenBotChatAPI = {
+  listBots: listOpenBotBots,
   listChannels: listOpenBotChannels,
   getConversation: loadOpenBotConversation,
   sendMessage: sendOpenBotMessage,
   onRunEvent: onOpenBotRunEvent,
 };
+
+export function listOpenBotBots(): Promise<OpenBotAgent[]> {
+  return ipcRenderer.invoke(OpenBotChatAPIEvent.LIST_BOTS);
+}
 
 export function listOpenBotChannels(): Promise<OpenBotChatChannel[]> {
   return ipcRenderer.invoke(OpenBotChatAPIEvent.LIST_CHANNELS);

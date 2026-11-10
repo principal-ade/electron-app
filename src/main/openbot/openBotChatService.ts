@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { HttpAgent, type Message } from '@ag-ui/client';
 import type {
+  OpenBotAgent,
   OpenBotChatChannel,
   OpenBotChatMessage,
   OpenBotChatRunEvent,
@@ -9,6 +10,10 @@ import type {
 
 const OPENBOT_BASE_URL = 'http://127.0.0.1:3010';
 const MAX_CHANNEL_PAGES = 100;
+
+type OpenBotAgentsResponse = {
+  agents?: unknown;
+};
 
 type OpenBotChannelResponse = {
   channel?: unknown;
@@ -30,6 +35,20 @@ export type OpenBotRunEventHandler = (event: OpenBotChatRunEvent) => void;
  * OpenBot sees a loopback client, not a cross-origin browser page.
  */
 export class OpenBotChatService {
+  async listBots(): Promise<OpenBotAgent[]> {
+    const result = await requestJson<OpenBotAgentsResponse>('/api/agents');
+    if (!Array.isArray(result.agents)) return [];
+
+    return result.agents
+      .map(toAgent)
+      .filter((agent): agent is OpenBotAgent => agent !== null)
+      .filter((agent) => !agent.hidden)
+      .sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+  }
+
   async listChannels(): Promise<OpenBotChatChannel[]> {
     const channels: OpenBotChatChannel[] = [];
     let cursor: string | undefined;
@@ -370,6 +389,32 @@ async function responseError(response: Response): Promise<string> {
     if (typeof error === 'string' && error.trim()) return error;
   }
   return `OpenBot request failed (HTTP ${response.status}).`;
+}
+
+function toAgent(value: unknown): OpenBotAgent | null {
+  if (!value || typeof value !== 'object') return null;
+  const agent = value as Record<string, unknown>;
+  if (typeof agent.id !== 'string' || !agent.id) return null;
+
+  const named =
+    typeof agent.name === 'string' && agent.name.trim()
+      ? agent.name
+      : typeof agent.title === 'string' && agent.title.trim()
+        ? agent.title
+        : agent.id;
+  const title = typeof agent.title === 'string' ? agent.title : null;
+  const roleDescription =
+    typeof agent.roleDescription === 'string' ? agent.roleDescription : null;
+
+  return {
+    id: agent.id,
+    name: named,
+    summary: roleDescription ?? title,
+    hidden: agent.hidden === true,
+    builtIn: agent.builtIn === true,
+    pinned: agent.pinned === true,
+    visibility: typeof agent.visibility === 'string' ? agent.visibility : null,
+  };
 }
 
 function toChannel(value: unknown): OpenBotChatChannel | null {

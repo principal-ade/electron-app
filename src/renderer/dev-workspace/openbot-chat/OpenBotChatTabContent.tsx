@@ -4,7 +4,17 @@ import type { OpenBotChatMessage } from './OpenBotChatView';
 import { OpenBotChatView } from './OpenBotChatView';
 import { OpenBotChatService } from '../../main-process-api/OpenBotChatService';
 
-export function OpenBotChatTabContent() {
+export interface OpenBotChatTabContentProps {
+  /** Scope the conversation list to one bot's runtime agent id. */
+  agentId?: string;
+  /** Bot display name for the chat header. */
+  botName?: string;
+}
+
+export function OpenBotChatTabContent({
+  agentId,
+  botName,
+}: OpenBotChatTabContentProps) {
   const [channels, setChannels] = React.useState<OpenBotChatChannel[]>([]);
   const [activeChannelId, setActiveChannelId] = React.useState<
     string | undefined
@@ -27,7 +37,11 @@ export function OpenBotChatTabContent() {
     setConnectionState('connecting');
     setConnectionError(null);
     try {
-      const result = await OpenBotChatService.listChannels();
+      const allChannels = await OpenBotChatService.listChannels();
+      // Each channel has exactly one agent; scope to the tab's bot when set.
+      const result = agentId
+        ? allChannels.filter((channel) => channel.agentIds[0] === agentId)
+        : allChannels;
       setChannels(result);
       setConnectionState('connected');
       setActiveChannelId((current) =>
@@ -39,7 +53,7 @@ export function OpenBotChatTabContent() {
       setConnectionState('error');
       setConnectionError(errorMessage(error));
     }
-  }, []);
+  }, [agentId]);
 
   const loadConversation = React.useCallback(async (channelId: string) => {
     const request = ++historyRequest.current;
@@ -179,7 +193,7 @@ export function OpenBotChatTabContent() {
   return (
     <OpenBotChatView
       activeChannelId={activeChannelId}
-      botName={activeChannel?.name ?? 'OpenBot'}
+      botName={botName ?? activeChannel?.name ?? 'OpenBot'}
       busy={busy}
       channels={channels}
       connectionError={connectionError}

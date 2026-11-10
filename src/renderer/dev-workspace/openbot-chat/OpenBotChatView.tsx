@@ -38,6 +38,8 @@ export interface OpenBotChatViewProps {
   placeholder?: string;
   channels?: readonly OpenBotChatConversation[];
   activeChannelId?: string;
+  /** Open with the conversations sidebar visible. Storybook composition aid. */
+  defaultSidebarOpen?: boolean;
   connectionState?: 'fixture' | 'connecting' | 'connected' | 'error';
   connectionError?: string | null;
   loadingConversation?: boolean;
@@ -82,6 +84,7 @@ export function OpenBotChatView({
   placeholder = 'Ask anything',
   channels,
   activeChannelId,
+  defaultSidebarOpen = false,
   connectionState = 'fixture',
   connectionError,
   loadingConversation = false,
@@ -89,7 +92,8 @@ export function OpenBotChatView({
   onSendMessage,
   onRetry,
 }: OpenBotChatViewProps) {
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [sidebarOpen, setSidebarOpen] =
+    React.useState(defaultSidebarOpen);
   const [detailPanel, setDetailPanel] = React.useState<
     'computer' | 'settings' | null
   >(null);
@@ -196,11 +200,6 @@ export function OpenBotChatView({
               <Sparkles size={15} />
             </span>
             <span className="openbot-chat__bot-name">{botName}</span>
-            <ChevronDown
-              aria-hidden="true"
-              className="openbot-chat__name-chevron"
-              size={14}
-            />
           </div>
           <div className="openbot-chat__header-actions">
             <button

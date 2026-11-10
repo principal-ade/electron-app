@@ -32,7 +32,8 @@ export type WorkspaceView =
   | 'skills'
   | 'processes'
   | 'requests'
-  | 'subsystem-models';
+  | 'subsystem-models'
+  | 'bots';
 
 export const WORKSPACE_VIEWS: WorkspaceView[] = [
   'home-panel',
@@ -44,6 +45,7 @@ export const WORKSPACE_VIEWS: WorkspaceView[] = [
   'processes',
   'requests',
   'subsystem-models',
+  'bots',
 ];
 
 /** Type guard: is this navigation view a portal-hosted workspace surface? */
@@ -83,7 +85,8 @@ export const PrincipalPortal: React.FC<PrincipalPortalProps> = ({
         workspaceView === 'skills' ||
         workspaceView === 'processes' ||
         workspaceView === 'requests' ||
-        workspaceView === 'subsystem-models') && (
+        workspaceView === 'subsystem-models' ||
+        workspaceView === 'bots') && (
         <WorkspaceShell
           activeView={workspaceView}
           leftSidebarCollapsed={leftSidebarCollapsed}

@@ -78,6 +78,7 @@ const VIEW_OPTIONS = [
   'skills',
   'drawings',
   'subsystem-models',
+  'bots',
 ];
 
 // Cmd+Shift+<letter> jumps straight to a sidebar view. Keys are matched on

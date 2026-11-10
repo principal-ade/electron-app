@@ -21,6 +21,11 @@ function requireAppMainFrame(event: Electron.IpcMainInvokeEvent): void {
 }
 
 export function registerOpenBotChatHandlers(): void {
+  ipcMain.handle(OpenBotChatAPIEvent.LIST_BOTS, (event) => {
+    requireAppMainFrame(event);
+    return service.listBots();
+  });
+
   ipcMain.handle(OpenBotChatAPIEvent.LIST_CHANNELS, (event) => {
     requireAppMainFrame(event);
     return service.listChannels();

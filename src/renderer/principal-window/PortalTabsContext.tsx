@@ -164,8 +164,8 @@ export interface WorkspaceTabsContextValue {
     label?: string,
     processId?: string,
   ) => string;
-  /** Open or focus the native chat surface for the local OpenBot instance. */
-  openOpenBotChat: () => void;
+  /** Open or focus a native chat surface, optionally scoped to one bot. */
+  openOpenBotChat: (bot?: { agentId: string; name: string }) => void;
   /**
    * Rename the active tab (or clear the rename with an empty name). Sets
    * `customLabel`, which the tab strip and Home prefer over the computed
@@ -654,14 +654,24 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [],
   );
 
-  const openOpenBotChat = useCallback(() => {
-    openTab('openbot-chat', () => ({
-      id: 'openbot-chat',
-      label: 'OpenBot',
-      contentType: 'openbot-chat',
-      closable: true,
-    } as OpenBotChatTab));
-  }, [openTab]);
+  const openOpenBotChat = useCallback(
+    (bot?: { agentId: string; name: string }) => {
+      const id = bot ? `openbot-chat-${bot.agentId}` : 'openbot-chat';
+      openTab(
+        id,
+        () =>
+          ({
+            id,
+            label: bot?.name ?? 'OpenBot',
+            contentType: 'openbot-chat',
+            closable: true,
+            agentId: bot?.agentId,
+            botName: bot?.name,
+          }) as OpenBotChatTab,
+      );
+    },
+    [openTab],
+  );
 
   const openHttpRequest = useCallback(
     (request: SavedRequest) => {

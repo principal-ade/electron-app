@@ -1,8 +1,20 @@
 export enum OpenBotChatAPIEvent {
+  LIST_BOTS = 'openbot-chat:list-bots',
   LIST_CHANNELS = 'openbot-chat:list-channels',
   GET_CONVERSATION = 'openbot-chat:get-conversation',
   SEND_MESSAGE = 'openbot-chat:send-message',
   RUN_EVENT = 'openbot-chat:run-event',
+}
+
+/** A Bot (OpenBot agent) that conversations can be opened with. */
+export interface OpenBotAgent {
+  id: string;
+  name: string;
+  summary: string | null;
+  hidden: boolean;
+  builtIn: boolean;
+  pinned: boolean;
+  visibility: string | null;
 }
 
 export interface OpenBotChatChannel {
@@ -58,6 +70,7 @@ export type OpenBotChatRunEvent =
     };
 
 export interface OpenBotChatAPI {
+  listBots(): Promise<OpenBotAgent[]>;
   listChannels(): Promise<OpenBotChatChannel[]>;
   getConversation(channelId: string): Promise<OpenBotConversation>;
   sendMessage(
