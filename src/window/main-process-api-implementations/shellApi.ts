@@ -3,7 +3,10 @@ import type { EditorId } from '../../shared/types/editor.types';
 import type { TerminalId } from '../../shared/types/terminal.types';
 import {
   ShellAPIEvent,
+  type StudioInstallOptions,
+  type StudioInstallResult,
   type StudioLaunchOptions,
+  type StudioStatusOptions,
   type StudioStatusResult,
 } from '../../shared/main-process-api-interfaces/ShellAPI';
 
@@ -83,6 +86,13 @@ export const shellAPI = {
   launchStudio: async (options: StudioLaunchOptions) =>
     ipcRenderer.invoke(ShellAPIEvent.LAUNCH_STUDIO, options),
 
-  getStudioStatus: async (): Promise<StudioStatusResult> =>
-    ipcRenderer.invoke(ShellAPIEvent.GET_STUDIO_STATUS),
+  getStudioStatus: async (
+    options?: StudioStatusOptions,
+  ): Promise<StudioStatusResult> =>
+    ipcRenderer.invoke(ShellAPIEvent.GET_STUDIO_STATUS, options),
+
+  installStudio: async (
+    options: StudioInstallOptions,
+  ): Promise<StudioInstallResult> =>
+    ipcRenderer.invoke(ShellAPIEvent.INSTALL_STUDIO, options),
 };

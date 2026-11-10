@@ -1,13 +1,17 @@
-import { ipcMain, shell } from 'electron';
-import { exec, spawn, type ExecException } from 'child_process';
-import { existsSync, realpathSync } from 'fs';
+import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { exec, execFile, spawn, type ExecException } from 'child_process';
+import { existsSync, readFileSync, realpathSync, statSync } from 'fs';
+import { createRequire } from 'module';
 import { promisify } from 'util';
 import * as os from 'os';
 import {
   ShellAPIEvent,
+  type StudioInstallOptions,
+  type StudioInstallResult,
   type StudioLaunchOptions,
   type StudioLaunchResult,
   type StudioLaunchMode,
+  type StudioStatusOptions,
   type StudioStatusResult,
 } from '../../shared/main-process-api-interfaces/ShellAPI';
 import path from 'path';
@@ -23,6 +27,7 @@ import {
 } from '../../shared/types/terminal.types';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // ---------------------------------------------------------------------------
 // Subsystems Studio launch
@@ -37,6 +42,202 @@ const STUDIO_REPO_DIR =
   path.join(os.homedir(), 'Developer/principal-ai/subsystem-modeling');
 
 const STUDIO_HTTP_PORTS = [3045, 3046] as const;
+const STUDIO_PACKAGE_NAME = '@principal-ai/subsystems-studio';
+const STUDIO_CLI_PACKAGE_NAME = '@principal-ai/principal-studio-cli';
+
+interface StudioPackageJson {
+  name?: string;
+  version?: string;
+}
+
+function readStudioPackageJson(
+  packageDir: string,
+): StudioPackageJson | undefined {
+  try {
+    const parsed = JSON.parse(
+      readFileSync(path.join(packageDir, 'package.json'), 'utf8'),
+    ) as { name?: unknown; version?: unknown };
+    return {
+      name: typeof parsed.name === 'string' ? parsed.name : undefined,
+      version: typeof parsed.version === 'string' ? parsed.version : undefined,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Walk up from a bin script until we reach the package that owns it. */
+function findPackageRoot(target: string): string | undefined {
+  let current = target;
+  try {
+    if (!statSync(current).isDirectory()) current = path.dirname(current);
+  } catch {
+    current = path.dirname(current);
+  }
+  while (true) {
+    if (existsSync(path.join(current, 'package.json'))) return current;
+    const parent = path.dirname(current);
+    if (parent === current) return undefined;
+    current = parent;
+  }
+}
+
+/** Derive the global npm root from a scoped package directory. */
+function inferNpmRoot(packageRoot: string | undefined): string | undefined {
+  if (!packageRoot) return undefined;
+  const parent = path.dirname(packageRoot);
+  return path.basename(parent).startsWith('@') ? path.dirname(parent) : parent;
+}
+
+/**
+ * Resolve the Studio package exactly the way the CLI does. Node's resolution
+ * prefers a nested copy, then a hoisted/sibling global install.
+ */
+function resolveStudioForCli(cliPackageRoot: string): string | undefined {
+  try {
+    const requireFromCli = createRequire(
+      path.join(cliPackageRoot, 'package.json'),
+    );
+    const bin = requireFromCli.resolve(
+      `${STUDIO_PACKAGE_NAME}/bin/subsystems-studio.cjs`,
+    );
+    return findPackageRoot(bin);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Describe a package root, following the CLI to the Studio app it will run. */
+function describeInstalledPackage(
+  packageRoot: string,
+  npmRoot?: string,
+): StudioStatusResult['installed'] {
+  const packageJson = readStudioPackageJson(packageRoot);
+  const packageName = packageJson?.name ?? STUDIO_PACKAGE_NAME;
+  const effectiveNpmRoot = npmRoot ?? inferNpmRoot(packageRoot);
+
+  if (packageName === STUDIO_PACKAGE_NAME) {
+    return {
+      available: true,
+      version: packageJson?.version,
+      packageName,
+      packageVersion: packageJson?.version,
+      npmRoot: effectiveNpmRoot,
+    };
+  }
+
+  const studioPackageRoot = resolveStudioForCli(packageRoot);
+  if (!studioPackageRoot) {
+    // The CLI exists but cannot resolve Studio; updating the CLI repairs it.
+    return {
+      available: true,
+      packageName,
+      packageVersion: packageJson?.version,
+      npmRoot: effectiveNpmRoot,
+    };
+  }
+
+  const studioPackageJson = readStudioPackageJson(studioPackageRoot);
+  const nestedPrefix = `${path.join(packageRoot, 'node_modules')}${path.sep}`;
+  const nested = `${studioPackageRoot}${path.sep}`.startsWith(nestedPrefix);
+
+  return {
+    available: true,
+    version: studioPackageJson?.version,
+    // A nested copy ships with the CLI, so update the CLI. A hoisted/sibling
+    // copy is its own global package, so update Studio directly.
+    packageName: nested ? packageName : STUDIO_PACKAGE_NAME,
+    packageVersion: nested ? packageJson?.version : studioPackageJson?.version,
+    npmRoot: nested ? effectiveNpmRoot : inferNpmRoot(studioPackageRoot),
+  };
+}
+
+/**
+ * Describe the package behind a bin shim. When the shim belongs to the CLI,
+ * follow Node resolution to whichever Studio copy it will actually run.
+ */
+function describeInstalledStudio(
+  binPath: string,
+  npmRoot?: string,
+): StudioStatusResult['installed'] {
+  let realBin = binPath;
+  try {
+    realBin = realpathSync(binPath);
+  } catch {
+    // Keep the path as found.
+  }
+
+  const packageRoot = findPackageRoot(realBin);
+  return packageRoot
+    ? describeInstalledPackage(packageRoot, npmRoot)
+    : { available: false };
+}
+
+/** Find the published build without launching it. */
+function resolveInstalledStudio(
+  env: NodeJS.ProcessEnv,
+): StudioStatusResult['installed'] {
+  const override = process.env.PRINCIPAL_STUDIO_BIN;
+  if (override && existsSync(override)) {
+    return describeInstalledStudio(
+      override,
+      process.env.PRINCIPAL_STUDIO_NPM_ROOT,
+    );
+  }
+
+  // `launchStudio` prefers the CLI on PATH, so status should describe the same
+  // install rather than an arbitrary copy in a global root.
+  const cli = findInPath('principal-ai', env);
+  if (cli) {
+    return describeInstalledStudio(cli);
+  }
+
+  const roots = [
+    process.env.PRINCIPAL_STUDIO_NPM_ROOT,
+    '/opt/homebrew/lib/node_modules',
+    '/usr/local/lib/node_modules',
+    path.join(os.homedir(), '.npm-global', 'lib', 'node_modules'),
+  ].filter((root): root is string => Boolean(root));
+
+  for (const root of roots) {
+    const studioBin = path.join(
+      root,
+      STUDIO_PACKAGE_NAME,
+      'bin/subsystems-studio.cjs',
+    );
+    if (existsSync(studioBin)) {
+      return describeInstalledStudio(studioBin, root);
+    }
+
+    // Launch's fallback can run a Studio nested under a global CLI, so
+    // describe that CLI rather than the nested copy in isolation.
+    const cliRoot = path.join(root, STUDIO_CLI_PACKAGE_NAME);
+    const nestedStudioBin = path.join(
+      cliRoot,
+      'node_modules',
+      STUDIO_PACKAGE_NAME,
+      'bin/subsystems-studio.cjs',
+    );
+    if (existsSync(nestedStudioBin)) {
+      return describeInstalledPackage(cliRoot, root);
+    }
+  }
+
+  return { available: false };
+}
+
+/** Read the version of a Studio source checkout without launching it. */
+function resolveDevStudio(devPath?: string): StudioStatusResult['dev'] {
+  const repoPath = devPath ?? STUDIO_REPO_DIR;
+  const packageJson = readStudioPackageJson(
+    path.join(repoPath, 'packages/subsystems-studio'),
+  );
+  return {
+    available: Boolean(packageJson),
+    version: packageJson?.version,
+    path: repoPath,
+  };
+}
 
 async function studioHealthAnswers(port: number): Promise<boolean> {
   try {
@@ -55,7 +256,12 @@ async function studioHealthAnswers(port: number): Promise<boolean> {
   }
 }
 
-async function getStudioStatus(): Promise<StudioStatusResult> {
+async function getStudioStatus(
+  options?: StudioStatusOptions,
+): Promise<StudioStatusResult> {
+  const env = buildStudioEnv();
+  const installed = resolveInstalledStudio(env);
+  const dev = resolveDevStudio(options?.devPath);
   const configuredPort = Number(process.env.PRINCIPAL_STUDIO_HTTP_PORT);
   const ports = [
     ...(Number.isInteger(configuredPort) && configuredPort > 0
@@ -70,11 +276,13 @@ async function getStudioStatus(): Promise<StudioStatusResult> {
         running: true,
         mode: port === 3046 ? 'dev' : port === 3045 ? 'installed' : undefined,
         port,
+        installed,
+        dev,
       };
     }
   }
 
-  return { running: false };
+  return { running: false, installed, dev };
 }
 
 /**
@@ -284,6 +492,233 @@ async function launchStudio(
     error:
       'Could not find an installed Studio. Install the principal-ai CLI or @principal-ai/subsystems-studio, or use the dev option.',
   };
+}
+
+/** Find npm next to the install when the GUI PATH doesn't include it. */
+function resolveNpmCommand(
+  env: NodeJS.ProcessEnv,
+  npmRoot?: string,
+): string | null {
+  const fromPath = findInPath('npm', env);
+  if (fromPath) return fromPath;
+
+  if (npmRoot) {
+    // <prefix>/lib/node_modules -> <prefix>/bin/npm
+    const prefix = path.dirname(path.dirname(npmRoot));
+    const candidate = path.join(prefix, 'bin', 'npm');
+    if (existsSync(candidate)) return candidate;
+  }
+
+  for (const candidate of [
+    '/opt/homebrew/bin/npm',
+    '/usr/local/bin/npm',
+    path.join(os.homedir(), '.npm-global', 'bin', 'npm'),
+    path.join(os.homedir(), '.bun', 'bin', 'npm'),
+  ]) {
+    if (existsSync(candidate)) return candidate;
+  }
+
+  return null;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForStudio(
+  port: number,
+  timeoutMs: number,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await studioHealthAnswers(port)) return true;
+    await delay(300);
+  }
+  return studioHealthAnswers(port);
+}
+
+/** Find the process listening on Studio's HTTP port. */
+async function studioListenerPids(
+  port: number,
+  env: NodeJS.ProcessEnv,
+): Promise<number[]> {
+  const lsof =
+    ['/usr/sbin/lsof', '/usr/bin/lsof'].find((candidate) =>
+      existsSync(candidate),
+    ) ?? 'lsof';
+  try {
+    const { stdout } = await execFileAsync(
+      lsof,
+      ['-ti', `tcp:${port}`, '-sTCP:LISTEN'],
+      { env, timeout: 5000 },
+    );
+    return [
+      ...new Set(
+        stdout
+          .split('\n')
+          .map((line) => Number.parseInt(line.trim(), 10))
+          .filter((pid) => Number.isInteger(pid) && pid > 0),
+      ),
+    ];
+  } catch {
+    // lsof exits non-zero when nothing is listening.
+    return [];
+  }
+}
+
+/**
+ * Ask the running Studio to quit and wait for its port to close. Studio has no
+ * quit IPC command, so this uses the listening process and SIGTERM.
+ */
+async function quitRunningStudio(
+  port: number,
+  env: NodeJS.ProcessEnv,
+): Promise<string | undefined> {
+  const pids = await studioListenerPids(port, env);
+  if (pids.length === 0) {
+    return `Could not find the Studio process on port ${port}. Quit Studio manually and try again.`;
+  }
+
+  for (const pid of pids) {
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch (error) {
+      console.warn(`[ShellHandler] Could not stop Studio pid ${pid}:`, error);
+    }
+  }
+
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    if (!(await studioHealthAnswers(port))) {
+      // Give the app a moment to release its IPC socket before relaunching.
+      await delay(500);
+      return undefined;
+    }
+    await delay(250);
+  }
+
+  return 'Studio did not quit in time. Quit it manually and try again.';
+}
+
+/**
+ * Install the published Studio package (or update it in place) with the global
+ * package manager. Dev builds are intentionally rejected: they belong to the
+ * registered source checkout.
+ */
+async function installStudio(
+  options: StudioInstallOptions,
+  parentWindow?: BrowserWindow | null,
+): Promise<StudioInstallResult> {
+  const mode: StudioLaunchMode = options?.mode === 'dev' ? 'dev' : 'installed';
+
+  if (mode === 'dev') {
+    return {
+      success: false,
+      mode,
+      error:
+        'Studio Dev is updated from its source checkout. Pull the registered clone and reinstall there.',
+    };
+  }
+
+  const env = buildStudioEnv();
+  const current = resolveInstalledStudio(env);
+  const packageName = current.packageName ?? STUDIO_PACKAGE_NAME;
+  const npm = resolveNpmCommand(env, current.npmRoot);
+  if (!npm) {
+    return {
+      success: false,
+      mode,
+      packageName,
+      error:
+        'Could not find npm. Install Node.js or add npm to PATH, then try again.',
+    };
+  }
+
+  const shouldRestart = Boolean(options?.restart);
+  const status = shouldRestart ? await getStudioStatus() : undefined;
+  const runningInstalled =
+    status?.running && status.mode !== 'dev' && status.port
+      ? status.port
+      : undefined;
+
+  if (shouldRestart && runningInstalled) {
+    const confirmation = {
+      type: 'warning' as const,
+      buttons: ['Update & Restart', 'Cancel'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+      title: 'Update Subsystems Studio',
+      message: current.version
+        ? `Subsystems Studio ${current.version} is running.`
+        : 'Subsystems Studio is running.',
+      detail:
+        'Principal will quit Studio, install the update, and reopen it. Unsaved changes in Studio may be lost.',
+    };
+    const { response } = parentWindow
+      ? await dialog.showMessageBox(parentWindow, confirmation)
+      : await dialog.showMessageBox(confirmation);
+    if (response !== 0) {
+      return { success: false, mode, packageName, cancelled: true };
+    }
+  }
+
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      npm,
+      ['install', '-g', `${packageName}@latest`],
+      {
+        env,
+        timeout: 5 * 60 * 1000,
+        maxBuffer: 32 * 1024 * 1024,
+      },
+    );
+    const updated = resolveInstalledStudio(env);
+
+    let restarted: boolean | undefined;
+    let restartError: string | undefined;
+    if (shouldRestart && runningInstalled) {
+      restartError = await quitRunningStudio(runningInstalled, env);
+      if (!restartError) {
+        const launched = await launchStudio({ mode: 'installed' });
+        if (!launched.success) {
+          restartError = launched.error ?? 'Studio could not be reopened.';
+        } else {
+          restarted = await waitForStudio(runningInstalled, 30_000);
+          if (!restarted) {
+            restartError =
+              'Studio was updated but did not answer its health check in time.';
+          }
+        }
+      }
+    }
+
+    return {
+      success: true,
+      mode,
+      packageName,
+      version: updated.version,
+      restarted,
+      restartError,
+      output: `${stdout}${stderr}`.trim() || undefined,
+    };
+  } catch (error) {
+    const failure = error as {
+      stdout?: string;
+      stderr?: string;
+      message?: string;
+    };
+    return {
+      success: false,
+      mode,
+      packageName,
+      error:
+        failure.stderr?.trim() ||
+        failure.message ||
+        `Failed to install ${packageName}.`,
+      output: failure.stdout?.trim() || undefined,
+    };
+  }
 }
 
 export function setupShellHandlers() {
@@ -842,6 +1277,28 @@ export function setupShellHandlers() {
 
   ipcMain.handle(
     ShellAPIEvent.GET_STUDIO_STATUS,
-    async (): Promise<StudioStatusResult> => getStudioStatus(),
+    async (_, options?: StudioStatusOptions): Promise<StudioStatusResult> =>
+      getStudioStatus(options),
+  );
+
+  ipcMain.handle(
+    ShellAPIEvent.INSTALL_STUDIO,
+    async (
+      event,
+      options: StudioInstallOptions,
+    ): Promise<StudioInstallResult> => {
+      try {
+        const parentWindow = BrowserWindow.fromWebContents(event.sender);
+        return await installStudio(
+          options ?? { mode: 'installed' },
+          parentWindow,
+        );
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to install Studio';
+        console.error('[ShellHandler] Error installing Studio:', error);
+        return { success: false, error: message };
+      }
+    },
   );
 }

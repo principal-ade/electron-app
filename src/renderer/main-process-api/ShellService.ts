@@ -6,16 +6,22 @@
 import type { EditorId } from '../../shared/types/editor.types';
 import type { TerminalId } from '../../shared/types/terminal.types';
 import type {
+  StudioInstallOptions,
+  StudioInstallResult,
   StudioLaunchMode,
   StudioLaunchOptions,
   StudioLaunchResult,
+  StudioStatusOptions,
   StudioStatusResult,
 } from '../../shared/main-process-api-interfaces/ShellAPI';
 
 export type {
+  StudioInstallOptions,
+  StudioInstallResult,
   StudioLaunchMode,
   StudioLaunchOptions,
   StudioLaunchResult,
+  StudioStatusOptions,
   StudioStatusResult,
 };
 
@@ -206,7 +212,17 @@ export class ShellService {
   }
 
   /** Read Studio's local health endpoint without activating its window. */
-  static async getStudioStatus(): Promise<StudioStatusResult> {
-    return window.mainProcess.shell.getStudioStatus();
+  static async getStudioStatus(
+    options?: StudioStatusOptions,
+  ): Promise<StudioStatusResult> {
+    return window.mainProcess.shell.getStudioStatus(options);
+  }
+
+  /** Install or update the published Studio build through global npm. */
+  static async installStudio(
+    options: StudioInstallOptions,
+  ): Promise<StudioInstallResult> {
+    console.info(`[ShellService] Installing Studio (${options.mode})`);
+    return window.mainProcess.shell.installStudio(options);
   }
 }

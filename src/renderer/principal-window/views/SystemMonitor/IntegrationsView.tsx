@@ -6,6 +6,7 @@ import {
   type StudioStatusResult,
 } from '../../../main-process-api/ShellService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import { PackageManagerService } from '../../../main-process-api/PackageManagerService';
 import { repoPurlFromEntry } from '../../../../shared/topics/repoPurl';
 import {
   Activity,
@@ -129,6 +130,14 @@ const repositoryOwners: Record<IntegrationId, string> = {
   openbot: 'CopilotKit',
 };
 
+/** Production starts with no Studio facts until the main process reports them. */
+const unresolvedStudioState: IntegrationState = {
+  installed: false,
+  running: false,
+  enabled: true,
+  version: '',
+};
+
 const MAPLE_DASHBOARD_URL = 'https://local.maple.dev/?port=4318';
 const STUDIO_REPOSITORY_PURL = 'pkg:github/principal-ai/subsystem-modeling';
 
@@ -156,42 +165,97 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
     }
     return 'maple';
   });
-  const [integrations, setIntegrations] = useState(
-    () => scenarioState[scenario ?? 'healthy'],
-  );
+  const [integrations, setIntegrations] = useState(() => {
+    const initial = scenarioState[scenario ?? 'healthy'];
+    if (scenario !== undefined) return initial;
+    return {
+      ...initial,
+      studio: { ...unresolvedStudioState },
+      'studio-dev': { ...unresolvedStudioState },
+    };
+  });
   const [notice, setNotice] = useState('');
   const [studioActionLoading, setStudioActionLoading] = useState(false);
+  const [studioInstalling, setStudioInstalling] = useState(false);
+  const [studioUpdate, setStudioUpdate] = useState<{
+    latestVersion: string;
+    isOutdated: boolean;
+  } | null>(null);
+  const [studioUpdateChecking, setStudioUpdateChecking] = useState(false);
   const isFixture = scenario !== undefined;
   const [studioStatusChecking, setStudioStatusChecking] = useState(
     scenario === undefined,
+  );
+
+  const refreshStudioUpdate = useCallback(
+    async (status: StudioStatusResult) => {
+      if (scenario !== undefined) return;
+      const installed = status.installed;
+      if (!installed.available) {
+        setStudioUpdate(null);
+        return;
+      }
+
+      const currentVersion = installed.version ?? '0.0.0';
+      const packageName = '@principal-ai/subsystems-studio';
+      setStudioUpdateChecking(true);
+      try {
+        const [result] = await PackageManagerService.checkVersions(
+          [{ name: packageName, currentVersion }],
+          'npm',
+        );
+        if (result?.latestVersion && !result.error) {
+          setStudioUpdate({
+            latestVersion: result.latestVersion,
+            // An unreadable install version should still surface a repair path.
+            isOutdated: installed.version ? result.isOutdated : true,
+          });
+        } else {
+          setStudioUpdate(null);
+        }
+      } catch {
+        setStudioUpdate(null);
+      } finally {
+        setStudioUpdateChecking(false);
+      }
+    },
+    [scenario],
   );
 
   const refreshStudioStatus = useCallback(async () => {
     if (scenario !== undefined) return;
     setStudioStatusChecking(true);
     try {
-      const status: StudioStatusResult = await ShellService.getStudioStatus();
+      const status: StudioStatusResult = await ShellService.getStudioStatus({
+        devPath: registeredStudioRepoPath,
+      });
       setIntegrations((previous) => ({
         ...previous,
         studio: {
           ...previous.studio,
+          installed: status.installed.available,
           running: status.running && status.mode !== 'dev',
+          version: status.installed.version ?? '',
         },
         'studio-dev': {
           ...previous['studio-dev'],
+          installed: status.dev.available,
           running: status.running && status.mode === 'dev',
+          version: status.dev.version ?? '',
         },
       }));
+      void refreshStudioUpdate(status);
     } catch {
       setIntegrations((previous) => ({
         ...previous,
         studio: { ...previous.studio, running: false },
         'studio-dev': { ...previous['studio-dev'], running: false },
       }));
+      setStudioUpdate(null);
     } finally {
       setStudioStatusChecking(false);
     }
-  }, [scenario]);
+  }, [scenario, registeredStudioRepoPath, refreshStudioUpdate]);
 
   useEffect(() => {
     void refreshStudioStatus();
@@ -290,6 +354,57 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
       );
     } finally {
       setStudioActionLoading(false);
+    }
+  };
+
+  const handleStudioInstall = async () => {
+    if (isFixture) {
+      showPrototypeNotice('Update flow preview — no files were changed.');
+      return;
+    }
+
+    setStudioInstalling(true);
+    try {
+      const wasInstalled = studio.installed;
+      const wasRunning = studio.running;
+      const result = await ShellService.installStudio({
+        mode: 'installed',
+        restart: wasRunning,
+      });
+      if (result.cancelled) return;
+
+      if (!result.success) {
+        showPrototypeNotice(
+          result.error ?? 'Could not install Subsystems Studio.',
+        );
+        await refreshStudioStatus();
+        return;
+      }
+
+      const versionLabel = result.version ? ` ${result.version}` : '';
+      if (result.restarted) {
+        showPrototypeNotice(
+          `Subsystems Studio${versionLabel} is updated and running.`,
+        );
+      } else if (wasInstalled) {
+        const restartNote = wasRunning
+          ? ` ${result.restartError ?? 'Restart Studio to use it.'}`
+          : '';
+        showPrototypeNotice(
+          `Subsystems Studio${versionLabel} is updated.${restartNote}`,
+        );
+      } else {
+        showPrototypeNotice(`Subsystems Studio${versionLabel} is installed.`);
+      }
+      await refreshStudioStatus();
+    } catch (error) {
+      showPrototypeNotice(
+        error instanceof Error
+          ? error.message
+          : 'Could not install Subsystems Studio.',
+      );
+    } finally {
+      setStudioInstalling(false);
     }
   };
 
@@ -644,6 +759,24 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
                     <ArrowDownToLine size={14} /> Review update
                   </button>
                 )}
+                {!isMaple &&
+                  !isOpenBot &&
+                  !isStudioDev &&
+                  studioUpdate?.isOutdated && (
+                    <button
+                      type="button"
+                      onClick={() => void handleStudioInstall()}
+                      disabled={studioInstalling}
+                      style={secondaryButtonStyle}
+                    >
+                      <ArrowDownToLine size={14} />
+                      {studioInstalling
+                        ? 'Updating…'
+                        : studio.running
+                          ? 'Update & restart'
+                          : `Update to ${studioUpdate.latestVersion}`}
+                    </button>
+                  )}
                 {isOpenBot ? (
                   <button
                     type="button"
@@ -659,14 +792,35 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
                 ) : !current.installed ? (
                   <button
                     type="button"
-                    onClick={() =>
-                      showPrototypeNotice(
-                        'Install flow preview — no software was installed.',
-                      )
+                    onClick={() => {
+                      if (isMaple) {
+                        showPrototypeNotice(
+                          'Install flow preview — no software was installed.',
+                        );
+                      } else if (isStudioDev) {
+                        showPrototypeNotice(
+                          'Register a Studio source clone before launching Studio Dev.',
+                        );
+                      } else {
+                        void handleStudioInstall();
+                      }
+                    }}
+                    disabled={
+                      studioInstalling ||
+                      (scenario === undefined && studioStatusChecking)
                     }
                     style={primaryButtonStyle}
                   >
-                    <ArrowDownToLine size={14} /> Install Maple
+                    <ArrowDownToLine size={14} />
+                    {!isMaple && scenario === undefined && studioStatusChecking
+                      ? 'Checking Studio…'
+                      : studioInstalling
+                        ? 'Installing…'
+                        : isMaple
+                          ? 'Install Maple'
+                          : isStudioDev
+                            ? 'Dev build not found'
+                            : 'Install Studio'}
                   </button>
                 ) : (
                   <button
@@ -775,6 +929,41 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
               </div>
             )}
 
+            {!isMaple &&
+              !isOpenBot &&
+              !isStudioDev &&
+              current.installed &&
+              studioUpdate?.isOutdated && (
+                <div
+                  style={{
+                    ...surfaceStyle,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: space[2],
+                    marginBottom: space[3],
+                    padding: space[2],
+                    color: colors.warning,
+                  }}
+                >
+                  <ArrowDownToLine size={16} />
+                  <span style={{ fontSize: fontSizes[1] }}>
+                    Version {studioUpdate.latestVersion} is available
+                    {current.version ? ` — you have ${current.version}` : ''}
+                    {studio.running ? '. Updating restarts Studio.' : ''}
+                  </span>
+                  {studioUpdateChecking && (
+                    <span
+                      style={{
+                        color: colors.textMuted,
+                        fontSize: fontSizes[1],
+                      }}
+                    >
+                      Checking…
+                    </span>
+                  )}
+                </div>
+              )}
+
             <div
               style={{
                 display: 'flex',
@@ -788,9 +977,19 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
                 label={
                   isOpenBot
                     ? 'Local chat bridge'
-                    : current.installed
-                      ? `Version ${current.version}`
-                      : 'No version installed'
+                    : scenario === undefined && studioStatusChecking && !isMaple
+                      ? 'Checking'
+                      : isStudioDev
+                        ? current.installed
+                          ? current.version
+                            ? `Version ${current.version}`
+                            : 'Version unknown'
+                          : 'No dev build found'
+                        : current.installed
+                          ? current.version
+                            ? `Version ${current.version}`
+                            : 'Version unknown'
+                          : 'No version installed'
                 }
                 color={colors.textSecondary}
                 theme={theme}
@@ -956,10 +1155,16 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
                     label: isStudioDev ? 'Registered source clone' : 'Package',
                     description: isStudioDev
                       ? 'The development entry is available because a Studio repository clone is registered.'
-                      : 'Published npm package, launched through the Principal Studio CLI.',
+                      : activeStudio.installed
+                        ? 'Published npm package, launched through the Principal Studio CLI.'
+                        : 'Not installed. Install the published package to launch Studio.',
                     value: isStudioDev
-                      ? 'packages/subsystems-studio'
-                      : '@principal-ai/subsystems-studio',
+                      ? activeStudio.installed
+                        ? 'packages/subsystems-studio'
+                        : 'Not registered'
+                      : activeStudio.installed
+                        ? '@principal-ai/subsystems-studio'
+                        : 'Not installed yet',
                   })}
                   {renderSettingRow({
                     icon: <ShieldCheck size={16} />,
@@ -981,13 +1186,23 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
                     color={colors.primary}
                     title={
                       isStudioDev
-                        ? 'Subsystems Studio Dev is ready'
-                        : 'Subsystems Studio is ready'
+                        ? activeStudio.installed
+                          ? 'Subsystems Studio Dev is ready'
+                          : 'Subsystems Studio Dev is not registered'
+                        : activeStudio.installed
+                          ? 'Subsystems Studio is ready'
+                          : 'Subsystems Studio is not installed'
                     }
                     detail={
                       isStudioDev
-                        ? 'Development build · registered source clone'
-                        : `Published npm package · version ${activeStudio.version}`
+                        ? activeStudio.version
+                          ? `Development build · version ${activeStudio.version}`
+                          : 'Development build · registered source clone'
+                        : activeStudio.version
+                          ? `Published npm package · version ${activeStudio.version}`
+                          : activeStudio.installed
+                            ? 'Published npm package · version unknown'
+                            : 'Published npm package · not installed'
                     }
                     theme={theme}
                     last

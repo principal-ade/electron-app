@@ -15,6 +15,7 @@ export enum ShellAPIEvent {
   OPEN_PRIVACY_SETTINGS = 'shell:open-privacy-settings',
   LAUNCH_STUDIO = 'shell:launch-studio',
   GET_STUDIO_STATUS = 'shell:get-studio-status',
+  INSTALL_STUDIO = 'shell:install-studio',
 }
 
 /** How to launch Subsystems Studio. */
@@ -38,10 +39,62 @@ export interface StudioLaunchResult {
   error?: string;
 }
 
+export interface StudioStatusOptions {
+  /** Registered Studio source clone, used to read the dev build's version. */
+  devPath?: string;
+}
+
+export interface StudioInstalledInfo {
+  /** True when an installed build can be launched. */
+  available: boolean;
+  /** Version of Studio itself (the nested package when the CLI is the entry). */
+  version?: string;
+  /** Package a global install/update should target. */
+  packageName?: string;
+  /** Version of `packageName` as installed, used for registry comparison. */
+  packageVersion?: string;
+  /** Global npm root containing `packageName`, when known. */
+  npmRoot?: string;
+}
+
+export interface StudioDevInfo {
+  available: boolean;
+  version?: string;
+  /** Root of the source checkout the dev build would run from. */
+  path?: string;
+}
+
 export interface StudioStatusResult {
   running: boolean;
   mode?: StudioLaunchMode;
   port?: number;
+  /** Published build discovered on disk, whether or not it is running. */
+  installed: StudioInstalledInfo;
+  /** Source checkout discovered on disk, whether or not it is running. */
+  dev: StudioDevInfo;
+}
+
+export interface StudioInstallOptions {
+  /** Dev builds are managed in source; only `installed` is supported. */
+  mode: StudioLaunchMode;
+  /** Quit and relaunch a running installed Studio after updating. */
+  restart?: boolean;
+}
+
+export interface StudioInstallResult {
+  success: boolean;
+  mode?: StudioLaunchMode;
+  /** Studio version read back after the install completes. */
+  version?: string;
+  packageName?: string;
+  /** True when a running Studio was relaunched and answered its health check. */
+  restarted?: boolean;
+  /** The user dismissed the update-and-restart confirmation. */
+  cancelled?: boolean;
+  /** Update succeeded but Studio could not be restarted. */
+  restartError?: string;
+  output?: string;
+  error?: string;
 }
 
 export interface ShellAPI {
@@ -139,5 +192,14 @@ export interface ShellAPI {
    */
   launchStudio: (options: StudioLaunchOptions) => Promise<StudioLaunchResult>;
   /** Probe Studio's read-only local health endpoint without focusing its window. */
-  getStudioStatus: () => Promise<StudioStatusResult>;
+  getStudioStatus: (
+    options?: StudioStatusOptions,
+  ) => Promise<StudioStatusResult>;
+  /**
+   * Install or update the published Studio build through its global npm
+   * package. Dev builds return an error; update their source clone instead.
+   */
+  installStudio: (
+    options: StudioInstallOptions,
+  ) => Promise<StudioInstallResult>;
 }
