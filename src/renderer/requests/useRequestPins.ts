@@ -8,6 +8,7 @@ import { BrunoService } from '../main-process-api/BrunoService';
 
 export function useRequestPins() {
   const [catalogRequests, setCatalogRequests] = useState<CatalogRequest[]>([]);
+  const [catalogRequestsLoaded, setCatalogRequestsLoaded] = useState(false);
   const savedRequests = useMemo(
     () =>
       catalogRequests
@@ -26,11 +27,15 @@ export function useRequestPins() {
     const sequence = ++loadSequence.current;
     try {
       const pending = BrunoService.listRoutes();
-      if (!pending) return;
+      if (!pending) {
+        setCatalogRequestsLoaded(true);
+        return;
+      }
       const saved = await pending;
       if (current !== revision.current || sequence !== loadSequence.current)
         return;
       setError(null);
+      setCatalogRequestsLoaded(true);
       setCatalogRequests((previous) =>
         previous.length || saved.length ? saved : previous,
       );
@@ -109,6 +114,7 @@ export function useRequestPins() {
   return {
     savedRequests,
     catalogRequests,
+    catalogRequestsLoaded,
     saveRequest,
     updateRequest,
     forgetRequest,

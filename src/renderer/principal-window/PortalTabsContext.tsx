@@ -16,6 +16,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import type { DocumentRange } from '../../shared/documentRange';
@@ -46,12 +47,17 @@ import type {
 import { specTabLabel } from '../specs-view/specPaths';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
 import { ProcessRegistryService } from '../main-process-api/ProcessRegistryService';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { useTopicRemoved } from '../topics-view/useTopicRemoved';
 import type {
   CatalogRequest,
   SavedRequest,
 } from '../../shared/requests/preparedRequest';
 import { useRequestPins } from '../requests/useRequestPins';
+import {
+  createWorkspaceTabsSnapshot,
+  restoreWorkspaceTabsSnapshot,
+} from './workspaceTabPersistence';
 import {
   browserTabId,
   openOrNavigateLocalhostBrowser,
@@ -101,6 +107,8 @@ export interface WorkspaceTabsContextValue {
   savedRequests: SavedRequest[];
   /** All remembered routes, including closed, unpinned definitions. */
   catalogRequests: CatalogRequest[];
+  /** True after the initial remembered-request catalog read has completed. */
+  catalogRequestsLoaded: boolean;
   updateRequest: (request: SavedRequest) => Promise<void>;
   forgetRequest: (id: string) => Promise<void>;
   saveRequest: (request: SavedRequest) => Promise<void>;
@@ -221,7 +229,66 @@ export function useWorkspaceTabsOptional(): WorkspaceTabsContextValue | null {
 function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [workspaceTabsLoaded, setWorkspaceTabsLoaded] = useState(false);
+  const workspaceRestoreStarted = useRef(false);
   const requestPins = useRequestPins();
+
+  // Restore once, after the secure request catalog has been read so prepared
+  // request tabs can be rebuilt from their IDs without copying request bodies
+  // or credentials into ordinary preferences.
+  useEffect(() => {
+    if (!requestPins.catalogRequestsLoaded || workspaceRestoreStarted.current)
+      return;
+    workspaceRestoreStarted.current = true;
+    let cancelled = false;
+
+    void UserPreferencesService.getPreferences()
+      .then((preferences) => {
+        if (cancelled) return;
+        const restored = restoreWorkspaceTabsSnapshot(
+          preferences.interactiveShell?.workspaceTabs,
+          requestPins.catalogRequests,
+        );
+        if (restored) {
+          setTabs((current) => {
+            const currentById = new Map(current.map((tab) => [tab.id, tab]));
+            const restoredIds = new Set(restored.tabs.map((tab) => tab.id));
+            return [
+              ...restored.tabs.map((tab) => currentById.get(tab.id) ?? tab),
+              ...current.filter((tab) => !restoredIds.has(tab.id)),
+            ];
+          });
+          setActiveTabId(
+            (current) => current ?? restored.activeTabId ?? null,
+          );
+        }
+      })
+      .catch((error) => {
+        console.error('[WorkspaceTabs] Failed to restore open tabs:', error);
+      })
+      .finally(() => {
+        if (!cancelled) setWorkspaceTabsLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requestPins.catalogRequests, requestPins.catalogRequestsLoaded]);
+
+  // Debounce writes so reorder/rename operations persist as one coherent
+  // snapshot. The readiness guard prevents the initial empty state from
+  // overwriting the saved workspace while restoration is in flight.
+  useEffect(() => {
+    if (!workspaceTabsLoaded) return;
+    const timeout = setTimeout(() => {
+      void UserPreferencesService.updatePreferences({
+        interactiveShell: {
+          workspaceTabs: createWorkspaceTabsSnapshot(tabs, activeTabId),
+        },
+      });
+    }, 200);
+    return () => clearTimeout(timeout);
+  }, [activeTabId, tabs, workspaceTabsLoaded]);
 
   useTopicRemoved(
     useCallback(

@@ -264,6 +264,11 @@ export interface UserPreferences {
   interactiveShell?: {
     activeNavigationView?: InteractiveShellNavigationView;
     /**
+     * The open tab order and selection for the principal workspace. Tab payloads
+     * are versioned and validated by the renderer before they are restored.
+     */
+    workspaceTabs?: WorkspaceTabsSnapshot;
+    /**
      * Tabs the user pinned from the Home rail. A pinned entry persists across
      * the tab being closed so it can be reopened from Home (repo-rooted ones
      * collapse to an icon on their repo row; standalone ones stay in the
@@ -333,6 +338,13 @@ export interface UserPreferences {
   // - validationConfigs: src/renderer/services/validation/ConfiguredValidationService.ts:13
   // - customArchitectureLayers: src/renderer/services/storage/CustomLayersStorageService.ts:3
   // - sessionContexts: src/renderer/services/sessionContextService.ts (with pattern `sessionContexts:${directory}`)
+}
+
+/** JSON-safe workspace tab descriptors stored separately from live tab state. */
+export interface WorkspaceTabsSnapshot {
+  version: 1;
+  tabs: Array<Record<string, unknown>>;
+  activeTabId: string | null;
 }
 
 export type AgentSessionBookmarkProvider =

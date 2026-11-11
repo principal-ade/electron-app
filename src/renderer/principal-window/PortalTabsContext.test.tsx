@@ -1,7 +1,8 @@
 /// <reference types="jest" />
 import React from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { PortalTabsProvider, useWorkspaceTabs } from './PortalTabsContext';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { ProcessRegistryService } from '../main-process-api/ProcessRegistryService';
 import { useBridgeBrowserOpen } from '../hooks/useBridgeBrowserOpen';
 import { BrowserService } from '../services/BrowserService';
@@ -15,6 +16,13 @@ import {
 
 jest.mock('../main-process-api/TopicService', () => ({
   TopicService: { onTopicChange: jest.fn() },
+}));
+
+jest.mock('../main-process-api/UserPreferencesService', () => ({
+  UserPreferencesService: {
+    getPreferences: jest.fn(() => new Promise(() => {})),
+    updatePreferences: jest.fn(),
+  },
 }));
 
 jest.mock('../main-process-api/ProcessRegistryService', () => ({
@@ -81,6 +89,89 @@ test('bridge ranges update an existing source tab, including repeated identical 
     rangeRevision: 3,
   });
   expect(result.current.activeTabId).toBe(firstId);
+});
+
+test('restores tabs in saved order and selects the saved active tab', async () => {
+  (UserPreferencesService.getPreferences as jest.Mock).mockResolvedValueOnce({
+    interactiveShell: {
+      workspaceTabs: {
+        version: 1,
+        activeTabId: 'local-topic-topic-a',
+        tabs: [
+          {
+            id: 'source-file-/repo/a.ts',
+            label: 'a.ts',
+            contentType: 'source-file',
+            closable: true,
+            filePath: '/repo/a.ts',
+          },
+          {
+            id: 'local-topic-topic-a',
+            label: 'Topic A',
+            contentType: 'local-topic',
+            closable: true,
+            topicId: 'topic-a',
+          },
+        ],
+      },
+    },
+  });
+
+  const { result, unmount } = renderHook(useWorkspaceTabs, { wrapper });
+  await waitFor(() => expect(result.current.tabs).toHaveLength(2));
+
+  expect(result.current.tabs.map((tab) => tab.id)).toEqual([
+    'source-file-/repo/a.ts',
+    'local-topic-topic-a',
+  ]);
+  expect(result.current.activeTabId).toBe('local-topic-topic-a');
+  unmount();
+});
+
+test('persists tab order and active selection after workspace changes', async () => {
+  (UserPreferencesService.getPreferences as jest.Mock).mockResolvedValueOnce(
+    {},
+  );
+  const { result, unmount } = renderHook(useWorkspaceTabs, { wrapper });
+
+  await waitFor(() =>
+    expect(UserPreferencesService.updatePreferences).toHaveBeenCalled(),
+  );
+  (UserPreferencesService.updatePreferences as jest.Mock).mockClear();
+
+  act(() => {
+    result.current.openSourceFile('/repo/a.ts');
+    result.current.openLocalTopic('topic-a', 'Topic A');
+  });
+
+  await waitFor(() =>
+    expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
+      interactiveShell: {
+        workspaceTabs: {
+          version: 1,
+          activeTabId: 'local-topic-topic-a',
+          tabs: [
+            {
+              id: 'source-file-/repo/a.ts',
+              label: 'a.ts',
+              contentType: 'source-file',
+              closable: true,
+              filePath: '/repo/a.ts',
+            },
+            {
+              id: 'local-topic-topic-a',
+              label: 'Topic A',
+              contentType: 'local-topic',
+              closable: true,
+              topicId: 'topic-a',
+              title: 'Topic A',
+            },
+          ],
+        },
+      },
+    }),
+  );
+  unmount();
 });
 
 test('topic removal closes all matching tabs and selects a remaining tab', () => {
