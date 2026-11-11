@@ -8,6 +8,8 @@
  *   grouped under its repo row;
  * - one top-level entry per **standalone** tab (drawings, localhost browsers,
  *   skills, files outside any repo, and topics/models without a single-repo pin);
+ * - one entry per **open bot chat**, kept in their own `bots` list so the rail
+ *   can give them a section heading;
  * - pinned entries whose tab is currently closed, split the same way (repo
  *   rows carry them as icons, or labeled children for topics/models; the rest
  *   land in the Pinned section).
@@ -81,6 +83,8 @@ export interface HomeTabEntries {
   processes: ProcessEntry[];
   /** Repos with in-progress work, an open tab, or a pinned tab. */
   repos: HomeRepoRow[];
+  /** Open OpenBot chat tabs, one per bot, listed under their own heading. */
+  bots: HomeTabEntry[];
   /** Open tabs that don't belong to any repo. */
   openTabs: HomeTabEntry[];
   /** Pinned entries with no open tab and no owning repo. */
@@ -180,10 +184,9 @@ export function entryFromTab(
       };
     case 'skill':
       return { ...base, kind: 'skill', skillId: tab.skillId };
-    // OpenBot has a connection-gated Home shortcut, rendered before the rest of
-    // the rail rather than in the generic Open Tabs section.
+    // Bot chats get their own Home heading, so `label` is the bot's name.
     case 'openbot-chat':
-      return null;
+      return { ...base, kind: 'openbot-chat' };
     case 'localhost-browser':
       return {
         ...base,
@@ -337,6 +340,7 @@ export function buildHomeTabEntries(
   }
 
   const openIds = new Set<string>();
+  const bots: HomeTabEntry[] = [];
   const openTabs: HomeTabEntry[] = [];
   const processTabs = new Map<string, HomeProcessTab>();
   const representedBrowserIds = new Set<string>();
@@ -399,6 +403,11 @@ export function buildHomeTabEntries(
         : undefined;
     const entry = entryFromTab(tab, repoPath);
     if (!entry) continue;
+    openIds.add(tab.id);
+    if (entry.kind === 'openbot-chat') {
+      bots.push(entry);
+      continue;
+    }
     if (entry.kind === 'terminal' && repoPath) {
       // Repo-nested terminals already sit under a row naming their location,
       // so the tab-bar position is the useful label there. A standalone
@@ -412,7 +421,6 @@ export function buildHomeTabEntries(
         entry.label = `Tab ${terminalNumber}`;
       }
     }
-    openIds.add(tab.id);
 
     const scope =
       entry.kind === 'topic' || entry.kind === 'subsystem-model'
@@ -518,6 +526,7 @@ export function buildHomeTabEntries(
     processTabs,
     processes: standaloneProcesses,
     repos: [...rows.values()],
+    bots,
     openTabs,
     pinnedTabs,
     ...(pinnedSessionBookmarks.length > 0 ? { pinnedSessionBookmarks } : {}),

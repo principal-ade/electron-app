@@ -8,19 +8,15 @@ import {
 } from '@testing-library/react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AgentSessionBookmark } from '../../../shared/types/userPreferences.types';
+import type { WatchedPullRequest } from '../../../shared/main-process-api-interfaces/PullRequestWatchAPI';
 import { agentSessionBookmarkTabId } from '../../../shared/agentSessionBookmark';
-import { OpenBotChatService } from '../../main-process-api/OpenBotChatService';
 import type { HomeRepoRow, HomeTabEntry } from './homeTabEntries';
 import { HomeLeftPanel, type HomeLeftPanelProps } from './HomeLeftPanel';
 import { buildHomeTabEntries } from './homeTabEntries';
 
 const mockOpenOrgProfile = jest.fn();
-const mockOpenOpenBotChat = jest.fn();
 const mockSessionBookmarks: AgentSessionBookmark[] = [];
 const mockToggleSessionBookmark = jest.fn();
-jest.mock('../../main-process-api/OpenBotChatService', () => ({
-  OpenBotChatService: { listChannels: jest.fn() },
-}));
 
 jest.mock('@industry-theme/xterm-terminal-panel', () => ({
   ProgramStatusBadge: ({ record }: { record: { state: string } }) => (
@@ -92,7 +88,6 @@ jest.mock('../../principal-window/PortalTabsContext', () => ({
     savedRequests: [],
     catalogRequests: [],
     openOrgProfile: mockOpenOrgProfile,
-    openOpenBotChat: mockOpenOpenBotChat,
   }),
 }));
 jest.mock('../../requests/RequestGroupList', () => ({
@@ -106,8 +101,14 @@ jest.mock('../../hooks/useProcessRegistry', () => ({
   useProcessRegistry: () => ({ entries: [] }),
 }));
 jest.mock('./HomeProcessRow', () => ({ HomeProcessRow: () => null }));
+const mockUseWatchedPullRequests = jest.fn(
+  (): { pullRequests: WatchedPullRequest[]; error: string | null } => ({
+    pullRequests: [],
+    error: null,
+  }),
+);
 jest.mock('../../hooks/useWatchedPullRequests', () => ({
-  useWatchedPullRequests: () => ({ pullRequests: [], error: null }),
+  useWatchedPullRequests: () => mockUseWatchedPullRequests(),
 }));
 jest.mock('./HomePullRequestRow', () => ({ HomePullRequestRow: () => null }));
 const mockDetachedTabs = new Map<string, { windowId: number }>();
@@ -141,12 +142,15 @@ function renderHome(
   pinnedTabs: HomeRepoRow['pinnedTabs'] = [],
   openTabs: HomeRepoRow['openTabs'] = [],
   programStatusByTab?: HomeLeftPanelProps['programStatusByTab'],
+  bots: HomeTabEntry[] = [],
+  onActivateTab = jest.fn(),
 ) {
   jest.mocked(buildHomeTabEntries).mockReturnValue({
     repos: [row],
     requests: [],
     processTabs: new Map(),
     processes: [],
+    bots,
     openTabs,
     pinnedTabs,
     pinnedSessionBookmarks: mockSessionBookmarks,
@@ -161,7 +165,7 @@ function renderHome(
       aboutUser={null}
       userLoading={false}
       activeTabId={null}
-      onActivateTab={jest.fn()}
+      onActivateTab={onActivateTab}
       onOpenEntry={onOpenEntry}
     />,
   );
@@ -170,13 +174,12 @@ function renderHome(
 
 beforeEach(() => {
   mockOpenOrgProfile.mockClear();
-  mockOpenOpenBotChat.mockClear();
   mockSessionBookmarks.splice(0, mockSessionBookmarks.length);
   mockToggleSessionBookmark.mockClear();
-  jest
-    .mocked(OpenBotChatService.listChannels)
-    .mockReset()
-    .mockRejectedValue(new Error('OpenBot unavailable'));
+  mockUseWatchedPullRequests.mockReturnValue({
+    pullRequests: [],
+    error: null,
+  });
   Object.defineProperty(window, 'mainProcess', {
     configurable: true,
     value: undefined,
@@ -232,6 +235,7 @@ test('renders repo-associated session bookmarks as nested repo rows', () => {
     requests: [],
     processTabs: new Map(),
     processes: [],
+    bots: [],
     openTabs: [],
     pinnedTabs: [],
     pinnedSessionBookmarks: [],
@@ -267,6 +271,7 @@ test('keeps a resumed session bookmark on its open terminal row', () => {
     requests: [],
     processTabs: new Map(),
     processes: [],
+    bots: [],
     openTabs: [],
     pinnedTabs: [],
     pinnedSessionBookmarks: [],
@@ -287,19 +292,35 @@ test('keeps a resumed session bookmark on its open terminal row', () => {
   expect(screen.queryByText('Pinned')).toBeNull();
 });
 
-test('shows OpenBot first in Home when connected and opens its tab', async () => {
-  jest.mocked(OpenBotChatService.listChannels).mockResolvedValue([]);
+test('lists open bots under a Bots header and focuses their tab', () => {
+  const onActivateTab = jest.fn();
+  const bot: HomeTabEntry = {
+    id: 'openbot-chat-agent-1',
+    kind: 'openbot-chat',
+    label: 'Atlas',
+  };
 
-  renderHome();
+  renderHome(repo, jest.fn(), [], [], undefined, [bot], onActivateTab);
 
-  const openBotRow = await screen.findByRole('button', {
-    name: 'Open OpenBot',
-  });
-  expect(screen.getAllByRole('button')[0]).toBe(openBotRow);
-  fireEvent.click(openBotRow);
-
-  expect(OpenBotChatService.listChannels).toHaveBeenCalled();
-  expect(mockOpenOpenBotChat).toHaveBeenCalledTimes(1);
+  const botsHeading = screen.getByText('Bots');
+  const ownerHeading = screen.getByText('Owner organization');
+  // Bots stay above the repo sections, separated from them by the same
+  // divider the other Home sections use.
+  expect(
+    botsHeading.compareDocumentPosition(ownerHeading) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  const divider = screen.getByRole('separator');
+  expect(
+    botsHeading.compareDocumentPosition(divider) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    divider.compareDocumentPosition(ownerHeading) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Open Atlas' }));
+  expect(onActivateTab).toHaveBeenCalledWith(bot.id);
 });
 
 test.each(
@@ -425,6 +446,7 @@ test('owner groups are separated from each other, not from their repositories', 
     requests: [],
     processTabs: new Map(),
     processes: [],
+    bots: [],
     openTabs: [],
     pinnedTabs: [],
   });
@@ -456,6 +478,7 @@ test.each(['Processes', 'Open Tabs', 'Pinned'] as const)(
       requests: [],
       processTabs: new Map(),
       processes: heading === 'Processes' ? [process] : [],
+      bots: [],
       openTabs: heading === 'Open Tabs' ? entries : [],
       pinnedTabs: heading === 'Pinned' ? entries : [],
     });
@@ -472,6 +495,57 @@ test.each(['Processes', 'Open Tabs', 'Pinned'] as const)(
     expect(divider.style.margin).toBe('4px 0px');
   },
 );
+
+test('separates the Pull Requests section from the preceding section, not its content', () => {
+  mockUseWatchedPullRequests.mockReturnValue({
+    pullRequests: [{ id: 'pr-1' } as unknown as WatchedPullRequest],
+    error: null,
+  });
+  renderHome();
+
+  const divider = screen.getByRole('separator');
+  const header = screen.getByText('Pull Requests').parentElement;
+  expect(divider.nextElementSibling).toBe(header);
+  expect(header?.nextElementSibling?.getAttribute('role')).not.toBe(
+    'separator',
+  );
+  expect(divider.style.height).toBe('1px');
+  expect(divider.style.backgroundColor).toBe('rgb(18, 52, 86)');
+  expect(divider.style.margin).toBe('4px 0px');
+});
+
+test('separates Pull Requests from Bots when nothing else precedes them', () => {
+  const bot: HomeTabEntry = {
+    id: 'openbot-chat-agent-1',
+    kind: 'openbot-chat',
+    label: 'Atlas',
+  };
+  jest.mocked(buildHomeTabEntries).mockReturnValueOnce({
+    repos: [],
+    requests: [],
+    processTabs: new Map(),
+    processes: [],
+    bots: [bot],
+    openTabs: [],
+    pinnedTabs: [],
+  });
+  mockUseWatchedPullRequests.mockReturnValue({
+    pullRequests: [{ id: 'pr-1' } as unknown as WatchedPullRequest],
+    error: null,
+  });
+
+  renderHome();
+
+  // One divider after Bots (before the repo section), one above Pull
+  // Requests — the latter exists because the Bots section precedes it even
+  // with no repos or requests.
+  const separators = screen.getAllByRole('separator');
+  expect(separators).toHaveLength(2);
+  const prHeader = screen.getByText('Pull Requests').parentElement;
+  expect(
+    separators.some((divider) => divider.nextElementSibling === prHeader),
+  ).toBe(true);
+});
 
 test('shows a bookmark icon before the Pinned section label', () => {
   renderHome(repo, jest.fn(), [

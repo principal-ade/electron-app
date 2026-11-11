@@ -22,7 +22,7 @@ import {
   type RepositorySelectedPayload,
 } from '../../events/repositorySelected';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Bookmark, GitPullRequest, PanelsTopLeft } from 'lucide-react';
+import { Bookmark, Bot, GitPullRequest, PanelsTopLeft } from 'lucide-react';
 import { useAuthUser } from '../../providers/AuthProvider';
 import { OrgRepoItemCard } from '../cards/OrgRepoItemCard';
 import { OrgSectionHeaderCard } from '../cards/OrgSectionHeaderCard';
@@ -47,7 +47,6 @@ import {
 import { useHomePins } from './useHomePins';
 import { detachedTabEntry, useDetachedTabs } from './useDetachedTabs';
 import { WindowService } from '../../main-process-api/WindowService';
-import { OpenBotChatService } from '../../main-process-api/OpenBotChatService';
 import { usePinnedRepoScopes } from './usePinnedRepoScopes';
 import {
   useWorkspaceTabs,
@@ -131,7 +130,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
   // Principal app OAuth — re-runs the profile load on sign-in.
   const { user: authUser, profile } = useAuthUser();
   const { theme } = useTheme();
-  const [openBotConnected, setOpenBotConnected] = useState(false);
   const [selectedRepo, setSelectedRepo] =
     useState<RepositorySelectedPayload | null>(null);
   const [repoCardExiting, setRepoCardExiting] = useState(false);
@@ -217,30 +215,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     requestPinError,
     refreshSavedRequests,
     openOrgProfile,
-    openOpenBotChat,
   } = useWorkspaceTabs();
-  const openBotTab = tabs.find((tab) => tab.contentType === 'openbot-chat');
 
-  // OpenBot appears as the first Home tab only while its local chat service is
-  // reachable. Recheck on focus so starting OpenBot while Home is open reveals it.
-  useEffect(() => {
-    let cancelled = false;
-    const checkOpenBotConnection = async () => {
-      try {
-        await OpenBotChatService.listChannels();
-        if (!cancelled) setOpenBotConnected(true);
-      } catch {
-        if (!cancelled) setOpenBotConnected(false);
-      }
-    };
-
-    void checkOpenBotConnection();
-    window.addEventListener('focus', checkOpenBotConnection);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('focus', checkOpenBotConnection);
-    };
-  }, []);
   const pinnedTabEntries = useMemo(
     () => [
       ...preferencePins.filter((entry) => entry.kind !== 'http-request'),
@@ -542,11 +518,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
     textTransform: 'uppercase',
     color: theme.colors.textSecondary,
   };
-  const tabSectionDividerStyle: React.CSSProperties = {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    margin: '5px 10px 0',
-  };
   const homeSectionDividerStyle: React.CSSProperties = {
     height: 1,
     backgroundColor: theme.colors.border,
@@ -689,30 +660,24 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
           }}
         >
           <UserAboutCard info={aboutUser} loading={userLoading} />
-          {openBotConnected && (
-            <div style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
-              <HomeTabRow
-                entry={{
-                  id: 'openbot-chat',
-                  kind: 'openbot-chat',
-                  label: 'OpenBot',
-                }}
-                open={!!openBotTab}
-                active={!!openBotTab && activeTabId === openBotTab.id}
-                tabNumber={
-                  openBotTab ? tabNumbers.get(openBotTab.id) : undefined
-                }
-                pinned={false}
-                pinnable={false}
-                onActivate={() => {
-                  if (openBotTab) onActivateTab(openBotTab.id);
-                  else openOpenBotChat();
-                }}
-                onTogglePin={() => {}}
-              />
+          {/* Open bot chats stay at the top of Home, one row per open bot. */}
+          {homeTabs.bots.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={tabSectionStyle}>
+                <Bot size={22} color={theme.colors.textSecondary} />
+                <span>Bots</span>
+              </div>
+              {homeTabs.bots.map((bot) => renderTabEntry(bot, true))}
             </div>
           )}
           <>
+            {homeTabs.bots.length > 0 && (
+              <div
+                role="separator"
+                aria-orientation="horizontal"
+                style={homeSectionDividerStyle}
+              />
+            )}
             <div
               style={{
                 display: 'flex',
@@ -922,6 +887,15 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
               )}
               {watchedPullRequests.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
+                  {(homeTabs.requests.length > 0 ||
+                    inProgressGroups.length > 0 ||
+                    homeTabs.bots.length > 0) && (
+                    <div
+                      role="separator"
+                      aria-orientation="horizontal"
+                      style={homeSectionDividerStyle}
+                    />
+                  )}
                   <div style={tabSectionStyle}>
                     <GitPullRequest
                       size={22}
@@ -929,7 +903,6 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                     />
                     <span>Pull Requests</span>
                   </div>
-                  <div role="separator" style={tabSectionDividerStyle} />
                   {watchedPullRequests.map((pr) => (
                     <HomePullRequestRow key={pr.id} pullRequest={pr} />
                   ))}
@@ -940,7 +913,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 <div style={{ marginBottom: 8 }}>
                   {(homeTabs.requests.length > 0 ||
                     inProgressGroups.length > 0 ||
-                    watchedPullRequests.length > 0) && (
+                    watchedPullRequests.length > 0 ||
+                    homeTabs.bots.length > 0) && (
                     <div
                       role="separator"
                       aria-orientation="horizontal"
@@ -966,7 +940,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                   {(homeTabs.requests.length > 0 ||
                     inProgressGroups.length > 0 ||
                     watchedPullRequests.length > 0 ||
-                    homeTabs.processes.length > 0) && (
+                    homeTabs.processes.length > 0 ||
+                    homeTabs.bots.length > 0) && (
                     <div
                       role="separator"
                       aria-orientation="horizontal"
@@ -992,6 +967,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                     inProgressGroups.length > 0 ||
                     watchedPullRequests.length > 0 ||
                     homeTabs.processes.length > 0 ||
+                    homeTabs.bots.length > 0 ||
                     homeTabs.openTabs.length > 0) && (
                     <div
                       role="separator"
@@ -1019,6 +995,7 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                 homeTabs.requests.length === 0 &&
                 watchedPullRequests.length === 0 &&
                 homeTabs.processes.length === 0 &&
+                homeTabs.bots.length === 0 &&
                 homeTabs.openTabs.length === 0 &&
                 homeTabs.pinnedTabs.length === 0 &&
                 (homeTabs.pinnedSessionBookmarks?.length ?? 0) === 0 && (

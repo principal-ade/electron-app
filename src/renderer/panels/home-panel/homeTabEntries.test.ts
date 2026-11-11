@@ -932,6 +932,23 @@ describe('tab renames (customLabel)', () => {
     expect(entryFromTab(blank)).not.toHaveProperty('customLabel');
   });
 
+  it('lists an open bot chat under bots, not the generic open tabs', () => {
+    const botTab = {
+      id: 'openbot-chat-agent-1',
+      label: 'Atlas',
+      contentType: 'openbot-chat',
+      agentId: 'agent-1',
+      botName: 'Atlas',
+    } as WorkspaceTab;
+
+    const result = buildHomeTabEntries([], [], [botTab], []);
+
+    expect(result.bots).toMatchObject([
+      { id: botTab.id, kind: 'openbot-chat', label: 'Atlas' },
+    ]);
+    expect(result.openTabs).toEqual([]);
+  });
+
   it('keeps a renamed repo-nested terminal name instead of Tab N', () => {
     const terminal = {
       id: 'tab-1',
