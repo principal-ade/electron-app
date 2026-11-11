@@ -115,6 +115,8 @@ function ownerForTab(tab: WorkspaceTab): {
       return { path: tab.repoPath };
     case 'markdown-doc':
       return { path: tab.repositoryPath ?? tab.filePath };
+    case 'spec':
+      return { path: tab.repositoryPath ?? tab.filePath };
     case 'http-request':
       return tab.repositoryPath ? { path: tab.repositoryPath } : null;
     case 'source-file':
@@ -160,6 +162,13 @@ export function entryFromTab(
       return {
         ...base,
         kind: 'markdown-doc',
+        filePath: tab.filePath,
+        repositoryPath: tab.repositoryPath,
+      };
+    case 'spec':
+      return {
+        ...base,
+        kind: 'spec',
         filePath: tab.filePath,
         repositoryPath: tab.repositoryPath,
       };

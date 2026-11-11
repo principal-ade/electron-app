@@ -353,6 +353,7 @@ export type HomePinnedTabKind =
   | 'http-request'
   | 'topic'
   | 'markdown-doc'
+  | 'spec'
   | 'source-file'
   | 'media'
   | 'drawing'

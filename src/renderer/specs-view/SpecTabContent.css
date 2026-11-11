@@ -1,0 +1,285 @@
+/* Keep themed-markdown's natural typography, but let fragments grow to the
+   content height so requirement/scenario cards size to their prose. */
+.spec-markdown-fragment > div,
+.spec-markdown-fragment .markdown-slide {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.spec-markdown-fragment .markdown-slide {
+  padding: 0 !important;
+}
+
+.spec-markdown-fragment .markdown-slide > :first-child {
+  margin-top: 0 !important;
+}
+
+.spec-markdown-fragment .markdown-slide > :last-child {
+  margin-bottom: 0 !important;
+}
+
+.spec-markdown-fragment .markdown-slide ul,
+.spec-markdown-fragment .markdown-slide ol {
+  margin-top: 0.45em;
+  margin-bottom: 0.45em;
+}
+
+.spec-markdown-fragment .markdown-slide li::marker {
+  color: var(--spec-accent, currentColor);
+}
+
+.spec-outline-item {
+  transition: background-color 120ms ease;
+}
+
+.spec-outline-item:not([aria-current='true']):hover {
+  background: var(--spec-outline-hover, transparent) !important;
+}
+
+.spec-structured-document {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  padding: 28px 36px 64px;
+  box-sizing: border-box;
+}
+
+.spec-section + .spec-section {
+  margin-top: 34px;
+}
+
+.spec-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.spec-section-header h2 {
+  margin: 0;
+}
+
+.spec-section-cards {
+  display: grid;
+  gap: 12px;
+}
+
+.spec-requirement-card {
+  overflow: hidden;
+  border: 1px solid var(--spec-border);
+  border-left: 1px solid var(--spec-border);
+  border-radius: var(--spec-card-radius, 10px);
+  background: var(--spec-surface);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 9%);
+}
+
+.spec-requirement-header {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--spec-border);
+  background: color-mix(in srgb, var(--spec-accent) 7%, transparent);
+}
+
+.spec-requirement-header h3 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.spec-requirement-number,
+.spec-scenario-number {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 7px;
+  color: var(--spec-accent);
+  background: color-mix(in srgb, var(--spec-accent) 13%, transparent);
+  font:
+    700 12px/1 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+
+.spec-scenario-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  color: var(--spec-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.spec-scenario-picker {
+  padding: 12px 14px;
+}
+
+.spec-scenario-picker:hover {
+  border-color: var(--spec-accent, var(--spec-border));
+}
+
+.spec-scenario-picker-title {
+  min-width: 0;
+  flex: 1;
+  color: var(--spec-text);
+  font-weight: 600;
+}
+
+.spec-focused-scenarios {
+  display: grid;
+  gap: 9px;
+  margin-top: 24px;
+}
+
+.spec-focused-requirement .spec-requirement-description {
+  padding-bottom: 20px;
+}
+
+.spec-focused-requirement .spec-focused-scenarios {
+  margin-top: 0;
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--spec-border);
+}
+
+.spec-focused-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--spec-muted, currentColor);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.spec-focused-subtitle span {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--spec-surface, transparent);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.spec-open-affordance {
+  flex-shrink: 0;
+  color: var(--spec-muted);
+  font-size: 12px;
+}
+
+.spec-focused-requirement > .spec-requirement-header {
+  border-radius: var(--spec-card-radius, 10px) var(--spec-card-radius, 10px) 0 0;
+}
+
+.spec-section-prompt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.spec-focused-scenario-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--spec-border);
+  background: color-mix(in srgb, var(--spec-accent) 7%, transparent);
+}
+
+.spec-focused-scenario-header h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.spec-focused-scenario-body {
+  padding: 18px 22px;
+  color: var(--spec-muted);
+}
+
+.spec-requirement-count {
+  flex: 0 0 auto;
+  color: var(--spec-muted);
+  font-size: 12px;
+}
+
+.spec-requirement-description {
+  padding: 16px 18px 2px;
+}
+
+.spec-scenario-list {
+  display: grid;
+  gap: 9px;
+  padding: 13px 16px 16px;
+}
+
+.spec-scenario-card {
+  overflow: hidden;
+  border: 1px solid var(--spec-border);
+  border-radius: var(--spec-card-radius, 10px);
+  background: color-mix(in srgb, var(--spec-surface) 72%, transparent);
+}
+
+.spec-scenario-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 8px 12px;
+}
+
+.spec-scenario-header h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.spec-scenario-body {
+  padding: 0 14px 12px 46px;
+  color: var(--spec-muted);
+  font-size: 13px;
+}
+
+.spec-section-prose {
+  padding: 15px 18px;
+  border: 1px solid var(--spec-border);
+  border-radius: 10px;
+  background: var(--spec-surface);
+}
+
+@media (max-width: 760px) {
+  .spec-structured-document {
+    padding: 20px 16px 40px;
+  }
+
+  .spec-requirement-header {
+    gap: 8px;
+    padding: 11px 12px;
+  }
+
+  .spec-scenario-list {
+    padding: 10px 10px 12px;
+  }
+}

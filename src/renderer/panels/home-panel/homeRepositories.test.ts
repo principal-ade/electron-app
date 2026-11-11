@@ -119,7 +119,7 @@ describe('getHomeRepositories', () => {
     },
   );
 
-  it.each(['markdown-doc', 'source-file', 'media'] as const)(
+  it.each(['markdown-doc', 'spec', 'source-file', 'media'] as const)(
     'includes repositories containing an open %s',
     (contentType) => {
       const tab: WorkspaceTab = {

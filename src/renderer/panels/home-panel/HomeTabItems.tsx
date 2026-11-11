@@ -23,6 +23,7 @@ import {
   Building2,
   FileCode2,
   FileText,
+  ScrollText,
   FolderGit2,
   FolderSearch,
   Globe,
@@ -120,6 +121,8 @@ export function homeTabIcon(
       return <TopicsIcon size={size} color={color} />;
     case 'markdown-doc':
       return <FileText size={size} color={color} />;
+    case 'spec':
+      return <ScrollText size={size} color={color} />;
     case 'source-file':
       return <FileCode2 size={size} color={color} />;
     case 'media':

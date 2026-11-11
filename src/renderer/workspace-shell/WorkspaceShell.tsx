@@ -39,6 +39,7 @@ import {
   Network,
   PenTool,
   PencilRuler,
+  ScrollText,
   ToolCase,
   Send,
   SquareArrowOutUpRight,
@@ -126,6 +127,8 @@ import { C4SketchTabContent } from '../c4-sketches/C4SketchTabContent';
 import { LocalhostBrowserTabContent } from '../principal-window/views/ProcessesView/LocalhostBrowserTabContent';
 import { OpenBotChatTabContent } from '../dev-workspace/openbot-chat/OpenBotChatTabContent';
 import { BuildConfigurationTab } from '../panels/build-configurations/BuildConfigurationTab';
+import { SpecTabContent } from '../specs-view/SpecTabContent';
+import { isSpecFilePath } from '../specs-view/specPaths';
 import type {
   FeedTab,
   DrawingTab,
@@ -134,6 +137,7 @@ import type {
   LocalhostBrowserTab,
   OpenBotChatTab,
   BuildConfigurationTab as BuildConfigurationTabModel,
+  SpecTab,
 } from '../events/portalTabs';
 import { customTabLabel } from '../events/portalTabs';
 import {
@@ -302,6 +306,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     setActiveTabId,
     renameTab,
     openMarkdownDoc,
+    openSpec,
     openSourceFile,
     openMedia,
     openLocalTopic,
@@ -514,6 +519,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           return <TopicsIcon size={14} />;
         case 'local-topic':
           return <TopicsIcon size={14} />;
+        case 'spec':
+          return <ScrollText size={14} />;
         case 'drawing':
           return <PenTool size={14} />;
         case 'skill':
@@ -596,6 +603,17 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
                 openDrawing({ drawingId, name, path })
               }
               onDetach={() => void detachTabToWindow(topicTab.id)}
+            />
+          );
+        }
+        case 'spec': {
+          const specTab = tab as SpecTab;
+          return (
+            <SpecTabContent
+              key={specTab.id}
+              filePath={specTab.filePath}
+              repositoryPath={specTab.repositoryPath}
+              events={eventsRef.current}
             />
           );
         }
@@ -839,6 +857,11 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             openMarkdownDoc(entry.filePath, entry.repositoryPath);
           }
           break;
+        case 'spec':
+          if (entry.filePath) {
+            openSpec(entry.filePath, entry.repositoryPath);
+          }
+          break;
         case 'source-file':
           if (entry.filePath) openSourceFile(entry.filePath);
           break;
@@ -949,6 +972,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       openHttpRequest,
       catalogRequests,
       openMarkdownDoc,
+      openSpec,
       openSourceFile,
       openMedia,
       openSubsystemModel,
@@ -1239,8 +1263,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
 
   // Route an absolute file path to the right viewer tab by extension — markdown
   // docs and media get their dedicated tabs, everything else the source viewer.
-  // Shared by the bridge handoff below, the `file:opened` bus handler, and the
-  // Cmd+Shift+F palette.
+  // OpenSpec spec files (`.../openspec/**/spec.md`) get the structured spec tab
+  // instead of the generic markdown doc. Shared by the bridge handoff below,
+  // the `file:opened` bus handler, and the Cmd+Shift+F palette.
   const openFileByPath = useCallback(
     (filePath: string, repositoryPath?: string, range?: DocumentRange) => {
       const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
@@ -1248,7 +1273,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(
           filePath,
         );
-      if (isMarkdown && !range) {
+      if (isSpecFilePath(filePath) && !range) {
+        openSpec(filePath, repositoryPath);
+      } else if (isMarkdown && !range) {
         openMarkdownDoc(filePath, repositoryPath);
       } else if (isMedia) {
         openMedia(filePath);
@@ -1256,7 +1283,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         openSourceFile(filePath, range);
       }
     },
-    [openMarkdownDoc, openMedia, openSourceFile],
+    [openSpec, openMarkdownDoc, openMedia, openSourceFile],
   );
 
   // Bridge handoff: a doc pushed from the Principal MCP Bridge
@@ -1338,10 +1365,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
                         : activeView === 'bots'
                           ? 'Bots'
                           : activeView === 'processes'
-                          ? 'Processes'
-                          : activeView === 'requests'
-                            ? 'Requests'
-                            : 'Topics',
+                            ? 'Processes'
+                            : activeView === 'requests'
+                              ? 'Requests'
+                              : 'Topics',
         content:
           isRepositoryPanelActive && selectedRepository ? (
             <RepoAboutCard

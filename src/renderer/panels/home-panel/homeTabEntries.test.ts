@@ -902,6 +902,23 @@ describe('Home processes', () => {
 });
 
 describe('tab renames (customLabel)', () => {
+  it('keeps spec tabs pinnable with their file and repository paths', () => {
+    const specTab = {
+      id: 'spec-/work/app/openspec/specs/cli-list/spec.md',
+      label: 'cli-list',
+      contentType: 'spec',
+      filePath: '/work/app/openspec/specs/cli-list/spec.md',
+      repositoryPath: '/work/app',
+    } as WorkspaceTab;
+
+    expect(entryFromTab(specTab)).toMatchObject({
+      id: specTab.id,
+      kind: 'spec',
+      filePath: '/work/app/openspec/specs/cli-list/spec.md',
+      repositoryPath: '/work/app',
+    });
+  });
+
   it('prefers the rename for the entry label and preserves it for reopen', () => {
     const tab = {
       id: 'local-topic-t1',

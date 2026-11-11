@@ -73,6 +73,19 @@ export interface MediaTab extends BaseTab {
   filePath: string;
 }
 
+/**
+ * Spec tab — an OpenSpec-style spec file (`<repo>/openspec/specs/<capability>/spec.md`
+ * or `<repo>/openspec/changes/<change>/specs/<capability>/spec.md`; see
+ * https://github.com/Fission-AI/OpenSpec). Carries the absolute path + host
+ * repo; `SpecTabContent` self-loads the file and renders the structured
+ * Purpose / Requirements / Scenarios view. Keyed by absolute `filePath`.
+ */
+export interface SpecTab extends BaseTab {
+  contentType: 'spec';
+  filePath: string;
+  repositoryPath?: string;
+}
+
 /** Landing tab for the Topics surface — a hint to pick a topic from the left. */
 export interface TopicsHomeTab extends BaseTab {
   contentType: 'topics-home';

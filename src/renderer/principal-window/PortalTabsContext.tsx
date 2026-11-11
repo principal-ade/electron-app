@@ -30,6 +30,7 @@ import type {
   MarkdownDocTab,
   SourceFileTab,
   MediaTab,
+  SpecTab,
   TopicsHomeTab,
   LocalTopicTab,
   DrawingTab,
@@ -42,6 +43,7 @@ import type {
   OpenBotChatTab,
   HttpRequestTab,
 } from '../events/portalTabs';
+import { specTabLabel } from '../specs-view/specPaths';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
 import { ProcessRegistryService } from '../main-process-api/ProcessRegistryService';
 import { useTopicRemoved } from '../topics-view/useTopicRemoved';
@@ -67,6 +69,8 @@ export type WorkspaceTab =
   | MarkdownDocTab
   | SourceFileTab
   | MediaTab
+  // Specs (OpenSpec)
+  | SpecTab
   // Projects
   | CommitReviewTab
   | ProjectInfoTab
@@ -113,6 +117,8 @@ export interface WorkspaceTabsContextValue {
   openLocalTopic: (topicId: string, title?: string) => void;
   /** Open a `markdown-doc-<filePath>` tab. */
   openMarkdownDoc: (filePath: string, repositoryPath?: string) => void;
+  /** Open a `spec-<filePath>` tab (an OpenSpec spec file). */
+  openSpec: (filePath: string, repositoryPath?: string) => void;
   /** Open a source tab, or navigate its existing editor to the supplied span. */
   openSourceFile: (filePath: string, range?: DocumentRange) => void;
   /** Open a `media-<filePath>` tab (image/video viewer). */
@@ -312,12 +318,31 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [openTab],
   );
 
+  const openSpec = useCallback(
+    (filePath: string, repositoryPath?: string) => {
+      openTab(
+        `spec-${filePath}`,
+        () =>
+          ({
+            id: `spec-${filePath}`,
+            label: specTabLabel(filePath),
+            contentType: 'spec',
+            closable: true,
+            filePath,
+            repositoryPath,
+          }) as SpecTab,
+      );
+    },
+    [openTab],
+  );
+
   const openSourceFile = useCallback(
     (filePath: string, range?: DocumentRange) => {
       const id = `source-file-${filePath}`;
       setTabs((previous) => {
         const existing = previous.find((tab) => tab.id === id) as
-          SourceFileTab | undefined;
+          | SourceFileTab
+          | undefined;
         if (existing) {
           if (!range) return previous;
           return previous.map((tab) =>
@@ -722,6 +747,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       renameTab,
       openLocalTopic,
       openMarkdownDoc,
+      openSpec,
       openSourceFile,
       openMedia,
       openProjectInfo,
@@ -745,6 +771,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       renameTab,
       openLocalTopic,
       openMarkdownDoc,
+      openSpec,
       openSourceFile,
       openMedia,
       openProjectInfo,

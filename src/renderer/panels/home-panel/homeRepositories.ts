@@ -56,6 +56,7 @@ export function getHomeRepositories(
       case 'terminal':
       case 'commit-review':
       case 'markdown-doc':
+      case 'spec':
       case 'source-file':
       case 'media': {
         const path =
@@ -63,7 +64,7 @@ export function getHomeRepositories(
             ? tab.directory
             : tab.contentType === 'commit-review'
               ? tab.repoPath
-              : tab.contentType === 'markdown-doc'
+              : tab.contentType === 'markdown-doc' || tab.contentType === 'spec'
                 ? (tab.repositoryPath ?? tab.filePath)
                 : tab.filePath;
         // Prefer a nested registered repository over its parent, and require a
