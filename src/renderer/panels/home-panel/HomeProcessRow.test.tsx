@@ -87,6 +87,34 @@ test('clicking the process label opens its linked browser once', () => {
   expect(openBrowser).toHaveBeenCalledWith(5173, '/', 'Dev server', 'server-1');
 });
 
+test('drags a shell-quoted working directory into the terminal without opening the browser', () => {
+  const process = { ...entry, cwd: "/repo/worker's project" };
+  render(<HomeProcessRow entry={process} />);
+  const row = screen.getByRole('button', {
+    name: 'Open Dev server in browser',
+  });
+  expect(row.draggable).toBe(true);
+  const dataTransfer = { effectAllowed: 'none', setData: jest.fn() };
+  fireEvent.dragStart(row, { dataTransfer });
+  expect(dataTransfer.effectAllowed).toBe('copy');
+  expect(dataTransfer.setData).toHaveBeenCalledWith(
+    'text/plain',
+    "'/repo/worker'\\''s project'",
+  );
+  expect(openBrowser).not.toHaveBeenCalled();
+});
+
+test.each(['', '  '])('does not drag a process with cwd %j', (cwd) => {
+  render(<HomeProcessRow entry={{ ...entry, cwd }} />);
+  const row = screen.getByRole('button', {
+    name: 'Open Dev server in browser',
+  });
+  expect(row.draggable).toBe(false);
+  const dataTransfer = { setData: jest.fn() };
+  fireEvent.dragStart(row, { dataTransfer });
+  expect(dataTransfer.setData).not.toHaveBeenCalled();
+});
+
 test('shows the open tab number and focuses that tab without navigating it', () => {
   const activate = jest.fn();
   const { rerender } = render(

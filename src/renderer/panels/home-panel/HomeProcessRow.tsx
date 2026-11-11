@@ -16,6 +16,7 @@ import { ProcessRegistryService } from '../../main-process-api/ProcessRegistrySe
 import { LocalhostDetectionService } from '../../main-process-api/LocalhostDetectionService';
 import { ConfirmDialog } from '../../repo-explorer/components/ConfirmDialog';
 import { useWorkspaceTabs } from '../../principal-window/PortalTabsContext';
+import { shellQuote } from '../../utils/shellQuote';
 import type { HomeProcessTab } from './homeTabEntries';
 
 /** Process pins are saved launch configurations, not workspace-tab pins. */
@@ -42,6 +43,7 @@ export const HomeProcessRow: React.FC<{
   const canKill =
     managed || (Number.isSafeInteger(entry.pid) && (entry.pid ?? 0) > 0);
   const canOpen = canFocus || (!stopped && entry.port != null);
+  const dragText = entry.cwd.trim() ? shellQuote(entry.cwd) : undefined;
   const openBrowser = () => {
     if (openTab && onActivateTab) {
       onActivateTab(openTab.id);
@@ -149,6 +151,12 @@ export const HomeProcessRow: React.FC<{
         role={canOpen ? 'button' : undefined}
         tabIndex={canOpen ? 0 : undefined}
         aria-label={canOpen ? `Open ${entry.label} in browser` : undefined}
+        draggable={dragText !== undefined}
+        onDragStart={(event) => {
+          if (!dragText || !event.dataTransfer) return;
+          event.dataTransfer.effectAllowed = 'copy';
+          event.dataTransfer.setData('text/plain', dragText);
+        }}
         onClick={openBrowser}
         onKeyDown={(event) => {
           if (!canOpen || event.target !== event.currentTarget) return;
