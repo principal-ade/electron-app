@@ -50,6 +50,42 @@ function timeAgo(timestamp: number): string {
   return `${Math.floor(months / 12)}y ago`;
 }
 
+function sessionDay(timestamp: number): { key: string; label: string } {
+  const date = new Date(timestamp);
+  if (!Number.isFinite(date.getTime())) {
+    return { key: 'unknown', label: 'Unknown date' };
+  }
+
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const dateKey = (value: Date) =>
+    `${value.getFullYear()}-${value.getMonth()}-${value.getDate()}`;
+  const key = dateKey(date);
+
+  if (key === dateKey(today)) return { key, label: 'Today' };
+  if (key === dateKey(yesterday)) return { key, label: 'Yesterday' };
+  return {
+    key,
+    label: new Intl.DateTimeFormat(undefined, {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(date),
+  };
+}
+
+function startOfLastSevenDays(now = new Date()): number {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - 6);
+  return start.getTime();
+}
+
+function sessionTimestamp(session: SessionHistoryEntry): number {
+  return session.updatedAt > 0 ? session.updatedAt : session.createdAt;
+}
+
 const useSpacing = (theme: Theme) => ({
   xs: theme.space?.[1] || 4,
   sm: theme.space?.[2] || 8,
@@ -321,9 +357,11 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
     let current = true;
     setLoading(true);
     setError(null);
+    setSessions([]);
     const timer = window.setTimeout(
       () => {
         const searchQuery = query.trim();
+        const oldestVisibleTimestamp = startOfLastSevenDays();
         const openCodeRequest = searchQuery
           ? SessionHistoryService.openCode.searchProjects(
               directories,
@@ -337,68 +375,83 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
           ? SessionHistoryService.cursor.search(searchQuery)
           : SessionHistoryService.cursor.list();
 
-        void Promise.allSettled([
-          openCodeRequest,
-          claudeRequest,
-          cursorRequest,
-        ]).then(([openCodeResult, claudeResult, cursorResult]) => {
-          if (!current) return;
-          const combined: SessionHistoryEntry[] = [];
-          const errors: string[] = [];
-          if (openCodeResult.status === 'fulfilled') {
-            combined.push(
-              ...openCodeResult.value.map((session) => ({
+        const providerRequests: Array<{
+          provider: AgentSessionBookmarkProvider;
+          request: Promise<SessionHistoryEntry[]>;
+        }> = [
+          {
+            provider: 'OpenCode',
+            request: openCodeRequest.then((values) =>
+              values.map((session) => ({
                 ...session,
                 agent: 'OpenCode' as const,
                 canResume: true,
               })),
-            );
-          } else {
-            errors.push(
-              openCodeResult.reason instanceof Error
-                ? openCodeResult.reason.message
-                : String(openCodeResult.reason),
-            );
-          }
-          if (claudeResult.status === 'fulfilled') {
-            combined.push(
-              ...claudeResult.value.map((session) => ({
+            ),
+          },
+          {
+            provider: 'Claude Code',
+            request: claudeRequest.then((values) =>
+              values.map((session) => ({
                 ...session,
                 agent: 'Claude Code' as const,
                 canResume: true,
               })),
-            );
-          } else {
-            errors.push(
-              claudeResult.reason instanceof Error
-                ? claudeResult.reason.message
-                : String(claudeResult.reason),
-            );
-          }
-          if (cursorResult.status === 'fulfilled') {
-            combined.push(
-              ...cursorResult.value
+            ),
+          },
+          {
+            provider: 'Cursor',
+            request: cursorRequest.then((values) =>
+              values
                 .filter((session) => session.resumable)
                 .map((session) => ({
                   ...session,
                   agent: 'Cursor' as const,
                   canResume: true,
                 })),
-            );
-          } else {
-            errors.push(
-              cursorResult.reason instanceof Error
-                ? cursorResult.reason.message
-                : String(cursorResult.reason),
-            );
-          }
-          combined.sort(
-            (a, b) =>
-              b.updatedAt - a.updatedAt || a.title.localeCompare(b.title),
-          );
-          setSessions(combined);
-          setError(combined.length === 0 ? errors.join('\n') || null : null);
+            ),
+          },
+        ];
+
+        let completed = 0;
+        let hasSessions = false;
+        const errors: string[] = [];
+        const finishProvider = () => {
+          completed += 1;
+          if (!current || completed !== providerRequests.length) return;
+          setError(hasSessions ? null : errors.join('\n') || null);
           setLoading(false);
+        };
+
+        providerRequests.forEach(({ provider, request }) => {
+          void request.then(
+            (providerResults) => {
+              if (!current) return;
+              const providerSessions = providerResults.filter(
+                (session) =>
+                  sessionTimestamp(session) >= oldestVisibleTimestamp,
+              );
+              hasSessions ||= providerSessions.length > 0;
+              setSessions((existing) => {
+                const combined = [
+                  ...existing.filter((session) => session.agent !== provider),
+                  ...providerSessions,
+                ];
+                return combined.sort(
+                  (a, b) =>
+                    b.updatedAt - a.updatedAt || a.title.localeCompare(b.title),
+                );
+              });
+              finishProvider();
+            },
+            (reason: unknown) => {
+              if (!current) return;
+              errors.push(
+                reason instanceof Error ? reason.message : String(reason),
+              );
+              finishProvider();
+            },
+          );
         });
       },
       query.trim() ? 250 : 0,
@@ -485,18 +538,34 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
         />
       );
     }
-    return [...sessions]
-      .sort((a, b) => {
-        const bookmarkOrder =
-          Number(isBookmarked(sessionBookmarkKey(b))) -
-          Number(isBookmarked(sessionBookmarkKey(a)));
-        return (
-          bookmarkOrder ||
-          b.updatedAt - a.updatedAt ||
-          a.title.localeCompare(b.title)
-        );
-      })
-      .map((session) => {
+    const sortRows = (values: SessionHistoryEntry[]) =>
+      [...values].sort(
+        (a, b) => b.updatedAt - a.updatedAt || a.title.localeCompare(b.title),
+      );
+    const bookmarkedSessions = sortRows(
+      sessions.filter((session) => isBookmarked(sessionBookmarkKey(session))),
+    );
+    const groups = new Map<
+      string,
+      { label: string; timestamp: number; sessions: SessionHistoryEntry[] }
+    >();
+    sessions
+      .filter((session) => !isBookmarked(sessionBookmarkKey(session)))
+      .forEach((session) => {
+        const timestamp = sessionTimestamp(session);
+        const day = sessionDay(timestamp);
+        const group = groups.get(day.key) ?? {
+          label: day.label,
+          timestamp,
+          sessions: [],
+        };
+        group.timestamp = Math.max(group.timestamp, timestamp);
+        group.sessions.push(session);
+        groups.set(day.key, group);
+      });
+
+    const renderRows = (values: SessionHistoryEntry[]) =>
+      sortRows(values).map((session) => {
         const bookmarkKey = sessionBookmarkKey(session);
         const bookmarked = isBookmarked(bookmarkKey);
         return (
@@ -510,6 +579,45 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
           />
         );
       });
+    const renderDayHeading = (label: string) => (
+      <div
+        role="heading"
+        aria-level={3}
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 1,
+          padding: `6px ${spacing.sm * 2}px`,
+          borderBottom: `1px solid ${theme.colors.border}`,
+          background: theme.colors.background,
+          color: theme.colors.textSecondary,
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[1],
+          fontWeight: 600,
+        }}
+      >
+        {label}
+      </div>
+    );
+
+    return (
+      <>
+        {bookmarkedSessions.length > 0 && (
+          <>
+            {renderDayHeading('Bookmarked')}
+            {renderRows(bookmarkedSessions)}
+          </>
+        )}
+        {[...groups.entries()]
+          .sort(([, a], [, b]) => b.timestamp - a.timestamp)
+          .map(([key, group]) => (
+            <React.Fragment key={key}>
+              {renderDayHeading(group.label)}
+              {renderRows(group.sessions)}
+            </React.Fragment>
+          ))}
+      </>
+    );
   };
 
   return (
@@ -582,7 +690,12 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
         </button>
       </div>
       <FilterBar value={query} onChange={setQuery} />
-      <div style={{ flex: 1, overflowY: 'auto' }}>{renderContent()}</div>
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {renderContent()}
+        {loading && sessions.length > 0 && (
+          <EmptyState text="Loading more sessions…" />
+        )}
+      </div>
     </div>
   );
 };

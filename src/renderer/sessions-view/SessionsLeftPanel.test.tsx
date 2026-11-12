@@ -1,5 +1,11 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { ClaudeSessionHistoryAPI } from '../../shared/main-process-api-interfaces/ClaudeSessionHistoryAPI';
 import type { CursorSessionHistoryAPI } from '../../shared/main-process-api-interfaces/CursorSessionHistoryAPI';
@@ -35,6 +41,8 @@ jest.mock('@principal-ade/industry-theme', () => ({
     },
   }),
 }));
+
+const RECENT_SESSION_TIME = Date.now();
 
 describe('SessionsLeftPanel', () => {
   let history: jest.Mocked<OpenCodeSessionHistoryAPI>;
@@ -82,8 +90,8 @@ describe('SessionsLeftPanel', () => {
         id: 'ses_history1',
         title: 'Fix the session picker',
         directory: '/work/example',
-        createdAt: 100,
-        updatedAt: 200,
+        createdAt: RECENT_SESSION_TIME - 60_000,
+        updatedAt: RECENT_SESSION_TIME,
       },
     ]);
 
@@ -120,14 +128,30 @@ describe('SessionsLeftPanel', () => {
     });
   });
 
-  it('bookmarks a session in user preferences and exposes its pinned state', async () => {
+  it('shows a provider result without waiting for the other histories', async () => {
+    let resolveClaude!: (
+      sessions: Awaited<ReturnType<typeof claudeHistory.list>>,
+    ) => void;
+    let resolveCursor!: (
+      sessions: Awaited<ReturnType<typeof cursorHistory.list>>,
+    ) => void;
+    claudeHistory.list.mockReturnValue(
+      new Promise((resolve) => {
+        resolveClaude = resolve;
+      }),
+    );
+    cursorHistory.list.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCursor = resolve;
+      }),
+    );
     history.listProjects.mockResolvedValue([
       {
-        id: 'ses_history1',
-        title: 'Fix the session picker',
+        id: 'ses_early01',
+        title: 'Available before the other providers',
         directory: '/work/example',
-        createdAt: 100,
-        updatedAt: 200,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
       },
     ]);
 
@@ -137,11 +161,96 @@ describe('SessionsLeftPanel', () => {
       />,
     );
 
-    const bookmark = await screen.findByRole('button', {
+    expect(
+      await screen.findByText('Available before the other providers'),
+    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Today' })).toBeTruthy();
+    expect(screen.getByText('Loading more sessions…')).toBeTruthy();
+    expect(claudeHistory.list).toHaveBeenCalled();
+    expect(cursorHistory.list).toHaveBeenCalled();
+
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    await act(async () => {
+      resolveClaude([
+        {
+          id: '11111111-aaaa-bbbb-cccc-000000000002',
+          title: 'A session from yesterday',
+          directory: '/work/example',
+          createdAt: yesterday.getTime(),
+          updatedAt: yesterday.getTime(),
+        },
+      ]);
+      resolveCursor([]);
+      await Promise.resolve();
+    });
+    expect(await screen.findByText('A session from yesterday')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Yesterday' })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByText('Loading more sessions…')).toBeNull();
+    });
+  });
+
+  it('hides sessions outside the last seven calendar days', async () => {
+    const oldDate = new Date();
+    oldDate.setHours(12, 0, 0, 0);
+    oldDate.setDate(oldDate.getDate() - 7);
+    history.listProjects.mockResolvedValue([
+      {
+        id: 'ses_recent01',
+        title: 'A recent session',
+        directory: '/work/example',
+        createdAt: RECENT_SESSION_TIME - 60_000,
+        updatedAt: RECENT_SESSION_TIME,
+      },
+      {
+        id: 'ses_old0001',
+        title: 'An older session',
+        directory: '/work/example',
+        createdAt: oldDate.getTime(),
+        updatedAt: oldDate.getTime(),
+      },
+    ]);
+
+    render(
+      <SessionsLeftPanel
+        repositories={[{ path: '/work/example' } as AlexandriaEntry]}
+      />,
+    );
+
+    expect(await screen.findByText('A recent session')).toBeTruthy();
+    expect(screen.queryByText('An older session')).toBeNull();
+  });
+
+  it('bookmarks a session in user preferences and exposes its pinned state', async () => {
+    history.listProjects.mockResolvedValue([
+      {
+        id: 'ses_history1',
+        title: 'Fix the session picker',
+        directory: '/work/example',
+        createdAt: RECENT_SESSION_TIME - 60_000,
+        updatedAt: RECENT_SESSION_TIME,
+      },
+    ]);
+
+    render(
+      <SessionsLeftPanel
+        repositories={[{ path: '/work/example' } as AlexandriaEntry]}
+      />,
+    );
+
+    await screen.findByRole('button', {
+      name: 'Bookmark OpenCode session: Fix the session picker',
+    });
+    let bookmark = screen.getByRole('button', {
       name: 'Bookmark OpenCode session: Fix the session picker',
     });
     fireEvent.click(bookmark);
 
+    bookmark = await screen.findByRole('button', {
+      name: 'Remove bookmark from OpenCode session: Fix the session picker',
+    });
     expect(bookmark.getAttribute('aria-pressed')).toBe('true');
     expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
       interactiveShell: {
@@ -177,7 +286,15 @@ describe('SessionsLeftPanel', () => {
     });
 
     fireEvent.click(bookmark);
-    expect(bookmark.getAttribute('aria-pressed')).toBe('false');
+    await waitFor(() => {
+      expect(
+        screen
+          .getByRole('button', {
+            name: 'Bookmark OpenCode session: Fix the session picker',
+          })
+          .getAttribute('aria-pressed'),
+      ).toBe('false');
+    });
     expect(UserPreferencesService.updatePreferences).toHaveBeenLastCalledWith({
       interactiveShell: {
         sessionBookmarks: [],
@@ -193,8 +310,8 @@ describe('SessionsLeftPanel', () => {
         id: 'ses_match01',
         title: 'Found in the transcript',
         directory: '/work/example',
-        createdAt: 100,
-        updatedAt: 200,
+        createdAt: RECENT_SESSION_TIME - 60_000,
+        updatedAt: RECENT_SESSION_TIME,
       },
     ]);
 
@@ -223,8 +340,8 @@ describe('SessionsLeftPanel', () => {
         id: '11111111-aaaa-bbbb-cccc-000000000001',
         title: 'Fix the login flow',
         directory: '/work/example',
-        createdAt: 100,
-        updatedAt: 200,
+        createdAt: RECENT_SESSION_TIME - 60_000,
+        updatedAt: RECENT_SESSION_TIME,
       },
     ]);
 
@@ -253,8 +370,8 @@ describe('SessionsLeftPanel', () => {
         id: 'cursor-session-1234',
         title: 'Update package scripts',
         directory: '/work/example',
-        createdAt: 100,
-        updatedAt: 200,
+        createdAt: RECENT_SESSION_TIME - 60_000,
+        updatedAt: RECENT_SESSION_TIME,
         resumable: true,
       },
     ]);
@@ -284,8 +401,8 @@ describe('SessionsLeftPanel', () => {
         id: 'cursor-composer-1234',
         title: 'Old Composer conversation',
         directory: '/work/example',
-        createdAt: 100,
-        updatedAt: 200,
+        createdAt: RECENT_SESSION_TIME - 60_000,
+        updatedAt: RECENT_SESSION_TIME,
         resumable: false,
       },
     ]);
