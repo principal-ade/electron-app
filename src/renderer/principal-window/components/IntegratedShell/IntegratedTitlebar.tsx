@@ -5,6 +5,7 @@ import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls'
 import { Radar } from 'lucide-react';
 import { TitlebarGitHubSearch } from './TitlebarGitHubSearch';
 import { TerminalDaemonUpdateIndicator } from '../../../components/Titlebar/TerminalDaemonUpdateIndicator';
+import { SyncAllIndicator } from '../../syncAll/SyncAllIndicator';
 import { blurAfterPointerActivation } from '../../../utils/blurAfterPointerActivation';
 
 interface IntegratedTitlebarProps {
@@ -153,6 +154,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             <span>Sky View</span>
           </button>
         )}
+        <SyncAllIndicator />
         <TerminalDaemonUpdateIndicator />
         {showSidebarControl && onToggleSidebar && (
           <ViewSidebarControls

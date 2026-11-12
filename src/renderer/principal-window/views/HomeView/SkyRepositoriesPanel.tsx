@@ -14,6 +14,7 @@ import {
   groupSkyRepositories,
   skyRepositoryOwner,
 } from './skyRepositoryGroups';
+import { SyncAllButton } from '../../syncAll/SyncAllButton';
 
 function OwnerAvatar({
   owner,
@@ -311,7 +312,11 @@ export function SkyRepositoriesPanel({
       <div
         role="group"
         aria-label="Repository filter"
-        style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+        }}
       >
         {(['in-progress', 'all'] as const).map((value) => (
           <button
@@ -335,6 +340,9 @@ export function SkyRepositoriesPanel({
             {value === 'in-progress' ? 'In Progress' : 'All'}
           </button>
         ))}
+        <span style={{ marginLeft: 'auto' }}>
+          <SyncAllButton repositories={props.repositories} />
+        </span>
       </div>
       <div style={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
         {filter === 'in-progress' ? (

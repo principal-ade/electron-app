@@ -9,6 +9,7 @@ import { PortalIntentBridge } from './components/PortalIntentBridge';
 import { IntegratedShell } from './components/IntegratedShell/IntegratedShell';
 import { KeychainConsentModal } from '../components/KeychainConsentModal';
 import { AuthProvider } from '../providers/AuthProvider';
+import { SyncAllProvider } from './syncAll/SyncAllContext';
 import {
   useKeychainConsent,
   KeychainConsentProvider,
@@ -48,7 +49,9 @@ export const PrincipalApp: React.FC = () => {
                     {/* Always-mounted listener on the portal bus, so the titlebar
                         can open content into a view that isn't mounted yet. */}
                     <PortalIntentBridge />
-                    <IntegratedShell />
+                    <SyncAllProvider>
+                      <IntegratedShell />
+                    </SyncAllProvider>
                   </PortalTabsProvider>
                 </PortalEventProvider>
               </PrincipalEventProvider>
