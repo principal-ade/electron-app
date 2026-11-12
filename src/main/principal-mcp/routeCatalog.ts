@@ -354,6 +354,62 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
       },
       {
         method: 'POST',
+        path: '/api/repos/sync',
+        summary:
+          'Fetch all remotes for registered repositories and optionally fast-forward eligible checked-out branches.',
+        body: {
+          apply:
+            'boolean (optional, default false): false reports fast-forward eligibility without changing the checked-out branch; true performs only git merge --ff-only for clean branches strictly behind their configured upstream.',
+          paths: `string[] (optional): select 1-${MAX_CLONE_BATCH} exact absolute paths from GET /api/repos. Omit to process all registered repositories. Unregistered paths are rejected.`,
+        },
+        response:
+          '{ success: true, apply, results: [{ path, status, branch?, upstream?, remotes: [{ name, fetchUrls, pushUrls }], ahead?, behind?, head?, upstreamHead?, error? }], summary: { requested, fastForwarded, fastForwardable, upToDate, skipped } }',
+        errors: {
+          '400':
+            'Invalid apply or paths value; requested path is not registered.',
+          '500': 'Could not read the Alexandria repository registry.',
+        },
+        notes: [
+          'Every configured remote is fetched with --all --prune. The operation mutates remote-tracking refs even when apply is false, but does not change the working tree or branch in that mode.',
+          'Only the currently checked-out branch is considered. A branch is fast-forwarded only when it has an upstream, the working tree is clean (including untracked files), it is strictly behind, and it has no local-only commits.',
+          'Dirty, detached, untracked-upstream, ahead, diverged, busy, and fetch-failed repositories are reported and left unchanged. Fast-forward uses --ff-only; no checkout, reset, rebase, or force operation is performed.',
+          'Use GET /api/repos to discover registered paths. Paths are allowlisted against the registry, not accepted as arbitrary local directories.',
+        ],
+        example: { apply: false },
+      },
+      {
+        method: 'POST',
+        path: '/api/repos/diffs',
+        summary:
+          'Inspect working-tree and upstream diff state for registered repositories without fetching or mutating them.',
+        body: {
+          paths: `string[] (optional): select 1-${MAX_CLONE_BATCH} exact absolute paths from GET /api/repos. Omit to process all registered repositories. Unregistered paths are rejected.`,
+          includeStaged:
+            'boolean (optional, default true): include index-vs-HEAD diff.',
+          includeUnstaged:
+            'boolean (optional, default true): include worktree-vs-index diff.',
+          includeUpstream:
+            'boolean (optional, default false): include HEAD-vs-upstream diff when an upstream is configured.',
+          contextLines:
+            'number (optional, default 3): unified diff context lines, 0-10.',
+          maxBytes:
+            'number (optional, default 100000): per-scope patch cap in bytes, 1024-500000. Larger patches are truncated with truncated: true.',
+        },
+        response:
+          '{ success: true, options, results: [{ path, branch?, upstream?, head?, upstreamHead?, ahead?, behind?, clean, porcelain, untracked, staged, unstaged, diffs: [{ scope, files: [{ path, additions, deletions }], totalAdditions, totalDeletions, patch, truncated, patchBytes }], error? }], summary: { requested, clean, dirty, failed } }',
+        errors: {
+          '400':
+            'Invalid paths or option value; requested path is not registered.',
+          '500': 'Could not read the Alexandria repository registry.',
+        },
+        notes: [
+          'Read-only: no fetch, checkout, reset, or working-tree mutation. Sync eligibility still comes from POST /api/repos/sync.',
+          'Paths are allowlisted against the registry, not accepted as arbitrary local directories.',
+        ],
+        example: { paths: ['/absolute/path/to/repo'], includeUpstream: true },
+      },
+      {
+        method: 'POST',
         path: '/api/repos/clone',
         summary:
           'Clone one or more repos into the base directory convention and register them.',

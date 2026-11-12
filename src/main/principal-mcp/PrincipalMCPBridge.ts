@@ -22,6 +22,8 @@ import { registerTopicRoutes } from '../topics/topicRoutes';
 import { registerSubsystemModelRoutes } from '../subsystem-models/subsystemModelRoutes';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
 import { registerRepoRoutes } from '../repos/repoRoutes';
+import { registerRepositorySyncRoutes } from '../repos/repositorySyncRoutes';
+import { registerRepositoryDiffRoutes } from '../repos/repositoryDiffRoutes';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { registerDependencyRoutes } from '../dependency-graph/dependencyRoutes';
 import { DependencyGraphService } from '../dependency-graph/DependencyGraphService';
@@ -1075,7 +1077,10 @@ export class PrincipalMCPBridge extends EventEmitter {
     // ============================================
     // REPO REGISTRY ROUTES
     // ============================================
-    registerRepoRoutes(this.app, AlexandriaRegistryService.getInstance());
+    const repositoryRegistry = AlexandriaRegistryService.getInstance();
+    registerRepoRoutes(this.app, repositoryRegistry);
+    registerRepositorySyncRoutes(this.app, repositoryRegistry);
+    registerRepositoryDiffRoutes(this.app, repositoryRegistry);
 
     // ============================================
     // DEPENDENCY GRAPH (BLAST RADIUS) ROUTES
