@@ -3,6 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { ArrowDownToLine, Loader2 } from 'lucide-react';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { useSyncAllOptional } from './SyncAllContext';
+import { formatAutoSyncInterval } from './autoSyncPrefs';
 
 /**
  * Sky View entry point for the sync-all run: fast-forwards every registered
@@ -17,8 +18,13 @@ export const SyncAllButton: React.FC<{ repositories: AlexandriaEntry[] }> = ({
   const isSyncing = syncAll?.isSyncing ?? false;
   const current = syncAll?.current ?? null;
   const start = syncAll?.start;
+  const autoSync = syncAll?.autoSync;
 
   const cloneCount = repositories.filter((r) => r.path).length;
+  const autoSuffix =
+    autoSync?.enabled && !isSyncing
+      ? ` Auto-sync is on (every ${formatAutoSyncInterval(autoSync.intervalMinutes)}).`
+      : '';
 
   return (
     <button
@@ -34,7 +40,7 @@ export const SyncAllButton: React.FC<{ repositories: AlexandriaEntry[] }> = ({
             : 'Syncing registered clones…'
           : cloneCount === 0
             ? 'No registered clones to sync'
-            : `Fast-forward all registered clones that can be safely fast-forwarded (${cloneCount} checked one at a time)`
+            : `Fast-forward all registered clones that can be safely fast-forwarded (${cloneCount} checked one at a time).${autoSuffix}`
       }
       style={{
         display: 'flex',

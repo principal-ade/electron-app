@@ -214,3 +214,57 @@ test('build terminal cleanup defaults to five minutes and is configurable', asyn
     }),
   );
 });
+
+test('clone auto-sync defaults to off on a 30-minute cadence', async () => {
+  render(<GeneralSettings />);
+  const checkbox = (await screen.findByRole('checkbox', {
+    name: 'Automatically sync clones on an interval',
+  })) as HTMLInputElement;
+  const interval = (await screen.findByLabelText('Every')) as HTMLSelectElement;
+  expect(checkbox.checked).toBe(false);
+  expect(interval.value).toBe('30');
+  expect(interval.disabled).toBe(true);
+});
+
+test('enabling clone auto-sync persists the setting', async () => {
+  render(<GeneralSettings />);
+  const checkbox = (await screen.findByRole('checkbox', {
+    name: 'Automatically sync clones on an interval',
+  })) as HTMLInputElement;
+  fireEvent.click(checkbox);
+  expect(checkbox.checked).toBe(true);
+  await waitFor(() =>
+    expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
+      repositoryAutoSync: { enabled: true, intervalMinutes: 30 },
+    }),
+  );
+});
+
+test('changing the auto-sync interval persists it', async () => {
+  (UserPreferencesService.getPreferences as jest.Mock).mockResolvedValue({
+    repositoryAutoSync: { enabled: true, intervalMinutes: 30 },
+  });
+  render(<GeneralSettings />);
+  const interval = (await screen.findByLabelText('Every')) as HTMLSelectElement;
+  await waitFor(() => expect(interval.disabled).toBe(false));
+  expect(interval.value).toBe('30');
+  fireEvent.change(interval, { target: { value: '60' } });
+  await waitFor(() =>
+    expect(UserPreferencesService.updatePreferences).toHaveBeenCalledWith({
+      repositoryAutoSync: { enabled: true, intervalMinutes: 60 },
+    }),
+  );
+});
+
+test('loads the saved auto-sync setting', async () => {
+  (UserPreferencesService.getPreferences as jest.Mock).mockResolvedValue({
+    repositoryAutoSync: { enabled: true, intervalMinutes: 120 },
+  });
+  render(<GeneralSettings />);
+  const checkbox = (await screen.findByRole('checkbox', {
+    name: 'Automatically sync clones on an interval',
+  })) as HTMLInputElement;
+  const interval = (await screen.findByLabelText('Every')) as HTMLSelectElement;
+  expect(checkbox.checked).toBe(true);
+  expect(interval.value).toBe('120');
+});

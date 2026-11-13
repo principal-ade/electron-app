@@ -2,6 +2,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -12,6 +13,13 @@ import {
   parsePurl,
 } from '@principal-ai/alexandria-core-library';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
+import { AlexandriaService } from '../../main-process-api/AlexandriaService';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
+import {
+  DEFAULT_AUTO_SYNC_SETTINGS,
+  normalizeAutoSyncSettings,
+  type AutoSyncSettings,
+} from './autoSyncPrefs';
 import {
   syncSingleRepository,
   type SyncSingleResult,
@@ -45,6 +53,8 @@ interface SyncAllContextValue {
   summary: SyncAllSummary | null;
   results: SyncSingleResult[];
   start: (entries: AlexandriaEntry[]) => Promise<void>;
+  /** The persisted auto-sync cadence (drives the interval timer below). */
+  autoSync: AutoSyncSettings;
 }
 
 const SyncAllContext = createContext<SyncAllContextValue | null>(null);
@@ -72,6 +82,9 @@ export const SyncAllProvider: React.FC<{ children: React.ReactNode }> = ({
   const [current, setCurrent] = useState<SyncAllCurrent | null>(null);
   const [summary, setSummary] = useState<SyncAllSummary | null>(null);
   const [results, setResults] = useState<SyncSingleResult[]>([]);
+  const [autoSync, setAutoSync] = useState<AutoSyncSettings>(
+    DEFAULT_AUTO_SYNC_SETTINGS,
+  );
   const runningRef = useRef(false);
   const doneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -169,13 +182,66 @@ export const SyncAllProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const value = useMemo<SyncAllContextValue>(
-    () => ({ isSyncing, current, summary, results, start }),
-    [isSyncing, current, summary, results, start],
+    () => ({ isSyncing, current, summary, results, start, autoSync }),
+    [isSyncing, current, summary, results, start, autoSync],
   );
 
+  // The auto-sync cadence is a persisted General setting; keep it live so
+  // changes from Settings (or another window) retime the scheduler below.
+  useEffect(() => {
+    let cancelled = false;
+    UserPreferencesService.getPreferences()
+      .then((prefs) => {
+        if (!cancelled) setAutoSync(normalizeAutoSyncSettings(prefs));
+      })
+      .catch(() => {
+        // Keep the default (off) when preferences are unreadable.
+      });
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
+      if (!cancelled) setAutoSync(normalizeAutoSyncSettings(prefs));
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
   return (
-    <SyncAllContext.Provider value={value}>{children}</SyncAllContext.Provider>
+    <SyncAllContext.Provider value={value}>
+      {children}
+      <AutoSyncScheduler />
+    </SyncAllContext.Provider>
   );
+};
+
+/**
+ * Interval timer for the persisted auto-sync setting. Mounted inside the
+ * provider so it shares the run lifecycle: each tick loads the registered
+ * clones fresh and runs the same safe sequential sync as the manual button.
+ * Skips ticks while a run (manual or scheduled) is already in progress.
+ */
+const AutoSyncScheduler: React.FC = () => {
+  const { start, autoSync, isSyncing } = useSyncAll();
+  const stateRef = useRef({ start, isSyncing });
+  stateRef.current = { start, isSyncing };
+
+  useEffect(() => {
+    if (!autoSync.enabled) return;
+    const intervalMs = autoSync.intervalMinutes * 60_000;
+    const timer = setInterval(() => {
+      // A manual run (or an earlier tick still working) owns the run
+      // lifecycle — the provider's start() guard is the final backstop.
+      if (stateRef.current.isSyncing) return;
+      void AlexandriaService.getRepositories()
+        .then((entries) => stateRef.current.start(entries))
+        .catch((error: unknown) => {
+          console.warn('[SyncAll] Scheduled auto-sync failed:', error);
+        });
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [autoSync.enabled, autoSync.intervalMinutes]);
+
+  return null;
 };
 
 export function useSyncAll(): SyncAllContextValue {

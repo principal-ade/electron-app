@@ -79,6 +79,9 @@ export const USER_PREFERENCES_KEY = 'preferences';
 /** Build terminal cleanup grace period: five minutes by default. */
 export const DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS = 5 * 60 * 1000;
 
+/** Fallback auto-sync cadence when the stored value is missing or invalid. */
+export const DEFAULT_REPOSITORY_AUTO_SYNC_INTERVAL_MINUTES = 30;
+
 export interface UserPreferences {
   // AI/LLM settings
   ollamaModel?: string; // Selected Ollama model for summarizing agent work
@@ -129,6 +132,16 @@ export interface UserPreferences {
   buildsDirectory?: string;
   /** Minutes to keep a completed build terminal open before cleanup (default: 5). */
   buildTerminalCleanupDelayMs?: number;
+  /**
+   * Sky View clone auto-sync. When enabled, registered clones are
+   * fast-forwarded (same safe check as the manual Sync all) on a timer while
+   * the app is open. Default: off.
+   */
+  repositoryAutoSync?: {
+    enabled?: boolean;
+    /** Cadence in minutes (default: 30). */
+    intervalMinutes?: number;
+  };
   /**
    * Filesystem watcher implementation used by the repository monitoring
    * worker. 'parcel' (default) uses native fsevents via @parcel/watcher;

@@ -11,6 +11,11 @@ import {
   DEFAULT_BUILD_TERMINAL_CLEANUP_DELAY_MS,
   type UserPreferences,
 } from '../../../../../shared/types/userPreferences.types';
+import {
+  AUTO_SYNC_INTERVAL_OPTIONS,
+  formatAutoSyncInterval,
+  normalizeAutoSyncSettings,
+} from '../../../syncAll/autoSyncPrefs';
 
 export const GeneralSettings: React.FC = () => {
   const { theme } = useTheme();
@@ -29,6 +34,9 @@ export const GeneralSettings: React.FC = () => {
   const [isSelectingBuildsDirectory, setIsSelectingBuildsDirectory] =
     useState(false);
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState<boolean>(false);
+  const [autoSyncIntervalMinutes, setAutoSyncIntervalMinutes] =
+    useState<number>(normalizeAutoSyncSettings(null).intervalMinutes);
   const [subsystemModelLayoutDirection, setSubsystemModelLayoutDirection] =
     useState<'horizontal' | 'vertical'>('vertical');
   const [openLocalhostTerminalLinksInApp, setOpenLocalhostTerminalLinksInApp] =
@@ -61,6 +69,9 @@ export const GeneralSettings: React.FC = () => {
         Math.max(0, Math.min(1440, Math.floor(cleanupDelayMs / 60_000))),
       );
       setEnableVimMode(prefs.enableVimMode ?? false);
+      const autoSync = normalizeAutoSyncSettings(prefs);
+      setAutoSyncEnabled(autoSync.enabled);
+      setAutoSyncIntervalMinutes(autoSync.intervalMinutes);
       setSubsystemModelLayoutDirection(
         prefs.subsystemModelLayoutDirection === 'horizontal'
           ? 'horizontal'
@@ -179,6 +190,22 @@ export const GeneralSettings: React.FC = () => {
     await UserPreferencesService.updatePreferences({
       buildTerminalCleanupDelayMs: minutes * 60_000,
     });
+  };
+
+  const persistAutoSync = async (enabled: boolean, intervalMinutes: number) => {
+    await UserPreferencesService.updatePreferences({
+      repositoryAutoSync: { enabled, intervalMinutes },
+    });
+  };
+
+  const handleAutoSyncEnabledChange = async (enabled: boolean) => {
+    setAutoSyncEnabled(enabled);
+    await persistAutoSync(enabled, autoSyncIntervalMinutes);
+  };
+
+  const handleAutoSyncIntervalChange = async (minutes: number) => {
+    setAutoSyncIntervalMinutes(minutes);
+    await persistAutoSync(autoSyncEnabled, minutes);
   };
 
   const handleClearAllData = async () => {
@@ -574,6 +601,104 @@ export const GeneralSettings: React.FC = () => {
               }}
             />
             minutes
+          </label>
+        </div>
+      </div>
+
+      {/* Clone Auto-Sync */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Clone Auto-Sync
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <p
+            style={{
+              fontSize: '14px',
+              color: theme.colors.textSecondary,
+              marginBottom: '12px',
+            }}
+          >
+            Periodically fast-forward registered clones that can be safely
+            fast-forwarded — the same safe check as Sync all in Sky View. Runs
+            while the app is open; progress shows in the titlebar.
+          </p>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={autoSyncEnabled}
+              onChange={(e) =>
+                void handleAutoSyncEnabledChange(e.target.checked)
+              }
+              style={{
+                marginRight: '8px',
+                width: '18px',
+                height: '18px',
+                cursor: 'pointer',
+              }}
+            />
+            <span style={{ color: theme.colors.text }}>
+              Automatically sync clones on an interval
+            </span>
+          </label>
+          <label
+            htmlFor="clone-auto-sync-interval"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginTop: '12px',
+              fontSize: '14px',
+              color: autoSyncEnabled
+                ? theme.colors.text
+                : theme.colors.textSecondary,
+            }}
+          >
+            Every
+            <select
+              id="clone-auto-sync-interval"
+              value={autoSyncIntervalMinutes}
+              disabled={!autoSyncEnabled}
+              onChange={(e) =>
+                void handleAutoSyncIntervalChange(Number(e.target.value))
+              }
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                cursor: autoSyncEnabled ? 'pointer' : 'not-allowed',
+                fontSize: '14px',
+                opacity: autoSyncEnabled ? 1 : 0.6,
+              }}
+            >
+              {AUTO_SYNC_INTERVAL_OPTIONS.map((minutes) => (
+                <option key={minutes} value={minutes}>
+                  {formatAutoSyncInterval(minutes)}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
       </div>
