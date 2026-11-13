@@ -15,8 +15,13 @@
 import path from 'path';
 import type { Application, Request, Response } from 'express';
 import type { ProcessRegistry } from './ProcessRegistry';
-import { ProcessKind } from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
+import {
+  ProcessEntry,
+  ProcessKind,
+} from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
+import type { RunningServer } from '../../shared/main-process-api-interfaces/LocalhostDetectionAPI';
 import { AGENT_COMMAND_ALLOWLIST } from '../../shared/build-configurations/types';
+import { COMMON_DEV_PORTS, detectRunningServers } from './detectServers';
 
 const PROCESS_KINDS: ProcessKind[] = [
   'dev-server',
@@ -36,13 +41,134 @@ function asObject(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+const ACTIVE_MANAGED_STATUSES = new Set([
+  'starting',
+  'running',
+  'restarting',
+  'stopping',
+]);
+
+function parsePortsQuery(value: unknown): number[] | undefined {
+  if (value == null) return undefined;
+  const raw = (Array.isArray(value) ? value : [value])
+    .flatMap((entry) => String(entry).split(','))
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  if (raw.length === 0) return undefined;
+  if (raw.length > 100) throw new Error('too many ports (max 100)');
+  const ports = raw.map((part) => Number.parseInt(part, 10));
+  if (
+    ports.some((port) => !Number.isInteger(port) || port < 1 || port > 65535)
+  ) {
+    throw new Error('ports must be integers 1-65535');
+  }
+  return [...new Set(ports)];
+}
+
+function parseTimeoutQuery(value: unknown): number | undefined {
+  if (value == null) return undefined;
+  const raw = Array.isArray(value) ? value[0] : value;
+  const timeout = Number.parseInt(String(raw), 10);
+  if (!Number.isInteger(timeout) || timeout < 100 || timeout > 10000) {
+    throw new Error('timeout must be an integer 100-10000 ms');
+  }
+  return timeout;
+}
+
 export function registerProcessRoutes(
   app: Application,
   registry: ProcessRegistry,
 ): void {
-  // List managed + detected processes.
+  // List managed processes started by the app or an agent.
   app.get('/api/processes', (_req: Request, res: Response) => {
     res.json({ success: true, processes: registry.list() });
+  });
+
+  // List externally detected localhost servers (not started by the app),
+  // merged the same way the Processes panel merges them: entries the app
+  // already manages (matched by pid or port) are dropped.
+  app.get('/api/processes/detected', async (req: Request, res: Response) => {
+    let ports: number[] | undefined;
+    let timeout: number | undefined;
+    try {
+      ports = parsePortsQuery(req.query.ports);
+      timeout = parseTimeoutQuery(req.query.timeout);
+    } catch (err) {
+      res.status(400).json({
+        success: false,
+        error: err instanceof Error ? err.message : 'invalid query',
+      });
+      return;
+    }
+
+    let scan;
+    try {
+      scan = await detectRunningServers({
+        ports: ports ?? COMMON_DEV_PORTS,
+        timeout,
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        error: err instanceof Error ? err.message : 'scan failed',
+      });
+      return;
+    }
+
+    const managed = registry.list();
+    const active = managed.filter((m) => ACTIVE_MANAGED_STATUSES.has(m.status));
+    const managedPids = new Set(
+      active
+        .map((m) => m.pid)
+        .filter((pid): pid is number => typeof pid === 'number'),
+    );
+    const managedPorts = new Set(
+      active
+        .map((m) => m.port)
+        .filter((port): port is number => typeof port === 'number'),
+    );
+
+    const servers: RunningServer[] = scan.servers
+      .filter((s) => {
+        if (s.pid != null && managedPids.has(s.pid)) return false;
+        if (s.port != null && managedPorts.has(s.port)) return false;
+        return true;
+      })
+      .map((s) => ({
+        ...s,
+        displayName:
+          registry.getDetectedLabel(`detected:${s.pid ?? s.port}`) ??
+          s.displayName,
+      }));
+
+    const processes: ProcessEntry[] = await Promise.all(
+      servers.map(async (s) => ({
+        id: `detected:${s.pid ?? s.port}`,
+        label:
+          s.displayName?.trim() ||
+          (s.command?.trim()
+            ? `${s.command.trim()} :${s.port}`
+            : `localhost:${s.port}`),
+        command: s.command || '',
+        cwd: s.cwd || '',
+        repo: s.cwd ? await registry.resolveRepo(s.cwd) : undefined,
+        kind: 'dev-server' as const,
+        status: 'running' as const,
+        origin: 'detected' as const,
+        pid: s.pid,
+        port: s.port,
+        source: 'external',
+        startedAt: Date.now(),
+      })),
+    );
+
+    res.json({
+      success: true,
+      processes,
+      servers,
+      scannedPorts: scan.scannedPorts,
+      scanDuration: scan.scanDuration,
+    });
   });
 
   // Captured stdout/stderr for a process — diagnostics when it exits fast.

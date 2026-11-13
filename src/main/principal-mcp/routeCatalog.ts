@@ -730,7 +730,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
   {
     name: 'processes',
     description:
-      'Start, inspect, stop, restart, and remove app-owned managed processes.',
+      'Start, inspect, stop, restart, and remove app-owned managed processes; list externally detected localhost servers.',
     routes: [
       {
         method: 'GET',
@@ -739,8 +739,30 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           'List the managed process registry, not externally detected servers.',
         response: '{ success: true, processes: ProcessEntry[] }',
         notes: [
-          'Entries include id, label, command, cwd, kind, status, origin, and optional repo, pid, port, timing, exit/error, and runCount information. Use durable id, not PID. The UI merges detected servers separately.',
+          'Entries include id, label, command, cwd, kind, status, origin, and optional repo, pid, port, timing, exit/error, and runCount information. Use durable id, not PID. For externally detected localhost servers, use GET /api/processes/detected.',
         ],
+      },
+      {
+        method: 'GET',
+        path: '/api/processes/detected',
+        summary:
+          'List externally detected localhost servers not started by the app.',
+        query: {
+          ports:
+            'string (optional): comma-separated ports to scan (1-65535, max 100); defaults to common dev ports.',
+          timeout:
+            'string (optional): per-port timeout in ms (100-10000, default 500).',
+        },
+        response:
+          '{ success: true, processes: ProcessEntry[], servers: RunningServer[], scannedPorts: number[], scanDuration: number }',
+        errors: {
+          '400': 'ports or timeout query failed validation.',
+          '500': 'localhost scan failed.',
+        },
+        notes: [
+          'Servers already owned by a managed process (matched by pid or port) are dropped, matching the Processes panel merge. Detected entries use ids like `detected:<pid-or-port>` with origin `detected`, status `running`, and source `external`. Use PATCH /api/processes/:id to rename one.',
+        ],
+        example: { ports: '3000,5173', timeout: '500' },
       },
       {
         method: 'POST',
