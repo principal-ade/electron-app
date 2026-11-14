@@ -1,4 +1,9 @@
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
+import { SpanStatusCode } from '@opentelemetry/api';
+import { getTracer } from '../telemetry';
+import { repositoryTelemetryId } from '../telemetry/repositoryIdentity';
+
+const tracer = getTracer('principal-ade-home-repository-refresh');
 
 const REFRESH_INTERVAL_MS = 60_000;
 const MIN_START_SPACING_MS = 250;
@@ -154,7 +159,43 @@ export class HomeRepositoryRefreshScheduler {
     this.nextStartAt = Date.now() + this.startSpacing();
     state.dueAt = Date.now() + REFRESH_INTERVAL_MS;
     void Promise.resolve()
-      .then(() => this.refresh(path))
+      .then(async () => {
+        const span = tracer.startSpan('home.repository.refresh', {
+          attributes: {
+            'home.refresh.source': 'scheduled',
+            'principal.repository.telemetry_id': repositoryTelemetryId(path),
+          },
+        });
+        try {
+          const status = await this.refresh(path);
+          span.setAttribute(
+            'git.status.changed',
+            state.status?.hash !== status.hash,
+          );
+          span.setAttribute('git.status.is_dirty', status.isDirty);
+          span.setAttribute('git.status.ahead', status.ahead);
+          span.setAttribute('git.status.behind', status.behind);
+          span.setAttribute(
+            'git.status.changed_file_count',
+            (status.modifiedFiles?.length ?? 0) +
+              (status.untrackedFiles?.length ?? 0) +
+              (status.stagedFiles?.length ?? 0) +
+              (status.createdFiles?.length ?? 0) +
+              (status.deletedFiles?.length ?? 0),
+          );
+          span.setStatus({ code: SpanStatusCode.OK });
+          return status;
+        } catch (error) {
+          span.setAttribute(
+            'error.type',
+            error instanceof Error ? error.name : typeof error,
+          );
+          span.setStatus({ code: SpanStatusCode.ERROR });
+          throw error;
+        } finally {
+          span.end();
+        }
+      })
       .then((status) => {
         if (this.disposed || this.repositories.get(path) !== state) return;
         // A watcher may have delivered a newer status while this read ran.

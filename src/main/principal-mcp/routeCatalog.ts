@@ -1096,6 +1096,69 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
     ],
   },
   {
+    name: 'acp-sessions',
+    description:
+      'Open ACP sessions in the Principal window and send prompts to active sessions in registered repositories.',
+    routes: [
+      {
+        method: 'POST',
+        path: '/api/acp/sessions/open',
+        summary:
+          'Open or focus an ACP tab in Principal and wait for its OpenCode session to start.',
+        body: {
+          directory:
+            'string (required): absolute directory inside a registered repository.',
+        },
+        response: '{ success: true, opened: true, alreadyRunning, agent }',
+        errors: {
+          '400':
+            'Malformed request or directory outside registered repositories.',
+          '403': 'Browser-origin requests are not allowed.',
+          '500': 'Registered repositories could not be read.',
+          '503': 'The Principal window could not open an ACP tab.',
+          '504': 'The ACP session did not become ready in time.',
+        },
+        notes: [
+          'Opens/focuses the actual ACP tab in the Principal renderer so session events and permission requests use the normal UI.',
+          'The tab uses the default ACP agent (OpenCode); permission requests still require approval in the UI.',
+          'A running session for the exact directory is reused.',
+        ],
+        example: { directory: '/absolute/path/to/repo' },
+      },
+      {
+        method: 'POST',
+        path: '/api/acp/prompt',
+        summary:
+          'Prompt an active ACP session and return its completion reason and update counts.',
+        body: {
+          directory:
+            'string (required): absolute directory inside a registered repository with an active ACP tab.',
+          text: 'string (required): non-empty prompt, maximum 20000 characters.',
+        },
+        response:
+          '{ success: true, agent, stopReason, sessionUpdates: { [updateType]: count } }',
+        errors: {
+          '400':
+            'Malformed request or directory outside registered repositories.',
+          '403': 'Browser-origin requests are not allowed.',
+          '404': 'No unique connected ACP session exists for the directory.',
+          '409':
+            'The ACP connection has not started a session or already has a prompt in progress.',
+          '502': 'The ACP prompt failed.',
+        },
+        notes: [
+          'Use POST /api/acp/sessions/open first if no session is already running.',
+          'Permission requests continue to appear in the ACP tab and require the user to approve them there.',
+          'Prompt and session-update content are not returned; only the stop reason and update counts are included.',
+        ],
+        example: {
+          directory: '/absolute/path/to/repo',
+          text: 'Make a small change to a file in this repository.',
+        },
+      },
+    ],
+  },
+  {
     name: 'terminals',
     description:
       'Open, list, and close real PTY terminal sessions. Uses the renderer\u2019s own session-creation path, so reuse, ownership, and telemetry match a terminal opened in the UI.',

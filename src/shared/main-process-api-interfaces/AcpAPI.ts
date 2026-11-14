@@ -124,6 +124,8 @@ export interface AcpPromptRequest {
 
 export interface AcpPromptResult {
   stopReason: string;
+  /** Counts only; session update content is intentionally not summarized here. */
+  sessionUpdates?: Record<string, number>;
 }
 
 export interface AcpCancelRequest {

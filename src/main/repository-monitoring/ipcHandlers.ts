@@ -14,7 +14,10 @@ import {
   type LogTailRequest,
   type FileWatcherImpl,
 } from '@principal-ai/repository-monitoring-server';
+import { SpanStatusCode } from '@opentelemetry/api';
 import { RepositoryMonitoringManager } from './RepositoryMonitoringManager';
+import { getTracer } from '../telemetry';
+import { repositoryTelemetryId } from '../telemetry/repositoryIdentity';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 import { applicationWindows, PrimaryWindowType } from '../window/types';
@@ -27,6 +30,8 @@ import {
 
 // Type alias for git state event payload (structure defined in repository-monitoring-server)
 type GitStateEventPayload = { event: { type: string }; [key: string]: unknown };
+
+const repositoryStatusTracer = getTracer('principal-ade-repository-monitoring');
 
 // MonitoringInternalEvent constants (matching the package)
 const MonitoringInternalEvent = {
@@ -749,10 +754,38 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
   manager.on(
     MonitoringInternalEvent.GIT_STATUS_CHANGED,
     (data: GitStatusWithFiles) => {
-      broadcastToRelevantWindows(
+      const span = repositoryStatusTracer.startSpan(
+        'repository_monitoring.git_status_changed',
+        {
+          attributes: {
+            'principal.repository.telemetry_id': repositoryTelemetryId(
+              data.repoPath,
+            ),
+            'git.status.is_dirty': data.isDirty,
+            'git.status.ahead': data.ahead,
+            'git.status.behind': data.behind,
+            'git.status.changed_file_count':
+              (data.modifiedFiles?.length ?? 0) +
+              (data.untrackedFiles?.length ?? 0) +
+              (data.stagedFiles?.length ?? 0) +
+              (data.createdFiles?.length ?? 0) +
+              (data.deletedFiles?.length ?? 0),
+          },
+        },
+      );
+      void broadcastToRelevantWindows(
         RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED,
         data,
-      );
+      )
+        .then(() => span.setStatus({ code: SpanStatusCode.OK }))
+        .catch((error: unknown) => {
+          span.setAttribute(
+            'error.type',
+            error instanceof Error ? error.name : typeof error,
+          );
+          span.setStatus({ code: SpanStatusCode.ERROR });
+        })
+        .finally(() => span.end());
 
       // Also send to presence system (debounced) for sharing with other users
       sendGitStatusToPresence(data, manager);

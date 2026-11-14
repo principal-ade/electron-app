@@ -17,6 +17,10 @@ import { registerRepoOpenRoutes } from './repoOpenRoutes';
 import { registerRequestRoutes } from './requestRoutes';
 import { createAgentSessionProviders } from './agentSessionRoutes';
 import { registerAgentSessionRoutes } from './agentSessionRoutes';
+import { registerAcpSessionRoutes } from './acpSessionRoutes';
+import { getAcpService } from '../acp/AcpService';
+import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
+import { focusOrCreateMainWindow } from '../window/modernWindowManager';
 import { getDocumentNotesPersistence } from '../document-notes/documentNotesPersistence';
 import { registerTopicRoutes } from '../topics/topicRoutes';
 import { registerSubsystemModelRoutes } from '../subsystem-models/subsystemModelRoutes';
@@ -50,6 +54,62 @@ import { getPullRequestWatcher } from '../pr-watching/PullRequestWatcher';
 
 // Tracer for Principal MCP Bridge instrumentation
 const tracer = getTracer('principal-ade-main');
+const ACP_SESSION_START_TIMEOUT_MS = 45_000;
+const ACP_SESSION_POLL_INTERVAL_MS = 100;
+
+function waitForWebContentsLoad(
+  webContents: Electron.WebContents,
+  timeoutMs: number,
+): Promise<boolean> {
+  if (!webContents.isLoading()) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (loaded: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      webContents.removeListener('did-finish-load', onLoaded);
+      webContents.removeListener('destroyed', onDestroyed);
+      resolve(loaded);
+    };
+    const onLoaded = () => finish(true);
+    const onDestroyed = () => finish(false);
+    const timer = setTimeout(() => finish(false), timeoutMs);
+    webContents.once('did-finish-load', onLoaded);
+    webContents.once('destroyed', onDestroyed);
+  });
+}
+
+async function startAcpSessionFromMainWindow(
+  directory: string,
+): Promise<{ agentName: string; alreadyRunning: boolean } | null> {
+  const service = getAcpService();
+  const existing = service.getActiveSessionInfo(directory);
+  if (existing?.hasSession) {
+    return { agentName: existing.agentName, alreadyRunning: true };
+  }
+
+  const principal = await focusOrCreateMainWindow();
+  if (!principal || principal.window.isDestroyed()) return null;
+  const { webContents } = principal.window;
+  if (!(await waitForWebContentsLoad(webContents, 30_000))) return null;
+
+  webContents.send(WindowEvent.OPEN_ACP_TAB, { directory });
+
+  const deadline = Date.now() + ACP_SESSION_START_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    if (principal.window.isDestroyed() || webContents.isDestroyed())
+      return null;
+    const session = service.getActiveSessionInfo(directory);
+    if (session?.hasSession) {
+      return { agentName: session.agentName, alreadyRunning: false };
+    }
+    await new Promise<void>((resolve) =>
+      setTimeout(resolve, ACP_SESSION_POLL_INTERVAL_MS),
+    );
+  }
+  throw new Error('ACP session startup timed out');
+}
 
 // Determine which port to use based on environment
 function getDefaultPort(): number {
@@ -1061,6 +1121,17 @@ export class PrincipalMCPBridge extends EventEmitter {
         (await AlexandriaRegistryService.getInstance().getRepositories()).map(
           (repo) => repo.path,
         ),
+    });
+    registerAcpSessionRoutes(this.app, {
+      getRepositoryDirectories: async () =>
+        (await AlexandriaRegistryService.getInstance().getRepositories()).map(
+          (repo) => repo.path,
+        ),
+      startSession: startAcpSessionFromMainWindow,
+      getActiveSessionInfo: (directory) =>
+        getAcpService().getActiveSessionInfo(directory),
+      prompt: (sessionKey, text) =>
+        getAcpService().prompt({ sessionKey, text }),
     });
 
     // ============================================
