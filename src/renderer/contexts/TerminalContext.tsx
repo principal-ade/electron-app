@@ -35,6 +35,10 @@ interface TerminalPanelActions extends BaseTerminalPanelActions {
     context?: string;
     command?: string;
   }) => Promise<string>;
+  reconnectTerminalSession?: (options: {
+    cwd?: string;
+    context?: string;
+  }) => Promise<string | null>;
 }
 
 /**
@@ -378,6 +382,30 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
         // Update terminal sessions list
         const terminals = await TerminalService.list();
         setTerminalSessions(terminals);
+        return sessionId;
+      },
+
+      reconnectTerminalSession: async (options: {
+        cwd?: string;
+        context?: string;
+      }) => {
+        const sessionContext = options.context ?? terminalContext;
+        const sessionId = await TerminalService.reconnect({
+          context: sessionContext,
+        });
+        if (!sessionId) return null;
+
+        if (!terminalSubscriptionsRef.current.has(sessionId)) {
+          const unsubscribe = TerminalService.onDataForSession(
+            sessionId,
+            (_data) => {
+              // Data is handled by individual terminal components.
+            },
+          );
+          terminalSubscriptionsRef.current.set(sessionId, unsubscribe);
+        }
+
+        setTerminalSessions(await TerminalService.list());
         return sessionId;
       },
 

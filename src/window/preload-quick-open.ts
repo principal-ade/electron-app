@@ -62,8 +62,8 @@ try {
       };
     },
     requestQuickOpenItems: () => ipcRenderer.send('quick-open:request-items'),
-    selectQuickOpenItem: (item: QuickOpenItem) =>
-      ipcRenderer.send('quick-open:select', item),
+    selectQuickOpenItem: (item: QuickOpenItem, action?: 'acp') =>
+      ipcRenderer.send('quick-open:select', item, action),
     closeQuickOpen: () => ipcRenderer.send('quick-open:close'),
     copyToClipboard: (text: string) =>
       ipcRenderer.invoke(ClipboardAPIEvent.WRITE_TEXT, text),

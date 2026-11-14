@@ -221,6 +221,12 @@ export class TerminalSessionManager {
   private isDaemonConnected = false;
   private daemonConnectedPromise: Promise<void> | null = null;
   private daemonConnectedResolve: (() => void) | null = null;
+  // The daemon socket becoming available is not enough to safely reconnect a
+  // tab: its session inventory is delivered in a separate worker message.
+  private daemonSessionInventoryReady = false;
+  private daemonSessionInventoryPromise: Promise<boolean> | null = null;
+  private daemonSessionInventoryResolve: ((ready: boolean) => void) | null =
+    null;
 
   // An outdated daemon found at startup that still owned sessions. Replaced
   // once the last of them closes; restarting earlier would kill them.
@@ -354,6 +360,7 @@ export class TerminalSessionManager {
       // The bridge died with the worker; let the next request reconnect.
       this.isDaemonConnected = false;
       this.settleDaemonConnection();
+      this.settleDaemonSessionInventory(false);
 
       // Fail any pending session callbacks
       for (const [, callback] of this.pendingSessionCallbacks) {
@@ -435,6 +442,8 @@ export class TerminalSessionManager {
           msg.error,
         );
         this.isDaemonConnected = false;
+        this.settleDaemonConnection();
+        this.settleDaemonSessionInventory(false);
         // Every session lived in that daemon, so they are gone with it; tell
         // renderers so tabs close instead of sitting on a dead stream.
         this.dropDaemonSessions();
@@ -445,6 +454,7 @@ export class TerminalSessionManager {
           `[Terminal] Received ${msg.sessions.length} existing sessions from daemon`,
         );
         this.restoreSessionsFromDaemon(msg.sessions);
+        this.settleDaemonSessionInventory(true);
         break;
 
       case 'SCROLLBACK_RESPONSE': {
@@ -513,6 +523,13 @@ export class TerminalSessionManager {
       this.daemonConnectedPromise = new Promise((resolve) => {
         this.daemonConnectedResolve = resolve;
       });
+      // DAEMON_CONNECTED precedes DAEMON_SESSIONS. Keep a distinct barrier so
+      // reconnect-only callers don't mistake a ready socket for a hydrated
+      // session map.
+      this.daemonSessionInventoryReady = false;
+      this.daemonSessionInventoryPromise = new Promise((resolve) => {
+        this.daemonSessionInventoryResolve = resolve;
+      });
 
       // Ensure daemon is running
       console.log('[Terminal] Starting PTY daemon...');
@@ -540,6 +557,7 @@ export class TerminalSessionManager {
       // Settle anything awaiting the connection (ensureDaemonReady) and allow a
       // later attempt, instead of leaving every session request to time out.
       this.settleDaemonConnection();
+      this.settleDaemonSessionInventory(false);
     }
   }
 
@@ -553,6 +571,56 @@ export class TerminalSessionManager {
     this.daemonConnectedPromise = null;
     this.daemonConnectedResolve = null;
     resolve?.();
+  }
+
+  private settleDaemonSessionInventory(ready: boolean): void {
+    this.daemonSessionInventoryReady = ready;
+    const resolve = this.daemonSessionInventoryResolve;
+    this.daemonSessionInventoryPromise = null;
+    this.daemonSessionInventoryResolve = null;
+    resolve?.(ready);
+  }
+
+  /**
+   * Wait until the daemon's complete session inventory has been applied to
+   * this manager. A connected socket alone does not guarantee that existing
+   * PTYs are visible yet.
+   */
+  async waitForSessionInventory(): Promise<void> {
+    const workerReady = await this.ensureWorkerReady();
+    if (!workerReady) {
+      throw new Error('Terminal worker is not available');
+    }
+
+    if (!getDaemonModeEnabled()) return;
+
+    if (this.daemonSessionInventoryReady && this.isDaemonConnected) return;
+
+    if (!this.isDaemonConnected && !this.daemonConnectedPromise) {
+      await this.initializeDaemonConnection();
+    }
+
+    const inventoryPromise = this.daemonSessionInventoryPromise;
+    if (!inventoryPromise) {
+      throw new Error('Terminal session inventory is not available');
+    }
+
+    let timeout: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise<boolean>((resolve) => {
+      timeout = setTimeout(() => resolve(false), 15000);
+    });
+    let inventoryReady: boolean;
+    try {
+      inventoryReady = await Promise.race([
+        inventoryPromise,
+        timeoutPromise,
+      ]);
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+    if (!inventoryReady) {
+      throw new Error('Timed out waiting for terminal session inventory');
+    }
   }
 
   /**
@@ -579,6 +647,7 @@ export class TerminalSessionManager {
     this.pendingDaemonUpdate = null;
     this.isDaemonConnected = false;
     this.settleDaemonConnection();
+    this.settleDaemonSessionInventory(false);
 
     if (this.worker) {
       const disconnectMsg: DisconnectDaemonMessage = {

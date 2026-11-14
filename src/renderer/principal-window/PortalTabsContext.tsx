@@ -43,6 +43,7 @@ import type {
   TerminalTab,
   OpenBotChatTab,
   HttpRequestTab,
+  AcpTab,
 } from '../events/portalTabs';
 import { specTabLabel } from '../specs-view/specPaths';
 import type { RepositorySelectedPayload } from '../events/repositorySelected';
@@ -94,7 +95,9 @@ export type WorkspaceTab =
   // Processes
   | LocalhostBrowserTab
   | OpenBotChatTab
-  | HttpRequestTab;
+  | HttpRequestTab
+  // ACP agents
+  | AcpTab;
 
 // ----------------------------------------------------------------------------
 // Slice shapes
@@ -180,6 +183,20 @@ export interface WorkspaceTabsContextValue {
   ) => string;
   /** Open or focus a native chat surface, optionally scoped to one bot. */
   openOpenBotChat: (bot?: { agentId: string; name: string }) => void;
+  /**
+   * Open (or focus) an ACP agent tab for a local directory. `autoStart`
+   * connects and creates a session immediately (Quick Open); it is a one-shot
+   * hint and is not persisted.
+   */
+  openAcpTab: (payload: {
+    directory: string;
+    label?: string;
+    agent?: AcpTab['agent'];
+    sessionId?: AcpTab['sessionId'];
+    sessionTitle?: AcpTab['sessionTitle'];
+    autoStart?: boolean;
+    repository?: AcpTab['repository'];
+  }) => string;
   /**
    * Rename the active tab (or clear the rename with an empty name). Sets
    * `customLabel`, which the tab strip and Home prefer over the computed
@@ -765,6 +782,62 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
     [openTab],
   );
 
+  const openAcpTab = useCallback(
+    (payload: {
+      directory: string;
+      label?: string;
+      agent?: AcpTab['agent'];
+      sessionId?: AcpTab['sessionId'];
+      sessionTitle?: AcpTab['sessionTitle'];
+      autoStart?: boolean;
+      repository?: AcpTab['repository'];
+    }) => {
+      const id = `acp-${payload.directory}`;
+      const fallbackLabel =
+        payload.directory.split(/[\\/]/).filter(Boolean).pop() ?? 'ACP';
+      setTabs((previous) => {
+        const existing = previous.find((tab) => tab.id === id);
+        if (existing) {
+          // Quick Open may target a restored ACP tab. Promote it to auto-start
+          // rather than merely focusing an idle setup screen.
+          if (payload.autoStart && existing.contentType === 'acp') {
+            return previous.map((tab) =>
+              tab.id === id && tab.contentType === 'acp'
+                ? ({
+                    ...tab,
+                    autoStart: true,
+                    label: payload.label || tab.label,
+                    repository: payload.repository ?? tab.repository,
+                    sessionId: payload.sessionId ?? tab.sessionId,
+                    sessionTitle: payload.sessionTitle ?? tab.sessionTitle,
+                  } as AcpTab)
+                : tab,
+            );
+          }
+          return previous;
+        }
+        return [
+          ...previous,
+          {
+            id,
+            label: payload.label || fallbackLabel,
+            contentType: 'acp',
+            closable: true,
+            directory: payload.directory,
+            agent: payload.agent,
+            sessionId: payload.sessionId,
+            sessionTitle: payload.sessionTitle,
+            autoStart: payload.autoStart,
+            repository: payload.repository,
+          } as AcpTab,
+        ];
+      });
+      setActiveTabId(id);
+      return id;
+    },
+    [],
+  );
+
   const openHttpRequest = useCallback(
     (request: SavedRequest) => {
       const id = `http-request-${request.id}`;
@@ -829,6 +902,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openBuildConfiguration,
       openLocalhostBrowser,
       openOpenBotChat,
+      openAcpTab,
     }),
     [
       requestPins,
@@ -853,6 +927,7 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       openBuildConfiguration,
       openLocalhostBrowser,
       openOpenBotChat,
+      openAcpTab,
     ],
   );
 }

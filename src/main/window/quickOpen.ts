@@ -20,6 +20,7 @@ import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type {
   OpenTerminalTabPayload,
   OpenRepositoryExplorerPayload,
+  OpenAcpTabPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import { focusOrCreateMainWindow } from './modernWindowManager';
 import { collectOwnerDirectories } from './ownerDirectories';
@@ -340,79 +341,133 @@ async function openTerminalTabInPrincipal(
 }
 
 /**
+ * Focus/create the principal window and ask its renderer to open a live ACP
+ * agent session at `directory` (Command+Enter in Quick Open).
+ */
+async function openAcpTabInPrincipal(
+  directory: string,
+  label?: string,
+  repository?: OpenAcpTabPayload['repository'],
+): Promise<void> {
+  const principal = await focusOrCreateMainWindow();
+  if (!principal || principal.window.isDestroyed()) {
+    log.error('[Quick Open] No principal window available for ACP tab');
+    return;
+  }
+
+  const payload: OpenAcpTabPayload = { directory, label, repository };
+  const send = () => {
+    if (principal.window.isDestroyed()) return;
+    principal.window.webContents.send(WindowEvent.OPEN_ACP_TAB, payload);
+    log.info(
+      `[Quick Open] Sent open-acp-tab for ${label ?? directory} → principal`,
+    );
+  };
+
+  if (principal.window.webContents.isLoading()) {
+    principal.window.webContents.once('did-finish-load', send);
+  } else {
+    send();
+  }
+}
+
+/**
  * Setup IPC handlers for quick open
  */
 export function setupQuickOpenHandlers(): void {
-  // Handle item selection from renderer
-  ipcMain.on('quick-open:select', async (_event, item: QuickOpenItem) => {
-    log.info(
-      `[Quick Open] Item selected: ${item.type} - ${item.name} (isOpen: ${item.isOpen})`,
-    );
+  // Handle item selection from renderer. `action` distinguishes the modifier
+  // gestures: plain Enter opens the default surface, `'acp'` starts an agent
+  // session (Command+Enter).
+  ipcMain.on(
+    'quick-open:select',
+    async (_event, item: QuickOpenItem, action?: 'acp') => {
+      log.info(
+        `[Quick Open] Item selected: ${item.type} - ${item.name} (isOpen: ${item.isOpen}, action: ${action ?? 'default'})`,
+      );
 
-    // Close the overlay immediately for instant feedback
-    quickOpen.hide();
+      // Close the overlay immediately for instant feedback
+      quickOpen.hide();
 
-    if (item.type === 'github') {
-      const [owner, name] = (item.fullName || item.name).split('/');
-      if (!owner || !name) return;
+      if (item.type === 'github') {
+        const [owner, name] = (item.fullName || item.name).split('/');
+        if (!owner || !name) return;
 
-      const principal = await focusOrCreateMainWindow();
-      if (!principal || principal.window.isDestroyed()) return;
+        const principal = await focusOrCreateMainWindow();
+        if (!principal || principal.window.isDestroyed()) return;
 
-      const payload: OpenRepositoryExplorerPayload = {
-        owner,
-        name,
-        description: item.description,
-        stars: item.stars,
-      };
-      const send = () => {
-        if (principal.window.isDestroyed()) return;
-        principal.window.webContents.send(
-          WindowEvent.OPEN_REPOSITORY_EXPLORER,
-          payload,
-        );
-      };
-      if (principal.window.webContents.isLoading()) {
-        principal.window.webContents.once('did-finish-load', send);
-      } else {
-        send();
-      }
-      return;
-    }
-
-    // Local repositories and owner directories always open in terminal tabs,
-    // even when the repository also has a dedicated workspace window.
-    if (
-      (item.type === 'repository' || item.type === 'ownerDirectory') &&
-      item.localPath
-    ) {
-      await openTerminalTabInPrincipal(item.localPath, item.name);
-      return;
-    }
-
-    if (item.isOpen && item.openWindowId) {
-      // Focus existing window
-      const { applicationWindows } = require('./types');
-      const appWindow = applicationWindows.get(item.openWindowId);
-      if (appWindow && !appWindow.window.isDestroyed()) {
-        if (appWindow.window.isMinimized()) {
-          appWindow.window.restore();
+        const payload: OpenRepositoryExplorerPayload = {
+          owner,
+          name,
+          description: item.description,
+          stars: item.stars,
+        };
+        const send = () => {
+          if (principal.window.isDestroyed()) return;
+          principal.window.webContents.send(
+            WindowEvent.OPEN_REPOSITORY_EXPLORER,
+            payload,
+          );
+        };
+        if (principal.window.webContents.isLoading()) {
+          principal.window.webContents.once('did-finish-load', send);
+        } else {
+          send();
         }
-        appWindow.window.show();
-        appWindow.window.focus();
-        log.info(`[Quick Open] Focused existing window ${item.openWindowId}`);
+        return;
       }
-    } else {
-      // Open new window
-      if (item.type === 'repository' && item.alexandriaEntry) {
-        // Open dev workspace with panel framework
-        await openDevWorkspaceWindow({
-          alexandriaEntry: item.alexandriaEntry,
-        });
-        log.info(`[Quick Open] Opening dev workspace for ${item.name}`);
+
+      // Local repositories and owner directories always open in this app,
+      // even when the repository also has a dedicated workspace window.
+      if (
+        (item.type === 'repository' || item.type === 'ownerDirectory') &&
+        item.localPath
+      ) {
+        if (action === 'acp') {
+          const repoGithub = item.alexandriaEntry?.github;
+          const repository =
+            repoGithub?.owner && repoGithub.name
+              ? {
+                  owner: repoGithub.owner,
+                  name: repoGithub.name,
+                  avatarUrl: item.avatarUrl,
+                }
+              : undefined;
+          await openAcpTabInPrincipal(
+            item.localPath,
+            item.name,
+            repository,
+          );
+          return;
+        }
+
+        await openTerminalTabInPrincipal(item.localPath, item.name);
+        return;
       }
-    }
-  });
+
+      if (item.isOpen && item.openWindowId) {
+        // Focus existing window
+        const { applicationWindows } = require('./types');
+        const appWindow = applicationWindows.get(item.openWindowId);
+        if (appWindow && !appWindow.window.isDestroyed()) {
+          if (appWindow.window.isMinimized()) {
+            appWindow.window.restore();
+          }
+          appWindow.window.show();
+          appWindow.window.focus();
+          log.info(`[Quick Open] Focused existing window ${item.openWindowId}`);
+        }
+      } else {
+        // Open new window
+        if (item.type === 'repository' && item.alexandriaEntry) {
+          // Open dev workspace with panel framework
+          await openDevWorkspaceWindow({
+            alexandriaEntry: item.alexandriaEntry,
+          });
+          log.info(`[Quick Open] Opening dev workspace for ${item.name}`);
+        }
+      }
+    },
+  );
 
   // Handle request for items from renderer
   ipcMain.on('quick-open:request-items', () => {

@@ -26,6 +26,11 @@ export enum WindowEvent {
   OPEN_TERMINAL_TAB_ACK = 'window:open-terminal-tab-ack',
   // Browse a remote GitHub repository without cloning it.
   OPEN_REPOSITORY_EXPLORER = 'window:open-repository-explorer',
+  /**
+   * Open (or focus) an ACP agent tab in the principal window for a local
+   * directory, connecting and starting a session immediately.
+   */
+  OPEN_ACP_TAB = 'window:open-acp-tab',
 
   // Cross-window tab transfer: sender invokes with tab data + target window
   // path; main pushes a TAB_RECEIVED event to the target window's webContents.

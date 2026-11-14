@@ -12,6 +12,7 @@ import type {
   TabTransferData,
   OpenTerminalTabPayload,
   OpenRepositoryExplorerPayload,
+  OpenAcpTabPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type {
   DetachableTabDescriptor,
@@ -137,6 +138,19 @@ export const windowAPI: WindowAPI = {
     ipcRenderer.on(WindowEvent.OPEN_REPOSITORY_EXPLORER, handler);
     return () => {
       ipcRenderer.removeListener(WindowEvent.OPEN_REPOSITORY_EXPLORER, handler);
+    };
+  },
+
+  onOpenAcpTab: (callback: (payload: OpenAcpTabPayload) => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: OpenAcpTabPayload,
+    ) => {
+      callback(payload);
+    };
+    ipcRenderer.on(WindowEvent.OPEN_ACP_TAB, handler);
+    return () => {
+      ipcRenderer.removeListener(WindowEvent.OPEN_ACP_TAB, handler);
     };
   },
 

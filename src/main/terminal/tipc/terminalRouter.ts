@@ -15,6 +15,7 @@ import { getDaemonStatus, isDaemonRunning } from '../daemonSpawner';
 import {
   broadcastTerminalSessionsChanged,
   createTerminalSession,
+  reconnectTerminalSession,
 } from '../terminalSessionService';
 import { contextFromTraceparent } from '../../../shared/telemetry/traceparent';
 
@@ -62,6 +63,21 @@ export const terminalRouter = {
         parent,
       );
       return sessionId;
+    }),
+
+  reconnectTerminalSession: t.procedure
+    .input<{ context: string; traceparent?: string }>()
+    .action(async ({ input, context }) => {
+      const window = BrowserWindow.fromWebContents(context.sender);
+      if (!window) {
+        throw new Error('No window found for terminal session');
+      }
+
+      return reconnectTerminalSession(
+        input.context,
+        window.id,
+        contextFromTraceparent(input.traceparent),
+      );
     }),
 
   destroyTerminalSession: t.procedure

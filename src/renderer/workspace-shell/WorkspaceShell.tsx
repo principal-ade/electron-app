@@ -42,6 +42,7 @@ import {
   ScrollText,
   ToolCase,
   Send,
+  Sparkles,
   SquareArrowOutUpRight,
   Terminal,
 } from 'lucide-react';
@@ -126,6 +127,7 @@ import { SubsystemModelTabContent } from '../subsystem-models/SubsystemModelTabC
 import { C4SketchTabContent } from '../c4-sketches/C4SketchTabContent';
 import { LocalhostBrowserTabContent } from '../principal-window/views/ProcessesView/LocalhostBrowserTabContent';
 import { OpenBotChatTabContent } from '../dev-workspace/openbot-chat/OpenBotChatTabContent';
+import { ACPTabContent } from '../dev-workspace/acp-client/ACPTabContent';
 import { BuildConfigurationTab } from '../panels/build-configurations/BuildConfigurationTab';
 import { SpecTabContent } from '../specs-view/SpecTabContent';
 import { isSpecFilePath } from '../specs-view/specPaths';
@@ -136,6 +138,7 @@ import type {
   SkillTab,
   LocalhostBrowserTab,
   OpenBotChatTab,
+  AcpTab,
   BuildConfigurationTab as BuildConfigurationTabModel,
   SpecTab,
 } from '../events/portalTabs';
@@ -235,6 +238,11 @@ interface WorkspaceShellInnerProps {
   }) => void;
 }
 
+// `syncTerminalTabs` is added by the terminal-panel package release paired
+// with restored-tab reconnect handling. Keep this prop structurally typed
+// while the app/package versions are being advanced together.
+const terminalPanelRestoreOptions = { syncTerminalTabs: true };
+
 const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   activeView,
   events,
@@ -319,8 +327,63 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     openLocalhostBrowser,
     openHttpRequest,
     openBuildConfiguration,
+    openAcpTab,
     catalogRequests,
   } = useWorkspaceTabs();
+  const handleAcpSessionIdChange = useCallback(
+    (tabId: string, sessionId: string) => {
+      setTabs((previous) =>
+        previous.map((tab) =>
+          tab.id === tabId && tab.contentType === 'acp'
+            ? { ...tab, sessionId }
+            : tab,
+        ),
+      );
+    },
+    [setTabs],
+  );
+  const handleAcpSessionTitleChange = useCallback(
+    (tabId: string, title: string | null) => {
+      setTabs((previous) =>
+        previous.map((tab) =>
+          tab.id === tabId && tab.contentType === 'acp'
+            ? { ...tab, sessionTitle: title ?? undefined }
+            : tab,
+        ),
+      );
+
+      void UserPreferencesService.getPreferences()
+        .then((preferences) => {
+          const pinnedTabs =
+            preferences.interactiveShell?.homePinnedTabs ?? [];
+          let changed = false;
+          const nextPinnedTabs = pinnedTabs.map((entry) => {
+            if (entry.id !== tabId || entry.kind !== 'acp') return entry;
+            const acpTitle = title?.trim() || undefined;
+            const fallbackLabel =
+              entry.path?.split(/[\\/]/).filter(Boolean).pop() ?? 'OpenCode';
+            const label =
+              entry.customLabel?.trim() || acpTitle || fallbackLabel;
+            if (entry.acpTitle === acpTitle && entry.label === label) {
+              return entry;
+            }
+            changed = true;
+            return { ...entry, label, acpTitle };
+          });
+          if (!changed) return;
+          return UserPreferencesService.updatePreferences({
+            interactiveShell: { homePinnedTabs: nextPinnedTabs },
+          });
+        })
+        .catch((error) =>
+          console.warn(
+            '[WorkspaceShell] Failed to update pinned ACP session title:',
+            error,
+          ),
+        );
+    },
+    [setTabs],
+  );
   // The Topics left panel emits open intents on the portal bus
   // (PortalIntentBridge turns them into tabs).
   const { events: portalEvents } = usePortalEvents();
@@ -533,6 +596,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           return <Globe size={14} />;
         case 'openbot-chat':
           return <Bot size={14} />;
+        case 'acp':
+          return <Sparkles size={14} />;
         case 'http-request':
           return <Send size={14} />;
         default:
@@ -681,6 +746,21 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             <SkillDetailTabContent key={skillTab.id} skill={skillTab.skill} />
           );
         }
+        case 'acp': {
+          const acpTab = tab as AcpTab;
+          return (
+            <ACPTabContent
+              key={acpTab.id}
+              tab={acpTab}
+              onSessionIdChange={(sessionId) =>
+                handleAcpSessionIdChange(acpTab.id, sessionId)
+              }
+              onSessionTitleChange={(title) =>
+                handleAcpSessionTitleChange(acpTab.id, title)
+              }
+            />
+          );
+        }
         case 'http-request':
           return <HttpRequestTabContent key={tab.sessionId} tab={tab} />;
         default:
@@ -689,6 +769,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     },
     [
       handleOpenTopicProject,
+      handleAcpSessionIdChange,
+      handleAcpSessionTitleChange,
       openModelFromReference,
       openTopicFromReference,
       openSketchFromReference,
@@ -785,7 +867,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     terminalDirectory,
   ]);
 
-  // Find the active terminal tab's directory for the "show project" button.
+  // Find the active directory-backed tab's repository for the "show project"
+  // button (for example, a terminal or ACP tab).
   const activeTabDirectory = useMemo(() => {
     if (!activeTabId) return undefined;
     const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -943,6 +1026,25 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           // no session lookup, no chance of respawning a dead shell.
           setRequestFocusTabId(entry.id);
           break;
+        case 'acp': {
+          if (!entry.path) break;
+          const repo = findEntryForDirectory(entry.path);
+          openAcpTab({
+            directory: entry.path,
+            label: entry.label,
+            agent: entry.acpAgent,
+            sessionId: entry.acpSessionId,
+            sessionTitle: entry.acpTitle,
+            autoStart: true,
+            repository: repo?.github
+              ? {
+                  owner: repo.github.owner,
+                  name: repo.github.name,
+                }
+              : undefined,
+          });
+          break;
+        }
         case 'repo-tab': {
           if (!entry.purl) break;
           const purl = entry.purl as Purl;
@@ -979,6 +1081,8 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       skillsBus,
       openLocalhostBrowser,
       openBuildConfiguration,
+      openAcpTab,
+      findEntryForDirectory,
       openRepoExplorer,
       openFileCityGuide,
       openProjectInfo,
@@ -1440,6 +1544,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               getRepoInfo={getRepoInfo}
               programStatus={programStatus}
               initialTabs={tabs}
+              {...terminalPanelRestoreOptions}
               onTabsChange={setTabs}
               activeTabId={activeTabId}
               onActiveTabChange={setActiveTabId}
@@ -1452,6 +1557,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               renderTabLabel={renderTabLabel}
               showCloseButtons
               renderEmptyState={renderTerminalEmptyState}
+              hideFooter={activeTab?.contentType === 'acp'}
               bottomBarContent={bottomBarContent}
             />
           </div>
@@ -1493,6 +1599,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       homeProgramStatus,
       tabs,
       activeTabId,
+      activeTab?.contentType,
       setTabs,
       setActiveTabId,
       requestFocusTabId,

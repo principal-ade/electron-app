@@ -9,7 +9,10 @@ jest.mock('./sessionManagerSingleton', () => ({
   getSessionManagerInstance: jest.fn(),
 }));
 jest.mock('./TerminalOwnershipManager', () => ({
-  ownershipManager: { claimOwnership: jest.fn(() => ({})) },
+  ownershipManager: {
+    claimOwnership: jest.fn(() => ({})),
+    getOwner: jest.fn(() => undefined),
+  },
 }));
 jest.mock('./utils/ptyLoader', () => ({ isPtyAvailable: () => true }));
 jest.mock('../stores/AlexandriaRegistryService', () => ({
@@ -37,7 +40,10 @@ jest.mock('../telemetry', () => ({
 
 import { BrowserWindow } from 'electron';
 import { getSessionManagerInstance } from './sessionManagerSingleton';
-import { createTerminalSession } from './terminalSessionService';
+import {
+  createTerminalSession,
+  reconnectTerminalSession,
+} from './terminalSessionService';
 
 describe('createTerminalSession env overlay', () => {
   const window = { id: 7, isDestroyed: () => false };
@@ -45,6 +51,7 @@ describe('createTerminalSession env overlay', () => {
     createSession: jest.Mock;
     canCreateSession: jest.Mock;
     getAllSessions: jest.Mock;
+    waitForSessionInventory: jest.Mock;
     getMaxSessions: jest.Mock;
     createMessageChannelForSession: jest.Mock;
   };
@@ -55,6 +62,7 @@ describe('createTerminalSession env overlay', () => {
       createSession: jest.fn(async () => 'session-1'),
       canCreateSession: jest.fn(() => true),
       getAllSessions: jest.fn(() => new Map()),
+      waitForSessionInventory: jest.fn(async () => {}),
       getMaxSessions: jest.fn(() => 20),
       createMessageChannelForSession: jest.fn(),
     };
@@ -89,5 +97,84 @@ describe('createTerminalSession env overlay', () => {
       undefined,
       undefined,
     );
+  });
+
+  test('waits for the daemon inventory before deciding to create', async () => {
+    manager.waitForSessionInventory.mockImplementationOnce(async () => {
+      manager.getAllSessions.mockReturnValue(
+        new Map([
+          [
+            'surviving-session',
+            {
+              id: 'surviving-session',
+              directory: '/repo',
+              context: 'terminal:workspace:tab-1',
+            },
+          ],
+        ]),
+      );
+    });
+
+    await expect(
+      createTerminalSession(
+        {
+          cwd: '/repo',
+          context: 'terminal:workspace:tab-1',
+        },
+        7,
+        'renderer',
+      ),
+    ).resolves.toEqual({ sessionId: 'surviving-session', reused: true });
+
+    expect(manager.waitForSessionInventory).toHaveBeenCalledTimes(1);
+    expect(manager.createSession).not.toHaveBeenCalled();
+  });
+
+  test('reattaches a matching session after inventory is ready', async () => {
+    manager.getAllSessions.mockReturnValue(
+      new Map([
+        [
+          'surviving-session',
+          {
+            id: 'surviving-session',
+            directory: '/repo',
+            context: 'terminal:workspace:tab-1',
+          },
+        ],
+      ]),
+    );
+
+    await expect(
+      reconnectTerminalSession('terminal:workspace:tab-1', 7),
+    ).resolves.toBe('surviving-session');
+
+    expect(manager.waitForSessionInventory).toHaveBeenCalledTimes(1);
+    expect(manager.createMessageChannelForSession).toHaveBeenCalledWith(
+      'surviving-session',
+      7,
+    );
+    expect(manager.createSession).not.toHaveBeenCalled();
+  });
+
+  test('reports a missing session without creating a replacement', async () => {
+    await expect(
+      reconnectTerminalSession('terminal:workspace:tab-missing', 7),
+    ).resolves.toBeNull();
+
+    expect(manager.waitForSessionInventory).toHaveBeenCalledTimes(1);
+    expect(manager.createSession).not.toHaveBeenCalled();
+  });
+
+  test('propagates inventory failures instead of treating them as missing', async () => {
+    manager.waitForSessionInventory.mockRejectedValueOnce(
+      new Error('daemon unavailable'),
+    );
+
+    await expect(
+      reconnectTerminalSession('terminal:workspace:tab-1', 7),
+    ).rejects.toThrow('daemon unavailable');
+
+    expect(manager.getAllSessions).not.toHaveBeenCalled();
+    expect(manager.createSession).not.toHaveBeenCalled();
   });
 });

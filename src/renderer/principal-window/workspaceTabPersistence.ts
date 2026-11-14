@@ -24,6 +24,7 @@ const SUPPORTED_TAB_TYPES = new Set([
   'localhost-browser',
   'openbot-chat',
   'http-request',
+  'acp',
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -84,6 +85,9 @@ function serializeTab(tab: WorkspaceTab): Record<string, unknown> | null {
     // Reconnect by the stable tab id/context; never replay a launch command.
     delete cloned.command;
     delete cloned.startupOverlay;
+    // This is transient UI lifecycle state; every snapshot restore starts in
+    // reconnect mode again, and the PTY session itself remains authoritative.
+    delete cloned.restoreSession;
   } else if (tab.contentType === 'localhost-browser') {
     // These describe the old renderer/process state and are refreshed on restore.
     delete cloned.processStatus;
@@ -93,6 +97,10 @@ function serializeTab(tab: WorkspaceTab): Record<string, unknown> | null {
   } else if (tab.contentType === 'source-file') {
     // rangeRevision is an in-renderer navigation signal, not document state.
     delete cloned.rangeRevision;
+  } else if (tab.contentType === 'acp') {
+    // Auto-start is a one-shot Quick Open hint; restoring it would spawn a
+    // fresh agent process every time the app launches.
+    delete cloned.autoStart;
   }
 
   return cloned;
@@ -132,6 +140,7 @@ function restoreTab(
   switch (tab.contentType) {
     case 'terminal':
       if (!isString(tab.directory)) return null;
+      tab.restoreSession = true;
       break;
     case 'local-topic':
       if (!isString(tab.topicId) || !optionalStringFields(tab, ['title']))
@@ -207,6 +216,19 @@ function restoreTab(
       break;
     case 'openbot-chat':
       if (!optionalStringFields(tab, ['agentId', 'botName'])) return null;
+      break;
+    case 'acp':
+      if (
+        !isString(tab.directory) ||
+        !optionalStringFields(tab, [
+          'agent',
+          'label',
+          'sessionId',
+          'sessionTitle',
+        ])
+      ) {
+        return null;
+      }
       break;
     case 'http-request': {
       if (!isString(tab.savedRequestId)) return null;

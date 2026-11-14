@@ -34,6 +34,13 @@ describe('workspace tab persistence', () => {
     ]);
     expect(restored?.activeTabId).toBe('source-file-/repo/index.ts');
     expect(snapshot.tabs[0]).not.toHaveProperty('command');
+    expect(restored?.tabs[0]).toMatchObject({ restoreSession: true });
+    expect(snapshot.tabs[0]).not.toHaveProperty('restoreSession');
+    const resaved = createWorkspaceTabsSnapshot(
+      restored?.tabs ?? [],
+      restored?.activeTabId ?? null,
+    );
+    expect(resaved.tabs[0]).not.toHaveProperty('restoreSession');
   });
 
   it('stores request tab identity, then rebuilds transient panel state from the secure catalog', () => {
@@ -84,6 +91,56 @@ describe('workspace tab persistence', () => {
     expect((requestTab as { sessionId: string }).sessionId).not.toBe(
       'old-session',
     );
+  });
+
+  it('restores ACP tabs without reconnecting them on launch', () => {
+    const tab = {
+      id: 'acp-/repo',
+      label: 'repo',
+      contentType: 'acp',
+      closable: true,
+      directory: '/repo',
+      agent: 'opencode',
+      sessionId: 'ses_saved',
+      sessionTitle: 'Investigate ACP reconnect',
+      autoStart: true,
+      repository: { owner: 'acme', name: 'widgets' },
+    } as WorkspaceTab;
+
+    const snapshot = createWorkspaceTabsSnapshot([tab], tab.id);
+    expect(snapshot.tabs[0]).not.toHaveProperty('autoStart');
+
+    const restored = restoreWorkspaceTabsSnapshot(snapshot, []);
+    expect(restored?.tabs[0]).toMatchObject({
+      id: 'acp-/repo',
+      contentType: 'acp',
+      directory: '/repo',
+      agent: 'opencode',
+      sessionId: 'ses_saved',
+      sessionTitle: 'Investigate ACP reconnect',
+    });
+    expect(restored?.tabs[0]).not.toHaveProperty('autoStart');
+  });
+
+  it('drops ACP tabs without a directory', () => {
+    const restored = restoreWorkspaceTabsSnapshot(
+      {
+        version: 1,
+        activeTabId: 'acp-missing',
+        tabs: [
+          {
+            id: 'acp-missing',
+            contentType: 'acp',
+            label: 'Broken',
+            closable: true,
+          },
+        ],
+      },
+      [],
+    );
+
+    expect(restored?.tabs).toEqual([]);
+    expect(restored?.activeTabId).toBeNull();
   });
 
   it('drops malformed descriptors and request tabs missing from the catalog', () => {

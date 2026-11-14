@@ -74,6 +74,7 @@ import type { DocumentAPI } from './DocumentAPI';
 import type { BrowserAPI } from './BrowserAPI';
 import type { BrunoAPI } from './BrunoAPI';
 import type { OpenBotChatAPI } from './OpenBotChatAPI';
+import type { AcpAPI } from './AcpAPI';
 
 // Re-export for convenience
 export type {
@@ -139,6 +140,7 @@ export interface MainProcessAPI {
   browser: BrowserAPI;
   bruno: BrunoAPI;
   openbotChat: OpenBotChatAPI;
+  acp: AcpAPI;
   processes: ProcessRegistryAPI;
   pullRequestWatch: PullRequestWatchAPI;
 }

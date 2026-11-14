@@ -2,6 +2,7 @@ import { TerminalId } from './terminal.types';
 import type { RepositoryPanelVisibility } from './repositoryPanel.types';
 import type { PanelLayout } from '@principal-ade/panels';
 import type { CodingAgentId } from '../agentSessionTypes';
+import type { AcpAgentId } from '../main-process-api-interfaces/AcpAPI';
 
 // Interactive shell navigation view types
 export type InteractiveShellNavigationView =
@@ -386,6 +387,7 @@ export type HomePinnedTabKind =
   | 'skill'
   | 'localhost-browser'
   | 'terminal'
+  | 'acp'
   | 'openbot-chat'
   | 'repo-tab'
   | 'build-configuration';
@@ -411,6 +413,12 @@ export interface HomePinnedTab {
   customLabel?: string;
   /** Coding-agent identity for terminal rows; independent of the tab label. */
   agent?: CodingAgentId;
+  /** Agent identity for an ACP conversation. */
+  acpAgent?: AcpAgentId;
+  /** Saved ACP session identifier for reconnecting a pinned conversation. */
+  acpSessionId?: string;
+  /** Agent-generated session title, distinct from the repo-based tab label. */
+  acpTitle?: string;
   /** Owning clone path when this tab is rooted in a repository. */
   repoPath?: string;
   // Kind-specific payload.

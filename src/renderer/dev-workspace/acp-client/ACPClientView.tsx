@@ -10,9 +10,14 @@ import {
   Sparkles,
   TerminalSquare,
 } from 'lucide-react';
+import {
+  ACP_AGENTS,
+  DEFAULT_ACP_AGENT,
+  type AcpAgentId,
+} from '../../../shared/main-process-api-interfaces/AcpAPI';
 import './ACPClientView.css';
 
-export type ACPAgentId = 'opencode' | 'claude' | 'codex' | 'cursor';
+export type ACPAgentId = AcpAgentId;
 export type ACPClientViewState = 'setup' | 'initializing' | 'ready' | 'error';
 
 export interface ACPClientViewProps {
@@ -25,53 +30,15 @@ export interface ACPClientViewProps {
     avatarUrl?: string;
   };
   errorMessage?: string;
+  /** True while `session/new` is in flight after a successful connect. */
+  isStartingSession?: boolean;
   onAgentChange?: (agent: ACPAgentId) => void;
   onInitialize?: (agent: ACPAgentId) => void;
   onStartSession?: () => void;
   onRetry?: () => void;
 }
 
-const agents: ReadonlyArray<{
-  id: ACPAgentId;
-  name: string;
-  description: string;
-  command: string;
-  monogram: string;
-  className: string;
-}> = [
-  {
-    id: 'opencode',
-    name: 'OpenCode',
-    description: 'Open-source coding agent',
-    command: 'opencode acp',
-    monogram: 'OC',
-    className: 'opencode',
-  },
-  {
-    id: 'claude',
-    name: 'Claude Code',
-    description: 'Anthropic coding agent',
-    command: 'npx @agentclientprotocol/claude-agent-acp@latest',
-    monogram: 'C',
-    className: 'claude',
-  },
-  {
-    id: 'codex',
-    name: 'Codex CLI',
-    description: 'OpenAI coding agent',
-    command: 'npx @zed-industries/codex-acp@latest',
-    monogram: 'CX',
-    className: 'codex',
-  },
-  {
-    id: 'cursor',
-    name: 'Cursor',
-    description: 'Cursor coding agent',
-    command: 'agent acp',
-    monogram: 'C',
-    className: 'cursor',
-  },
-];
+const agents = ACP_AGENTS;
 
 const initializationSteps = [
   { title: 'Start local agent', detail: 'Launch the selected ACP process' },
@@ -87,10 +54,11 @@ const initializationSteps = [
 
 export function ACPClientView({
   state = 'setup',
-  initialAgent = 'opencode',
+  initialAgent = DEFAULT_ACP_AGENT,
   workspacePath,
   repository,
   errorMessage = 'The agent process could not be started. Check the command and try again.',
+  isStartingSession = false,
   onAgentChange,
   onInitialize,
   onStartSession,
@@ -297,10 +265,12 @@ export function ACPClientView({
             {isReady ? (
               <button
                 className="acp-client__primary-button"
+                disabled={isStartingSession}
                 onClick={onStartSession}
                 type="button"
               >
-                Start a session <ArrowRight size={15} />
+                {isStartingSession ? 'Starting session…' : 'Start a session'}{' '}
+                {isStartingSession ? null : <ArrowRight size={15} />}
               </button>
             ) : hasError ? (
               <button

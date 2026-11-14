@@ -179,7 +179,7 @@ export const IntegratedShell: React.FC = () => {
   const { events } = usePrincipalEvents();
   const { events: portalEvents } = usePortalEvents();
   const { openTopic: openTopicInTopicsView } = useTopicsTabs();
-  const { openRepoExplorer } = useWorkspaceTabs();
+  const { openRepoExplorer, openAcpTab } = useWorkspaceTabs();
 
   // Live mirrors for the listeners that subscribe once on mount: they need to
   // read which surface / overlay is up without re-subscribing (and risking a
@@ -358,6 +358,26 @@ export const IntegratedShell: React.FC = () => {
       openRepoExplorer(payloadFromGithub(payload));
     });
   }, [openRepoExplorer]);
+
+  // Quick Open (Command+Enter) on a local repository or directory: main sends
+  // OPEN_ACP_TAB after focusing the principal window. Ensure a workspace
+  // surface is showing so the shell can host the tab, then open a live agent
+  // session immediately.
+  useEffect(() => {
+    return WindowService.onOpenAcpTab((payload) => {
+      if (!payload?.directory) return;
+      setOverlay(null);
+      if (!surfaceRef.current) {
+        setSurface('projects');
+      }
+      openAcpTab({
+        directory: payload.directory,
+        label: payload.label,
+        repository: payload.repository,
+        autoStart: true,
+      });
+    });
+  }, [openAcpTab]);
 
   // Quick Open (Command+O) on a local repository or owner directory: main sends
   // OPEN_TERMINAL_TAB after focusing the principal window. Ensure a workspace

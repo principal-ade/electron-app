@@ -33,7 +33,11 @@ describe('Quick Open selection', () => {
   const once = jest.fn();
   const isLoading = jest.fn();
   const isDestroyed = jest.fn();
-  let select: (event: unknown, item: unknown) => Promise<void>;
+  let select: (
+    event: unknown,
+    item: unknown,
+    action?: 'acp',
+  ) => Promise<void>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -136,8 +140,64 @@ describe('Quick Open selection', () => {
     },
   );
 
-  it('waits for a new principal window before opening a repository tab', async () => {
-    isLoading.mockReturnValue(true);
+  it('opens local repositories in an ACP tab on the acp action', async () => {
+    const alexandriaEntry = {
+      name: 'widgets',
+      github: { owner: 'acme', name: 'widgets' },
+    };
+    await select(
+      {},
+      {
+        type: 'repository',
+        name: 'widgets',
+        localPath: '/work/widgets',
+        avatarUrl: 'https://github.com/acme.png',
+        alexandriaEntry,
+        isOpen: false,
+      },
+      'acp',
+    );
+
+    expect(send).toHaveBeenCalledWith(WindowEvent.OPEN_ACP_TAB, {
+      directory: '/work/widgets',
+      label: 'widgets',
+      repository: {
+        owner: 'acme',
+        name: 'widgets',
+        avatarUrl: 'https://github.com/acme.png',
+      },
+    });
+    expect(send).not.toHaveBeenCalledWith(
+      WindowEvent.OPEN_TERMINAL_TAB,
+      expect.anything(),
+    );
+    expect(openDevWorkspaceWindow).not.toHaveBeenCalled();
+  });
+
+  it('opens owner directories in an ACP tab on the acp action', async () => {
+    await select(
+      {},
+      {
+        type: 'ownerDirectory',
+        name: 'acme',
+        localPath: '/work/acme',
+        isOpen: false,
+      },
+      'acp',
+    );
+
+    expect(send).toHaveBeenCalledWith(WindowEvent.OPEN_ACP_TAB, {
+      directory: '/work/acme',
+      label: 'acme',
+      repository: undefined,
+    });
+    expect(send).not.toHaveBeenCalledWith(
+      WindowEvent.OPEN_TERMINAL_TAB,
+      expect.anything(),
+    );
+  });
+
+  it('waits for a new principal window before opening a repository tab', async () => {    isLoading.mockReturnValue(true);
     await select(
       {},
       {

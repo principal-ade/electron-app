@@ -19,6 +19,7 @@ let itemsCallback: ItemsCallback | null = null;
 
 const selectQuickOpenItem = jest.fn();
 const cloneGitHubRepo = jest.fn();
+const copyToClipboard = jest.fn().mockResolvedValue(undefined);
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -36,6 +37,7 @@ beforeEach(() => {
       closeQuickOpen: jest.fn(),
       isAuthenticated: jest.fn().mockResolvedValue(true),
       cloneGitHubRepo,
+      copyToClipboard,
       searchGitHub: jest.fn().mockResolvedValue([
         {
           id: 1,
@@ -200,5 +202,34 @@ describe('Quick Open modes', () => {
         localPath: '/dev/acme/widgets',
       }),
     );
+  });
+
+  it('starts an ACP session from Clones on Cmd+Enter', async () => {
+    const input = await renderQuickOpen([ownerDirectoryItem, repositoryItem]);
+    fireEvent.keyDown(input, { key: 'Enter', metaKey: true });
+
+    expect(selectQuickOpenItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'repository',
+        localPath: '/dev/acme/widgets',
+      }),
+      'acp',
+    );
+  });
+
+  it('copies the selected path on Cmd+Shift+Enter without opening it', async () => {
+    const input = await renderQuickOpen([ownerDirectoryItem, repositoryItem]);
+
+    await act(async () => {
+      fireEvent.keyDown(input, {
+        key: 'Enter',
+        metaKey: true,
+        shiftKey: true,
+      });
+      await Promise.resolve();
+    });
+
+    expect(copyToClipboard).toHaveBeenCalledWith('/dev/acme/widgets');
+    expect(selectQuickOpenItem).not.toHaveBeenCalled();
   });
 });

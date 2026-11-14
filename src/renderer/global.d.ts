@@ -87,7 +87,7 @@ declare global {
         ) => void,
       ) => void | (() => void);
       requestQuickOpenItems?: () => void;
-      selectQuickOpenItem?: (item: QuickOpenItem) => void;
+      selectQuickOpenItem?: (item: QuickOpenItem, action?: 'acp') => void;
       closeQuickOpen?: () => void;
       showQuickOpen?: () => void;
       copyToClipboard?: (text: string) => void;

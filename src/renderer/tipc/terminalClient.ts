@@ -11,6 +11,7 @@ import { getTracer } from '../telemetry';
 import { traceparentFromSpan } from '../../shared/telemetry/traceparent';
 import type {
   CreateTerminalSessionInput,
+  ReconnectTerminalSessionInput,
   DestroyTerminalSessionInput,
   ResizeTerminalInput,
   RefreshTerminalInput,
@@ -33,6 +34,9 @@ import type { ProgramStatusRecord } from '../../shared/terminal/programStatus';
 // The shared TerminalRouterType is used for createClient<T>() to satisfy TIPC's RouterType constraint
 export interface TerminalClient {
   createTerminalSession: (input: CreateTerminalSessionInput) => Promise<string>;
+  reconnectTerminalSession: (
+    input: ReconnectTerminalSessionInput,
+  ) => Promise<string | null>;
   destroyTerminalSession: (input: DestroyTerminalSessionInput) => Promise<void>;
   listTerminalSessions: () => Promise<TerminalSessionInfo[]>;
   getAllProgramStatus: () => Promise<Record<string, ProgramStatusRecord[]>>;

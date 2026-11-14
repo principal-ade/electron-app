@@ -50,7 +50,7 @@ interface QuickOpenWindow extends Window {
       ) => void,
     ) => void | (() => void);
     requestQuickOpenItems: () => void;
-    selectQuickOpenItem: (item: QuickOpenItem) => void;
+    selectQuickOpenItem: (item: QuickOpenItem, action?: 'acp') => void;
     closeQuickOpen: () => void;
     copyToClipboard: (text: string) => Promise<void>;
     // GitHub search
@@ -282,10 +282,15 @@ const QuickOpenApp: React.FC = () => {
     }
   }, [selectedIndex]);
 
-  const handleSelectItem = (item: QuickOpenItem) => {
-    console.info('[Quick Open] Selected item:', item);
+  const handleSelectItem = (item: QuickOpenItem, action?: 'acp') => {
+    console.info('[Quick Open] Selected item:', item, 'action:', action);
 
-    // The main process opens local repositories or browses GitHub in Explorer.
+    // The main process opens local repositories or browses GitHub in Explorer;
+    // `action: 'acp'` starts a live agent session instead of a terminal.
+    if (action) {
+      quickOpenWindow.electronAPI.selectQuickOpenItem(item, action);
+      return;
+    }
     quickOpenWindow.electronAPI.selectQuickOpenItem(item);
   };
 
@@ -389,29 +394,39 @@ const QuickOpenApp: React.FC = () => {
       setSelectedIndex(0);
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      // Check for Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux) to copy path
       if (e.metaKey || e.ctrlKey) {
-        console.info(
-          '[Quick Open] Cmd/Ctrl+Enter - copying path at index:',
-          selectedIndex,
-        );
-        if (filteredItems[selectedIndex]) {
-          const item = filteredItems[selectedIndex];
-          if (item.localPath) {
+        if (e.shiftKey) {
+          // Cmd/Ctrl+Shift+Enter copies the selected item's local path.
+          console.info(
+            '[Quick Open] Cmd/Ctrl+Shift+Enter - copying path at index:',
+            selectedIndex,
+          );
+          if (filteredItems[selectedIndex]?.localPath) {
             handleContextMenu(
               e as unknown as React.MouseEvent<HTMLDivElement>,
-              item,
+              filteredItems[selectedIndex],
             );
           }
+          return;
         }
-      } else {
+
+        // Cmd/Ctrl+Enter opens a live ACP agent session for local items.
         console.info(
-          '[Quick Open] Enter - selecting item at index:',
+          '[Quick Open] Cmd/Ctrl+Enter - opening ACP session at index:',
           selectedIndex,
         );
         if (filteredItems[selectedIndex]) {
-          handleSelectItem(filteredItems[selectedIndex]);
+          handleSelectItem(filteredItems[selectedIndex], 'acp');
         }
+        return;
+      }
+
+      console.info(
+        '[Quick Open] Enter - selecting item at index:',
+        selectedIndex,
+      );
+      if (filteredItems[selectedIndex]) {
+        handleSelectItem(filteredItems[selectedIndex]);
       }
     }
   };
@@ -880,6 +895,15 @@ const QuickOpenApp: React.FC = () => {
                 style={{
                   fontSize: theme.fontSizes[1],
                   fontFamily: theme.fonts.body,
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                ⌘↵ Open ACP
+              </span>
+              <span
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts.body,
                   color: isCommandHeld
                     ? theme.colors.primary
                     : theme.colors.textSecondary,
@@ -895,7 +919,7 @@ const QuickOpenApp: React.FC = () => {
                   color: theme.colors.textSecondary,
                 }}
               >
-                ⌘↵ Copy Path
+                ⌘⇧↵ Copy Path
               </span>
             </>
           )}

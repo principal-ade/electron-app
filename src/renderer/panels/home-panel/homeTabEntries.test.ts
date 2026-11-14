@@ -6,10 +6,11 @@ import type {
 } from '../../../shared/types/userPreferences.types';
 import { agentSessionBookmarkTabId } from '../../../shared/agentSessionBookmark';
 import type { WorkspaceTab } from '../../principal-window/PortalTabsContext';
-import type { TerminalTab } from '../../events/portalTabs';
+import type { AcpTab, TerminalTab } from '../../events/portalTabs';
 import {
   buildHomeTabEntries,
   entryFromTab,
+  isHomeTabPinnable,
   resolveRepoPath,
 } from './homeTabEntries';
 import type { ProcessEntry } from '../../../shared/main-process-api-interfaces/ProcessRegistryAPI';
@@ -21,6 +22,37 @@ const entry = {
   path: '/work/app',
   purl,
 } as AlexandriaEntry;
+
+test('lists and pins ACP sessions under their repository', () => {
+  const tab: AcpTab = {
+    id: 'acp-/work/app',
+    label: 'app',
+    contentType: 'acp',
+    closable: true,
+    directory: '/work/app',
+    agent: 'opencode',
+    sessionId: 'ses_saved',
+    sessionTitle: 'Investigate ACP reconnect',
+  };
+
+  const homeEntry = entryFromTab(tab);
+  if (!homeEntry) throw new Error('Expected ACP tab Home entry');
+  expect(homeEntry).toMatchObject({
+    id: tab.id,
+    kind: 'acp',
+    label: 'Investigate ACP reconnect',
+    path: '/work/app',
+    acpAgent: 'opencode',
+    acpSessionId: 'ses_saved',
+    acpTitle: 'Investigate ACP reconnect',
+  });
+
+  const result = buildHomeTabEntries([entry], [], [tab], []);
+  expect(result.repos[0].openTabs).toContainEqual(
+    expect.objectContaining({ ...homeEntry, repoPath: '/work/app' }),
+  );
+  expect(isHomeTabPinnable(homeEntry)).toBe(true);
+});
 
 test('groups bookmarked sessions under the closest registered repository', () => {
   const nestedRepo = {

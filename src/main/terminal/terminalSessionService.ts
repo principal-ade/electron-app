@@ -191,6 +191,11 @@ export async function createTerminalSession(
     const cwd = input.cwd || process.env.HOME || '/';
 
     if (!input.command) {
+      // A connected daemon can report its existing PTYs just after the
+      // connection event. Wait until that inventory has been applied before
+      // deciding this context is new, otherwise a restored tab can spawn a
+      // duplicate while its old PTY is still being discovered.
+      await sessionManager.waitForSessionInventory();
       const existing = findReusableSession(
         sessionManager.getAllSessions().values(),
         cwd,
@@ -289,6 +294,70 @@ export async function createTerminalSession(
     span.recordException(
       error instanceof Error ? error : new Error(String(error)),
     );
+    throw error;
+  } finally {
+    span.end();
+  }
+}
+
+/**
+ * Reattach to a surviving terminal for a restored tab without creating a
+ * replacement when its session is missing. The inventory barrier is essential:
+ * an empty in-memory session map before daemon hydration is not evidence that
+ * the PTY is gone.
+ */
+export async function reconnectTerminalSession(
+  context: string,
+  windowId: number,
+  parentContext?: Context | null,
+): Promise<string | null> {
+  const sessionManager = getSessionManagerInstance();
+  const span = tracer.startSpan(
+    'terminal.session.reconnect',
+    { attributes: { 'session.context': context, 'window.id': windowId } },
+    parentContext ?? undefined,
+  );
+
+  try {
+    if (!isPtyAvailable()) {
+      throw new Error('Terminal functionality is not available in this build');
+    }
+
+    const window = BrowserWindow.fromId(windowId);
+    if (!window || window.isDestroyed()) {
+      throw new Error('No window found for terminal session');
+    }
+
+    await sessionManager.waitForSessionInventory();
+    const existing = findReusableSession(
+      sessionManager.getAllSessions().values(),
+      '',
+      context,
+    );
+    if (!existing) {
+      span.addEvent('terminal.session.reconnect_missing');
+      span.setStatus({ code: SpanStatusCode.OK });
+      return null;
+    }
+
+    sessionManager.createMessageChannelForSession(existing.id, window.id);
+    ownershipManager.claimOwnership(existing.id, window.id);
+    broadcastSessionListChanged(span);
+
+    span.setAttribute('session.id', existing.id);
+    span.addEvent('terminal.session.reconnected', {
+      'session.id': existing.id,
+    });
+    span.setStatus({ code: SpanStatusCode.OK });
+    return existing.id;
+  } catch (error) {
+    span.recordException(
+      error instanceof Error ? error : new Error(String(error)),
+    );
+    span.setStatus({
+      code: SpanStatusCode.ERROR,
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   } finally {
     span.end();

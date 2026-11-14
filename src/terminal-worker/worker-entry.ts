@@ -477,31 +477,32 @@ async function connectToDaemon(socketPath: string): Promise<void> {
     };
     sendToMain(connectedMsg);
 
-    if (existingSessions.length > 0) {
-      const sessionsMsg: DaemonSessionsMessage = {
-        type: 'DAEMON_SESSIONS',
-        id: 'daemon-sessions',
-        timestamp: Date.now(),
-        sessions: existingSessions,
-      };
-      sendToMain(sessionsMsg);
+    // Always send the inventory, including an empty one. Main uses this as the
+    // readiness barrier for restored tabs; DAEMON_CONNECTED only means the
+    // socket is up and can arrive before this inventory is applied.
+    const sessionsMsg: DaemonSessionsMessage = {
+      type: 'DAEMON_SESSIONS',
+      id: 'daemon-sessions',
+      timestamp: Date.now(),
+      sessions: existingSessions,
+    };
+    sendToMain(sessionsMsg);
 
-      for (const info of existingSessions) {
-        const session: TerminalSession = {
-          id: info.id,
-          pty: null,
-          directory: info.cwd,
-          context: info.context,
-          createdAt: new Date(info.createdAt).getTime(),
-          lastActivity: new Date(info.lastActivity).getTime(),
-          scrollback: [], // Not used in daemon mode (daemon handles scrollback)
-          scrollbackBytes: 0,
-          programStatus: new ProgramStatusRegistry(),
-          programStatusScanner: new OscScanner(),
-        };
-        sessions.set(info.id, session);
-        sessionPorts.set(info.id, new Map());
-      }
+    for (const info of existingSessions) {
+      const session: TerminalSession = {
+        id: info.id,
+        pty: null,
+        directory: info.cwd,
+        context: info.context,
+        createdAt: new Date(info.createdAt).getTime(),
+        lastActivity: new Date(info.lastActivity).getTime(),
+        scrollback: [], // Not used in daemon mode (daemon handles scrollback)
+        scrollbackBytes: 0,
+        programStatus: new ProgramStatusRegistry(),
+        programStatusScanner: new OscScanner(),
+      };
+      sessions.set(info.id, session);
+      sessionPorts.set(info.id, new Map());
     }
   } catch (error) {
     console.error('[TerminalWorker] Failed to connect to daemon:', error);

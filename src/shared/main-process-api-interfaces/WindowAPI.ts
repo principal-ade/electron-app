@@ -59,6 +59,20 @@ export interface OpenRepositoryExplorerPayload {
   stars?: number;
 }
 
+/** Quick Open → principal: open a live ACP agent session for a directory. */
+export interface OpenAcpTabPayload {
+  /** Absolute local directory the agent session runs in. */
+  directory: string;
+  /** Optional tab label (defaults to the directory basename). */
+  label?: string;
+  /** Repository display metadata for the tab header. */
+  repository?: {
+    owner: string;
+    name: string;
+    avatarUrl?: string;
+  };
+}
+
 export interface TabTransferData {
   tabId: string;
   sessionId?: string;
@@ -94,6 +108,8 @@ export interface WindowAPI {
   onOpenRepositoryExplorer(
     callback: (payload: OpenRepositoryExplorerPayload) => void,
   ): () => void;
+  /** Quick Open → principal: open a live ACP session for a local directory. */
+  onOpenAcpTab(callback: (payload: OpenAcpTabPayload) => void): () => void;
 
   sendTabToWindow(data: TabTransferData): Promise<void>;
   onTabReceived(callback: (data: TabTransferData) => void): () => void;

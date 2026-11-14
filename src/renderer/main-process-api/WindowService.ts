@@ -14,6 +14,7 @@ import type {
   TabTransferData,
   OpenTerminalTabPayload,
   OpenRepositoryExplorerPayload,
+  OpenAcpTabPayload,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type {
   DetachableTabDescriptor,
@@ -30,6 +31,7 @@ export type {
   RepositoryWindowState,
   TabTransferData,
   OpenTerminalTabPayload,
+  OpenAcpTabPayload,
   DetachableTabDescriptor,
   DetachedTabIncomingPayload,
   DetachedTabOpenOptions,
@@ -211,6 +213,20 @@ export class WindowService {
     } catch (error) {
       console.error(
         '[WindowService] Failed to register repository explorer listener:',
+        error,
+      );
+      return () => {};
+    }
+  }
+
+  static onOpenAcpTab(
+    callback: (payload: OpenAcpTabPayload) => void,
+  ): () => void {
+    try {
+      return window.mainProcess.window.onOpenAcpTab(callback);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to register ACP tab listener:',
         error,
       );
       return () => {};

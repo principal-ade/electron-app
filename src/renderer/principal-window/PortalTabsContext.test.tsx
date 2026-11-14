@@ -91,6 +91,39 @@ test('bridge ranges update an existing source tab, including repeated identical 
   expect(result.current.activeTabId).toBe(firstId);
 });
 
+test('ACP tabs retain saved session ids when Home or Quick Open reopens them', () => {
+  const { result } = renderHook(useWorkspaceTabs, { wrapper });
+
+  act(() =>
+    result.current.openAcpTab({
+      directory: '/repo',
+      label: 'repo',
+      sessionId: 'ses_saved',
+      sessionTitle: 'Investigate ACP reconnect',
+    }),
+  );
+  expect(result.current.tabs[0]).toMatchObject({
+    id: 'acp-/repo',
+    contentType: 'acp',
+    sessionId: 'ses_saved',
+    sessionTitle: 'Investigate ACP reconnect',
+  });
+
+  act(() =>
+    result.current.openAcpTab({
+      directory: '/repo',
+      autoStart: true,
+    }),
+  );
+  expect(result.current.tabs).toHaveLength(1);
+  expect(result.current.tabs[0]).toMatchObject({
+    id: 'acp-/repo',
+    sessionId: 'ses_saved',
+    sessionTitle: 'Investigate ACP reconnect',
+    autoStart: true,
+  });
+});
+
 test('restores tabs in saved order and selects the saved active tab', async () => {
   (UserPreferencesService.getPreferences as jest.Mock).mockResolvedValueOnce({
     interactiveShell: {

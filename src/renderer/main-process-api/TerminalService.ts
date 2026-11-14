@@ -36,6 +36,7 @@ import type {
   DaemonControlResult,
   GetTerminalBufferInput,
   GetTerminalBufferResult,
+  ReconnectTerminalSessionInput,
 } from '../../shared/tipc/terminalRouterTypes';
 
 export type {
@@ -132,6 +133,13 @@ export class TerminalService {
       context,
       metadata,
     });
+  }
+
+  /** Reattach only; returns null for a confirmed-missing session, never creates. */
+  static reconnect(
+    input: ReconnectTerminalSessionInput,
+  ): Promise<string | null> {
+    return terminalClient.reconnectTerminalSession(input);
   }
 
   static async createWithCommand(

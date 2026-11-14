@@ -25,6 +25,7 @@ import type { ProcessStatus } from '../../shared/main-process-api-interfaces/Pro
 import type { RequestPanelState } from '@principal-ade/bruno-panels';
 import type { RequestTarget } from '../../shared/requests/preparedRequest';
 import type { DocumentRange } from '../../shared/documentRange';
+import type { AcpAgentId } from '../../shared/main-process-api-interfaces/AcpAPI';
 import type { Skill } from '../panels/agent-panels/skills/hooks/useSkillsData';
 
 /** Terminal tab shape re-exported from the panel's public tab contract. */
@@ -225,6 +226,29 @@ export interface BuildConfigurationTab extends BaseTab {
   configId: string;
   /** pkg: purl of the repository this build targets, for Home grouping. */
   repo?: string;
+}
+
+/**
+ * ACP agent tab — one local agent session scoped to a directory. The body
+ * (`ACPTabContent`) owns the connection lifecycle; the tab carries the
+ * directory, selected agent, resumable ACP session ID, and display metadata.
+ */
+export interface AcpTab extends BaseTab {
+  contentType: 'acp';
+  /** Absolute directory the agent session runs in. */
+  directory: string;
+  agent?: AcpAgentId;
+  /** ACP session identifier used to load this conversation after reconnecting. */
+  sessionId?: string;
+  /** Agent-generated title for Home; the tab label stays repo-based. */
+  sessionTitle?: string;
+  /** Connect and start a session immediately when the tab first mounts. */
+  autoStart?: boolean;
+  repository?: {
+    owner: string;
+    name: string;
+    avatarUrl?: string;
+  };
 }
 
 /**

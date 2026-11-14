@@ -111,6 +111,8 @@ function ownerForTab(tab: WorkspaceTab): {
       };
     case 'terminal':
       return { path: tab.directory };
+    case 'acp':
+      return { path: tab.directory };
     case 'commit-review':
       return { path: tab.repoPath };
     case 'markdown-doc':
@@ -213,6 +215,16 @@ export function entryFromTab(
       };
     case 'terminal':
       return { ...base, kind: 'terminal', path: tab.directory };
+    case 'acp':
+      return {
+        ...base,
+        label: customLabel ?? (tab.sessionTitle?.trim() || tab.label),
+        kind: 'acp',
+        path: tab.directory,
+        acpAgent: tab.agent,
+        acpSessionId: tab.sessionId,
+        acpTitle: tab.sessionTitle,
+      };
     case 'project-info':
     case 'repo-explorer':
     case 'file-city-guide':

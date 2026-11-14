@@ -58,6 +58,7 @@ import { documentAPI } from './main-process-api-implementations/documentApi';
 import { browserAPI } from './main-process-api-implementations/browserApi';
 import { brunoAPI } from './main-process-api-implementations/brunoApi';
 import { openBotChatAPI } from './main-process-api-implementations/openBotChatApi';
+import { acpAPI } from './main-process-api-implementations/acpApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
 
@@ -143,6 +144,7 @@ const mainProcessExposure: MainProcessAPI = {
   browser: browserAPI,
   bruno: brunoAPI,
   openbotChat: openBotChatAPI,
+  acp: acpAPI,
 };
 
 // Mermaid removed from preload - will be loaded in renderer instead
@@ -231,8 +233,8 @@ try {
       };
     },
     requestQuickOpenItems: () => ipcRenderer.send('quick-open:request-items'),
-    selectQuickOpenItem: (item: unknown) =>
-      ipcRenderer.send('quick-open:select', item),
+    selectQuickOpenItem: (item: unknown, action?: 'acp') =>
+      ipcRenderer.send('quick-open:select', item, action),
     closeQuickOpen: () => ipcRenderer.send('quick-open:close'),
     showQuickOpen: () => ipcRenderer.send('quick-open:show'),
   });

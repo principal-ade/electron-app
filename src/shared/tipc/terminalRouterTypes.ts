@@ -37,6 +37,12 @@ export interface CreateTerminalSessionInput {
   traceparent?: string;
 }
 
+export interface ReconnectTerminalSessionInput {
+  /** Exact stable terminal-tab context, e.g. `terminal:workspace:tab-…`. */
+  context: string;
+  traceparent?: string;
+}
+
 export interface DestroyTerminalSessionInput {
   sessionId: string;
 }
@@ -177,6 +183,12 @@ export type TerminalRouterType = Record<
       context: ActionContext;
       input: CreateTerminalSessionInput;
     }) => Promise<string>;
+  };
+  reconnectTerminalSession: {
+    action: (args: {
+      context: ActionContext;
+      input: ReconnectTerminalSessionInput;
+    }) => Promise<string | null>;
   };
   destroyTerminalSession: {
     action: (args: {

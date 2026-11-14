@@ -135,6 +135,8 @@ export function homeTabIcon(
       return <ToolCase size={size} color={color} />;
     case 'openbot-chat':
       return <Bot size={size} color={color} />;
+    case 'acp':
+      return <AgentSessionIcon agent="OpenCode" size={size} color={color} />;
     case 'localhost-browser':
       return <Globe size={size} color={color} />;
     case 'build-configuration':
