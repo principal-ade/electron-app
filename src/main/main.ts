@@ -384,6 +384,11 @@ electronAutoUpdater.on('before-quit-for-update', () => {
 
 // Add a handler for 'before-quit' to show confirmation dialog
 app.on('before-quit', async (event) => {
+  // Skip the confirmation dialog while developing so the app can quit directly.
+  if (!app.isPackaged) {
+    return;
+  }
+
   // If already quitting or dialog already shown, don't show again
   if (isQuitting) {
     return;

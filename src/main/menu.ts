@@ -90,7 +90,7 @@ export default class MenuBuilder {
           label: 'Quit',
           accelerator: 'Command+Q',
           click: () => {
-            // The before-quit handler in main.ts will show the confirmation dialog
+            // The before-quit handler in main.ts confirms quitting in packaged builds.
             app.quit();
           },
         },
