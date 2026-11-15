@@ -8,6 +8,7 @@ import {
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { PackageManagerService } from '../../../main-process-api/PackageManagerService';
 import { repoPurlFromEntry } from '../../../../shared/topics/repoPurl';
+import { OpenBotDeploymentPanel } from './OpenBotDeploymentPanel';
 import {
   Activity,
   ArrowDownToLine,
@@ -186,6 +187,17 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
   const [studioStatusChecking, setStudioStatusChecking] = useState(
     scenario === undefined,
   );
+  const [openBotStatusChecking, setOpenBotStatusChecking] = useState(
+    scenario === undefined,
+  );
+
+  const handleOpenBotConnectionChange = useCallback((connected: boolean) => {
+    setIntegrations((previous) => ({
+      ...previous,
+      openbot: { ...previous.openbot, running: connected },
+    }));
+    setOpenBotStatusChecking(false);
+  }, []);
 
   const refreshStudioUpdate = useCallback(
     async (status: StudioStatusResult) => {
@@ -442,7 +454,10 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
   const statusLabel = (id: IntegrationId) => {
     const value = integrations[id];
     if (!value.installed) return 'Not installed';
-    if (id === 'openbot') return value.running ? 'Connected' : 'Not connected';
+    if (id === 'openbot') {
+      if (openBotStatusChecking) return 'Checking';
+      return value.running ? 'Connected' : 'Not connected';
+    }
     if (
       scenario === undefined &&
       studioStatusChecking &&
@@ -458,8 +473,8 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
     const value = integrations[id];
     if (
       scenario === undefined &&
-      studioStatusChecking &&
-      (id === 'studio' || id === 'studio-dev')
+      ((studioStatusChecking && (id === 'studio' || id === 'studio-dev')) ||
+        (openBotStatusChecking && id === 'openbot'))
     ) {
       return colors.textMuted;
     }
@@ -1094,45 +1109,51 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({
                 </div>
               </>
             ) : isOpenBot ? (
-              <>
-                <SectionHeading theme={theme}>Connection</SectionHeading>
-                <div style={surfaceStyle}>
-                  {renderSettingRow({
-                    icon: <Server size={16} />,
-                    label: 'Local service',
-                    description:
-                      'Principal connects to the local OpenBot service through its native chat bridge.',
-                    value: 'http://localhost:3010',
-                    last: true,
-                  })}
-                </div>
+              scenario === undefined ? (
+                <OpenBotDeploymentPanel
+                  onConnectionChange={handleOpenBotConnectionChange}
+                />
+              ) : (
+                <>
+                  <SectionHeading theme={theme}>Connection</SectionHeading>
+                  <div style={surfaceStyle}>
+                    {renderSettingRow({
+                      icon: <Server size={16} />,
+                      label: 'Local service',
+                      description:
+                        'Principal connects to the local OpenBot service through its native chat bridge.',
+                      value: 'http://localhost:3010',
+                      last: true,
+                    })}
+                  </div>
 
-                <SectionHeading theme={theme}>
-                  OpenBot in Principal
-                </SectionHeading>
-                <div style={surfaceStyle}>
-                  {renderSettingRow({
-                    icon: <Bot size={16} />,
-                    label: 'Native chat',
-                    description:
-                      'Open conversations in a workspace tab and continue working in context.',
-                    value: 'Workspace tab',
-                    last: true,
-                  })}
-                </div>
+                  <SectionHeading theme={theme}>
+                    OpenBot in Principal
+                  </SectionHeading>
+                  <div style={surfaceStyle}>
+                    {renderSettingRow({
+                      icon: <Bot size={16} />,
+                      label: 'Native chat',
+                      description:
+                        'Open conversations in a workspace tab and continue working in context.',
+                      value: 'Workspace tab',
+                      last: true,
+                    })}
+                  </div>
 
-                <SectionHeading theme={theme}>Recent activity</SectionHeading>
-                <div style={surfaceStyle}>
-                  <ActivityItem
-                    icon={<CircleCheck size={14} />}
-                    color={colors.success}
-                    title="OpenBot chat bridge is ready"
-                    detail="Local endpoint · localhost:3010"
-                    theme={theme}
-                    last
-                  />
-                </div>
-              </>
+                  <SectionHeading theme={theme}>Recent activity</SectionHeading>
+                  <div style={surfaceStyle}>
+                    <ActivityItem
+                      icon={<CircleCheck size={14} />}
+                      color={colors.success}
+                      title="OpenBot chat bridge is ready"
+                      detail="Local endpoint · localhost:3010"
+                      theme={theme}
+                      last
+                    />
+                  </div>
+                </>
+              )
             ) : (
               <>
                 <SectionHeading theme={theme}>Launch behavior</SectionHeading>

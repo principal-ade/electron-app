@@ -2,6 +2,7 @@ export enum OpenBotChatAPIEvent {
   LIST_BOTS = 'openbot-chat:list-bots',
   LIST_CHANNELS = 'openbot-chat:list-channels',
   GET_CONVERSATION = 'openbot-chat:get-conversation',
+  GET_DEPLOYMENT_SNAPSHOT = 'openbot-chat:get-deployment-snapshot',
   SEND_MESSAGE = 'openbot-chat:send-message',
   RUN_EVENT = 'openbot-chat:run-event',
 }
@@ -40,6 +41,37 @@ export interface OpenBotConversation {
   messages: OpenBotChatMessage[];
 }
 
+export type OpenBotHealthState = 'healthy' | 'degraded' | 'offline' | 'unknown';
+
+export interface OpenBotDeploymentComponent {
+  id: 'api' | 'worker' | 'database' | 'inference';
+  label: string;
+  detail: string;
+  state: OpenBotHealthState;
+  metric?: string;
+}
+
+export interface OpenBotDeploymentEvent {
+  id: string;
+  title: string;
+  detail: string;
+  state: OpenBotHealthState;
+}
+
+export interface OpenBotDeploymentSnapshot {
+  state: OpenBotHealthState;
+  endpoint: string;
+  source: string;
+  branch?: string;
+  revision?: string;
+  deploymentMode: string;
+  checkedAt: string;
+  components: OpenBotDeploymentComponent[];
+  events: OpenBotDeploymentEvent[];
+  eventsMessage?: string;
+  coverageNote?: string;
+}
+
 export type OpenBotChatRunEvent =
   | {
       channelId: string;
@@ -73,6 +105,7 @@ export interface OpenBotChatAPI {
   listBots(): Promise<OpenBotAgent[]>;
   listChannels(): Promise<OpenBotChatChannel[]>;
   getConversation(channelId: string): Promise<OpenBotConversation>;
+  getDeploymentSnapshot(): Promise<OpenBotDeploymentSnapshot>;
   sendMessage(
     channelId: string,
     text: string,

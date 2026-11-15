@@ -6,6 +6,9 @@ import type {
   OpenBotChatMessage,
   OpenBotChatRunEvent,
   OpenBotConversation,
+  OpenBotDeploymentComponent,
+  OpenBotDeploymentSnapshot,
+  OpenBotHealthState,
 } from '../../shared/main-process-api-interfaces/OpenBotChatAPI';
 
 const OPENBOT_BASE_URL = 'http://127.0.0.1:3010';
@@ -26,6 +29,17 @@ type OpenBotChannelPage = {
 
 type StoredMessagesResponse = {
   messages?: unknown;
+};
+
+type OpenBotCapabilitiesResponse = {
+  mode?: unknown;
+  durableHistory?: unknown;
+};
+
+type OpenBotSetupResponse = {
+  checklist?: {
+    rows?: unknown;
+  };
 };
 
 export type OpenBotRunEventHandler = (event: OpenBotChatRunEvent) => void;
@@ -74,6 +88,119 @@ export class OpenBotChatService {
     }
 
     throw new Error('OpenBot returned too many conversation pages.');
+  }
+
+  async getDeploymentSnapshot(): Promise<OpenBotDeploymentSnapshot> {
+    const checkedAt = new Date().toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    });
+    const components: OpenBotDeploymentComponent[] = [
+      {
+        id: 'api',
+        label: 'OpenBot API',
+        detail: 'Checking the public capabilities endpoint.',
+        state: 'unknown',
+      },
+      {
+        id: 'worker',
+        label: 'Background worker',
+        detail: 'Separate worker health is not exposed by the OpenBot API.',
+        state: 'unknown',
+      },
+      {
+        id: 'database',
+        label: 'Database',
+        detail: 'Database health is not exposed by the OpenBot API.',
+        state: 'unknown',
+      },
+      {
+        id: 'inference',
+        label: 'Model inference',
+        detail: 'OpenBot has not reported model availability.',
+        state: 'unknown',
+      },
+    ];
+
+    let deploymentMode = 'Runtime mode not reported';
+    try {
+      const capabilities =
+        await requestMonitoringJson<OpenBotCapabilitiesResponse>(
+          '/api/capabilities',
+        );
+      components[0] = {
+        ...components[0],
+        detail: 'The OpenBot API is responding.',
+        state: 'healthy',
+      };
+      deploymentMode = describeRuntimeMode(capabilities);
+    } catch {
+      components[0] = {
+        ...components[0],
+        detail: 'Could not reach the OpenBot API at the configured endpoint.',
+        state: 'offline',
+      };
+      return {
+        state: 'offline',
+        endpoint: 'http://localhost:3010',
+        source: 'Not identified by Principal',
+        deploymentMode,
+        checkedAt,
+        components,
+        events: [],
+        eventsMessage:
+          'Deployment events are not exposed by the OpenBot API yet.',
+        coverageNote:
+          'Principal connects to this local endpoint but does not own or identify the process that started it.',
+      };
+    }
+
+    try {
+      const setup =
+        await requestMonitoringJson<OpenBotSetupResponse>('/api/setup');
+      const modelRow = findSetupRow(setup, 'model');
+      if (modelRow) {
+        components[3] = {
+          ...components[3],
+          detail:
+            modelRow.detail ??
+            'OpenBot reported model setup status without additional detail.',
+          state: modelRow.state,
+        };
+      } else {
+        components[3] = {
+          ...components[3],
+          detail: 'The OpenBot setup checklist did not report model status.',
+        };
+      }
+    } catch {
+      components[3] = {
+        ...components[3],
+        detail:
+          'The setup checklist is unavailable; OpenBot sign-in may be required.',
+      };
+    }
+
+    const modelState = components[3].state;
+    // Full deployment health stays unknown until OpenBot exposes worker and
+    // database checks; a healthy API/model alone is not a complete health pass.
+    const state: OpenBotHealthState =
+      modelState === 'degraded' ? 'degraded' : 'unknown';
+
+    return {
+      state,
+      endpoint: 'http://localhost:3010',
+      source: 'Not identified by Principal',
+      deploymentMode,
+      checkedAt,
+      components,
+      events: [],
+      eventsMessage:
+        'Deployment events are not exposed by the OpenBot API yet.',
+      coverageNote:
+        'Inference status comes from OpenBot’s setup checklist. Reading it may refresh a bounded provider availability check, but it does not send a test prompt. Worker and database health are not currently reported.',
+    };
   }
 
   async getConversation(channelId: string): Promise<OpenBotConversation> {
@@ -377,6 +504,56 @@ async function requestJson<T>(path: string): Promise<T> {
     throw new Error(message);
   }
   return (await response.json()) as T;
+}
+
+async function requestMonitoringJson<T>(path: string): Promise<T> {
+  const response = await request(path, {
+    headers: { accept: 'application/json' },
+    signal: AbortSignal.timeout(3500),
+  });
+  if (!response.ok)
+    throw new Error(`OpenBot returned HTTP ${response.status}.`);
+  return (await response.json()) as T;
+}
+
+function describeRuntimeMode(
+  capabilities: OpenBotCapabilitiesResponse,
+): string {
+  const mode =
+    capabilities.mode === 'sse'
+      ? 'Server-owned SSE'
+      : capabilities.mode === 'intelligence'
+        ? 'CopilotKit Intelligence'
+        : 'OpenBot runtime';
+  if (typeof capabilities.durableHistory !== 'boolean') return mode;
+  return `${mode} · ${capabilities.durableHistory ? 'durable' : 'temporary'} history`;
+}
+
+function findSetupRow(
+  response: OpenBotSetupResponse,
+  id: string,
+): { state: OpenBotHealthState; detail?: string } | null {
+  const rows = response.checklist?.rows;
+  if (!Array.isArray(rows)) return null;
+  const row = rows.find(
+    (candidate): candidate is Record<string, unknown> =>
+      !!candidate &&
+      typeof candidate === 'object' &&
+      (candidate as Record<string, unknown>).id === id,
+  );
+  if (!row) return null;
+
+  const status = row.status;
+  const state: OpenBotHealthState =
+    status === 'ready'
+      ? 'healthy'
+      : status === 'needs_setup'
+        ? 'degraded'
+        : 'unknown';
+  return {
+    state,
+    detail: typeof row.detail === 'string' ? row.detail : undefined,
+  };
 }
 
 async function responseError(response: Response): Promise<string> {

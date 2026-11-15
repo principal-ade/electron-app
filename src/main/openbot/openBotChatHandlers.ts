@@ -31,6 +31,11 @@ export function registerOpenBotChatHandlers(): void {
     return service.listChannels();
   });
 
+  ipcMain.handle(OpenBotChatAPIEvent.GET_DEPLOYMENT_SNAPSHOT, (event) => {
+    requireAppMainFrame(event);
+    return service.getDeploymentSnapshot();
+  });
+
   ipcMain.handle(
     OpenBotChatAPIEvent.GET_CONVERSATION,
     (event, channelId: unknown) => {

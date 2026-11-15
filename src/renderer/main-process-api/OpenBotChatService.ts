@@ -4,6 +4,7 @@ import type {
   OpenBotChatChannel,
   OpenBotConversation,
   OpenBotChatRunEvent,
+  OpenBotDeploymentSnapshot,
 } from '../../shared/main-process-api-interfaces/OpenBotChatAPI';
 
 const getApi = (): OpenBotChatAPI => {
@@ -23,6 +24,10 @@ export class OpenBotChatService {
 
   static getConversation(channelId: string): Promise<OpenBotConversation> {
     return getApi().getConversation(channelId);
+  }
+
+  static getDeploymentSnapshot(): Promise<OpenBotDeploymentSnapshot> {
+    return getApi().getDeploymentSnapshot();
   }
 
   static sendMessage(

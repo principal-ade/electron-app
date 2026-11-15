@@ -6,12 +6,14 @@ import {
   type OpenBotChatChannel,
   type OpenBotConversation,
   type OpenBotChatRunEvent,
+  type OpenBotDeploymentSnapshot,
 } from '../../shared/main-process-api-interfaces/OpenBotChatAPI';
 
 export const openBotChatAPI: OpenBotChatAPI = {
   listBots: listOpenBotBots,
   listChannels: listOpenBotChannels,
   getConversation: loadOpenBotConversation,
+  getDeploymentSnapshot: getOpenBotDeploymentSnapshot,
   sendMessage: sendOpenBotMessage,
   onRunEvent: onOpenBotRunEvent,
 };
@@ -28,6 +30,10 @@ export function loadOpenBotConversation(
   channelId: string,
 ): Promise<OpenBotConversation> {
   return ipcRenderer.invoke(OpenBotChatAPIEvent.GET_CONVERSATION, channelId);
+}
+
+export function getOpenBotDeploymentSnapshot(): Promise<OpenBotDeploymentSnapshot> {
+  return ipcRenderer.invoke(OpenBotChatAPIEvent.GET_DEPLOYMENT_SNAPSHOT);
 }
 
 export function sendOpenBotMessage(

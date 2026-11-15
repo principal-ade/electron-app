@@ -6,7 +6,10 @@ import {
   type LocalhostBrowserTarget,
 } from '../../shared/main-process-api-interfaces/BrowserAPI';
 import type { ProcessRegistry } from '../processes/ProcessRegistry';
-import { applicationWindows } from '../window/modernWindowManager';
+import {
+  applicationWindows,
+  focusOrCreateMainWindow,
+} from '../window/modernWindowManager';
 import { PrimaryWindowType } from '../window/types';
 import { BrowserTargetError, resolveBrowserTarget } from './browserTarget';
 
@@ -113,9 +116,10 @@ export function registerBrowserRoutes(
       return;
     }
     try {
+      const focus = getRequestedFocus(req.body);
       const target = resolveBrowserTarget(req.body, registry.list());
       const focused = BrowserWindow.getFocusedWindow();
-      const appWindow =
+      let appWindow =
         focused && !focused.isDestroyed()
           ? applicationWindows.get(focused.id)
           : undefined;
@@ -123,10 +127,21 @@ export function registerBrowserRoutes(
         !appWindow ||
         appWindow.metadata.primaryType !== PrimaryWindowType.MAIN
       ) {
+        appWindow = focus
+          ? ((await focusOrCreateMainWindow()) ?? undefined)
+          : undefined;
+      }
+      if (
+        !appWindow ||
+        appWindow.window.isDestroyed() ||
+        appWindow.metadata.primaryType !== PrimaryWindowType.MAIN
+      ) {
         res.json({
           success: true,
           opened: false,
-          reason: 'no-focused-browser-host',
+          reason: focus
+            ? 'browser-host-unavailable'
+            : 'no-focused-browser-host',
         });
         return;
       }
@@ -151,4 +166,13 @@ export function registerBrowserRoutes(
       }
     }
   });
+}
+
+function getRequestedFocus(body: unknown): boolean {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return false;
+  const focus = (body as Record<string, unknown>).focus;
+  if (focus !== undefined && typeof focus !== 'boolean') {
+    throw new BrowserTargetError('focus must be a boolean');
+  }
+  return focus === true;
 }

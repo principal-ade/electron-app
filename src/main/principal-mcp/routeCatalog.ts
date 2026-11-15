@@ -1269,8 +1269,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
   },
   {
     name: 'browser',
-    description:
-      'Open localhost preview tabs in an already-focused Principal MAIN window.',
+    description: 'Open localhost preview tabs in a Principal MAIN window.',
     routes: [
       {
         method: 'POST',
@@ -1282,6 +1281,8 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           processId: 'string: managed process id; mutually exclusive with url.',
           path: 'string (optional, only with processId): path/query/fragment starting with a single /; defaults to /.',
           label: 'string (optional): display label.',
+          focus:
+            'boolean (optional, default false): if no MAIN window is focused, focus or create one before opening the tab.',
         },
         response:
           '{ success: true, opened, tabId?, processId?, reason?: "no-focused-browser-host" | "browser-host-unavailable" }',
@@ -1292,16 +1293,16 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           '409': 'Process not running or without a known port.',
         },
         notes: [
-          'Requires an already-focused MAIN window, not Dev Workspace. Does not create/focus windows or start servers.',
+          'Uses an already-focused MAIN window when available. Otherwise returns no-focused-browser-host unless focus: true; that explicit option focuses an existing MAIN window or creates one. It never starts the target server.',
           'Only HTTP, literal localhost, explicit ports 1-65535, and no credentials. Rejects HTTPS, 127.0.0.1, remote hosts, whitespace, backslashes, and control characters.',
           'Call from an agent tool, not browser-page JavaScript. Subsequent navigation/redirects are not sandboxed by initial URL validation.',
-          'opened: true means the renderer committed a tab, not that the page loaded. Waits up to three seconds. On opened: false inspect reason; ask the user to focus MAIN for no-focused-browser-host.',
+          'opened: true means the renderer committed a tab, not that the page loaded. Waits up to three seconds. On opened: false inspect reason.',
           'Process-linked tabs follow restarts and port changes. URL-only tabs associate only when exactly one running managed process matches the port. Reopening reloads and resets history. Closing never stops a process.',
         ],
         example: {
-          processId: '<managed-process-id>',
-          path: '/docs',
-          label: 'Preview',
+          url: 'http://localhost:6006/',
+          label: 'Storybook',
+          focus: true,
         },
       },
     ],

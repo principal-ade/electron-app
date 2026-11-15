@@ -3,7 +3,10 @@ import { EventEmitter } from 'events';
 import { BrowserWindow, ipcMain, type WebContents } from 'electron';
 import type { Application, Request, Response } from 'express';
 import { BrowserEvent } from '../../shared/main-process-api-interfaces/BrowserAPI';
-import { applicationWindows } from '../window/modernWindowManager';
+import {
+  applicationWindows,
+  focusOrCreateMainWindow,
+} from '../window/modernWindowManager';
 import { PrimaryWindowType } from '../window/types';
 import type { ProcessRegistry } from '../processes/ProcessRegistry';
 import {
@@ -23,6 +26,7 @@ jest.mock('electron', () => ({
 }));
 jest.mock('../window/modernWindowManager', () => ({
   applicationWindows: new Map(),
+  focusOrCreateMainWindow: jest.fn(),
 }));
 
 function webContents() {
@@ -133,6 +137,52 @@ test('does not create or focus a window when there is no capable focused host', 
   expect(res.json).toHaveBeenCalledWith(
     expect.objectContaining({ opened: false }),
   );
+  expect(focusOrCreateMainWindow).not.toHaveBeenCalled();
+});
+
+test('explicit focus opens in a focused or newly created MAIN window', async () => {
+  const handler = route();
+  const res = response();
+  const contents = webContents();
+  const window = { isDestroyed: () => false, webContents: contents };
+  (BrowserWindow.getFocusedWindow as jest.Mock).mockReturnValue(null);
+  (focusOrCreateMainWindow as jest.Mock).mockResolvedValue({
+    window,
+    metadata: { primaryType: PrimaryWindowType.MAIN },
+  });
+
+  const pending = handler(
+    {
+      headers: {},
+      body: { url: 'http://localhost:5173/', focus: true },
+    } as Request,
+    res,
+  );
+  expect(focusOrCreateMainWindow).toHaveBeenCalledTimes(1);
+  await Promise.resolve();
+  expect(contents.send).toHaveBeenCalledWith(
+    BrowserEvent.OPEN,
+    expect.objectContaining({ port: 5173 }),
+  );
+  acknowledge(contents);
+  await pending;
+  expect(res.json).toHaveBeenCalledWith(
+    expect.objectContaining({ success: true, opened: true }),
+  );
+});
+
+test('rejects a non-boolean focus option', async () => {
+  const handler = route();
+  const res = response();
+  await handler(
+    {
+      headers: {},
+      body: { url: 'http://localhost:5173/', focus: 'yes' },
+    } as Request,
+    res,
+  );
+  expect(res.status).toHaveBeenCalledWith(400);
+  expect(focusOrCreateMainWindow).not.toHaveBeenCalled();
 });
 
 test('reports success only after the focused MAIN host commits a tab', async () => {
