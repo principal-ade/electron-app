@@ -176,6 +176,15 @@ function handleMessage(rawMessage: unknown): void {
   if (isProcessACPEventMessage(message)) {
     if (server) {
       void server.processACPEvent(message.rawData);
+    } else {
+      sendToMain({
+        type: 'ACP_TOOL_PROCESSING_RESULT',
+        id: `acp-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: Date.now(),
+        sessionId: message.rawData.sessionId,
+        toolCallId: message.rawData.update.toolCallId,
+        outcome: 'unavailable',
+      });
     }
     return;
   }

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React, { useState } from 'react';
+import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
 import {
   ACPClientView,
   type ACPAgentId,
@@ -20,9 +21,11 @@ const meta: Meta<typeof ACPClientView> = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-        <Story />
-      </div>
+      <ThemeProvider theme={slateNeonTheme}>
+        <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <Story />
+        </div>
+      </ThemeProvider>
     ),
   ],
 };

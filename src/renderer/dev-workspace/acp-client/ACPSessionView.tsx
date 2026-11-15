@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTheme } from '@principal-ade/industry-theme';
 import {
   ArrowUp,
   Building2,
   CheckCircle2,
   ChevronRight,
-  Circle,
   Loader2,
   ShieldQuestion,
   Sparkles,
@@ -17,6 +17,7 @@ import {
   type CityData,
   type HighlightLayer,
 } from '@principal-ai/file-city-react';
+import { APP_BRANDING } from '../../../shared/config/appBranding';
 import type {
   RequestPermissionRequest,
   ToolCallLocation,
@@ -32,6 +33,7 @@ import { useRepoWatch } from '../../panels/home-panel/useRepoWatch';
 import { gitStatusToHighlightLayers } from '../../utils/gitStatusHighlightLayers';
 import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
+import { getAcpThemeStyle } from './acpTheme';
 
 export type AcpChatMessage =
   | {
@@ -121,18 +123,36 @@ function toolProcessingLabel(outcome?: AcpToolProcessingOutcome): string {
   }
 }
 
+function isPrincipalMcpToolCall(
+  call: Extract<AcpChatMessage, { role: 'tool' }>,
+): boolean {
+  const serverKey = APP_BRANDING.MCP_SERVER_CONFIG_KEY.replace(
+    /[^a-z0-9]/gi,
+    '',
+  ).toLowerCase();
+  const toolName = (call.name ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+  return toolName.includes(serverKey);
+}
+
 function ACPToolCallsPanel({
   calls,
   workspacePath,
+  workspaceName,
+  repository,
 }: {
   calls: AcpChatMessage[];
   workspacePath: string;
+  workspaceName: string;
+  repository?: ACPSessionViewProps['repository'];
 }) {
+  const [principalMcpOnly, setPrincipalMcpOnly] = useState(false);
   const toolCalls = calls.filter(
     (message): message is Extract<AcpChatMessage, { role: 'tool' }> =>
       message.role === 'tool',
   );
-  const activeCount = toolCalls.filter(
+  const principalMcpCalls = toolCalls.filter(isPrincipalMcpToolCall);
+  const visibleToolCalls = principalMcpOnly ? principalMcpCalls : toolCalls;
+  const activeCount = visibleToolCalls.filter(
     (call) => call.status === 'in_progress' || call.status === 'pending',
   ).length;
   const highlightLayers = useMemo<HighlightLayer[]>(() => {
@@ -172,29 +192,50 @@ function ACPToolCallsPanel({
     <aside className="acp-session__tool-panel" aria-label="ACP activity">
       <header className="acp-session__tool-panel-header">
         <div>
-          <span className="acp-session__section-kicker">ACP WORKSPACE</span>
           <strong className="acp-session__tool-panel-title">
             Tool activity
           </strong>
         </div>
-        <span
-          className="acp-session__tool-count"
-          aria-label={`${toolCalls.length} tool calls`}
-        >
-          {toolCalls.length}
-        </span>
+        <div className="acp-session__tool-panel-actions">
+          <button
+            className={`acp-session__tool-filter${principalMcpOnly ? ' is-active' : ''}`}
+            type="button"
+            aria-pressed={principalMcpOnly}
+            aria-label="Filter Principal MCP calls"
+            title="Show only calls made to the Principal MCP bridge"
+            onClick={() => setPrincipalMcpOnly((current) => !current)}
+          >
+            Principal MCP
+          </button>
+          <span
+            className="acp-session__tool-count"
+            aria-label={
+              principalMcpOnly
+                ? `${visibleToolCalls.length} Principal MCP tool calls`
+                : `${visibleToolCalls.length} tool calls`
+            }
+          >
+            {visibleToolCalls.length}
+          </span>
+        </div>
       </header>
 
       <div className="acp-session__tool-panel-content">
         <div className="acp-session__tool-activity">
-          {toolCalls.length === 0 ? (
-            <div className="acp-session__tool-panel-empty" role="status">
-              <Circle size={14} />
-              <span>Tool calls will appear here as the agent works.</span>
+          {visibleToolCalls.length === 0 ? (
+            <div
+              className="acp-session__tool-panel-empty acp-session__tool-panel-empty--activity"
+              role="status"
+            >
+              <span>
+                {principalMcpOnly
+                  ? 'No Principal MCP bridge calls in this session.'
+                  : 'Tool calls will appear here as the agent works.'}
+              </span>
             </div>
           ) : (
             <ol className="acp-session__tool-list" aria-live="polite">
-              {toolCalls.map((call) => {
+              {visibleToolCalls.map((call) => {
                 const input = toolInputSummary(call.rawInput);
                 const output = toolInputSummary(call.rawOutput);
                 return (
@@ -286,11 +327,27 @@ function ACPToolCallsPanel({
         </div>
         <section
           className="acp-session__tool-city-section"
-          aria-label="Workspace File City"
+          aria-label={workspaceName}
         >
           <h3 className="acp-session__tool-city-heading">
-            <Building2 size={13} />
-            Workspace File City
+            {repository ? (
+              <span
+                className="acp-client__owner-avatar acp-session__tool-city-avatar"
+                aria-hidden="true"
+              >
+                {repository.owner.slice(0, 2).toUpperCase()}
+                {repository.avatarUrl ? (
+                  <img
+                    alt=""
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none';
+                    }}
+                    src={repository.avatarUrl}
+                  />
+                ) : null}
+              </span>
+            ) : null}
+            {workspaceName}
           </h3>
           <ACPFileCityView
             workspacePath={workspacePath}
@@ -309,6 +366,7 @@ function ACPFileCityView({
   workspacePath: string;
   highlightLayers: HighlightLayer[];
 }) {
+  const { theme } = useTheme();
   useRepoWatch(workspacePath);
   const { gitStatusWithFiles } = useRepositoryGitStatus(workspacePath);
   const [cityData, setCityData] = useState<CityData | null>(null);
@@ -413,8 +471,8 @@ function ACPFileCityView({
         highlightLayers={visibleHighlightLayers}
         fullSize
         enableZoom
-        canvasBackgroundColor="#ffffff"
-        defaultBuildingColor="#f8f9fc"
+        canvasBackgroundColor={theme.colors.background}
+        defaultBuildingColor={theme.colors.backgroundSecondary}
       />
     </div>
   );
@@ -432,6 +490,7 @@ export function ACPSessionView({
   onRespondPermission,
   onDisconnect,
 }: ACPSessionViewProps) {
+  const { theme } = useTheme();
   const [draft, setDraft] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -458,9 +517,46 @@ export function ACPSessionView({
     isPrompting && latestConversationMessage?.role === 'agent'
       ? latestConversationMessage.id
       : undefined;
+  const reverseUserMessageIndex = [...messages]
+    .reverse()
+    .findIndex((message) => message.role === 'user');
+  const latestUserMessageIndex =
+    reverseUserMessageIndex < 0
+      ? -1
+      : messages.length - 1 - reverseUserMessageIndex;
+  const currentPromptMessages =
+    latestUserMessageIndex >= 0
+      ? messages.slice(latestUserMessageIndex + 1)
+      : messages;
+  const activeToolCall = [...currentPromptMessages]
+    .reverse()
+    .find(
+      (message): message is Extract<AcpChatMessage, { role: 'tool' }> =>
+        message.role === 'tool' &&
+        (message.status === 'in_progress' || message.status === 'pending'),
+    );
+  const hasAgentActivity = currentPromptMessages.some(
+    (message) => message.role === 'agent' || message.role === 'thought',
+  );
+  const activityStatus =
+    permissions.length > 0
+      ? 'Waiting for approval'
+      : activeToolCall
+        ? `Running ${activeToolCall.title}`
+        : isPrompting && !hasAgentActivity
+          ? 'Thinking…'
+          : null;
+  const workspaceName =
+    repository?.name ||
+    workspacePath.split(/[\\/]/).filter(Boolean).pop() ||
+    workspacePath;
 
   return (
-    <main className="acp-session" aria-label="ACP agent session">
+    <main
+      className="acp-session"
+      aria-label="ACP agent session"
+      style={getAcpThemeStyle(theme)}
+    >
       <header className="acp-session__topbar">
         <ACPWorkspaceIdentity
           workspacePath={workspacePath}
@@ -547,6 +643,21 @@ export function ACPSessionView({
                   return null;
               }
             })}
+
+            {activityStatus ? (
+              <div
+                className="acp-session__activity-status"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2
+                  className="acp-client__spinning"
+                  size={13}
+                  aria-hidden="true"
+                />
+                <span>{activityStatus}</span>
+              </div>
+            ) : null}
 
             <div ref={endRef} />
           </div>
@@ -638,7 +749,12 @@ export function ACPSessionView({
             </div>
           </div>
         </div>
-        <ACPToolCallsPanel calls={messages} workspacePath={workspacePath} />
+        <ACPToolCallsPanel
+          calls={messages}
+          workspacePath={workspacePath}
+          workspaceName={workspaceName}
+          repository={repository}
+        />
       </div>
     </main>
   );

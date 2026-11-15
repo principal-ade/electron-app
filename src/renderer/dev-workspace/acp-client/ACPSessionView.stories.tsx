@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
+import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
 import { ACPSessionView, type AcpChatMessage } from './ACPSessionView';
 import { getAcpAgent } from '../../../shared/main-process-api-interfaces/AcpAPI';
 
@@ -10,9 +11,11 @@ const meta: Meta<typeof ACPSessionView> = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-        <Story />
-      </div>
+      <ThemeProvider theme={slateNeonTheme}>
+        <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <Story />
+        </div>
+      </ThemeProvider>
     ),
   ],
 };

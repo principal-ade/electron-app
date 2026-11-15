@@ -1,9 +1,10 @@
 import React from 'react';
 import '@testing-library/jest-dom';
+import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
 import {
   act,
   fireEvent,
-  render,
+  render as testingRender,
   screen,
   waitFor,
 } from '@testing-library/react';
@@ -16,6 +17,12 @@ import { AcpService } from '../../main-process-api/AcpService';
 import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 import { ACPTabContent } from './ACPTabContent';
 import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
+
+function render(ui: React.ReactElement) {
+  return testingRender(
+    <ThemeProvider theme={slateNeonTheme}>{ui}</ThemeProvider>,
+  );
+}
 
 jest.mock('../../main-process-api/AcpService', () => ({
   AcpService: {
@@ -147,16 +154,21 @@ describe('ACPTabContent', () => {
     expect(screen.queryByText('Claude Code')).not.toBeInTheDocument();
   });
 
-  it('loads the saved ACP session instead of creating a new one', async () => {
+  it('automatically reconnects restored tabs and loads the saved ACP session', async () => {
     const onSessionIdChange = jest.fn();
     render(
       <ACPTabContent
-        tab={makeTab({ autoStart: true, sessionId: 'ses_saved' })}
+        tab={makeTab({ sessionId: 'ses_saved' })}
         onSessionIdChange={onSessionIdChange}
       />,
     );
 
     expect(await screen.findByText('Session ready')).toBeInTheDocument();
+    expect(mocked.connect).toHaveBeenCalledWith({
+      sessionKey: 'acp-/repo',
+      directory: '/repo',
+      agent: 'opencode',
+    });
     expect(mocked.loadSession).toHaveBeenCalledWith({
       sessionKey: 'acp-/repo',
       sessionId: 'ses_saved',
@@ -180,7 +192,7 @@ describe('ACPTabContent', () => {
     );
     await screen.findByText('Session ready');
 
-    const repoName = screen.getByText('subsystem-modeling');
+    const repoName = screen.getAllByText('subsystem-modeling')[0];
     const identity = repoName.closest('.acp-session__identity');
     expect(identity).toHaveTextContent('subsystem-modeling');
     expect(identity).not.toHaveTextContent('OpenCode');
@@ -188,6 +200,9 @@ describe('ACPTabContent', () => {
       'src',
       'https://github.com/principal-ai.png',
     );
+    expect(
+      document.querySelector('.acp-session__tool-city-avatar img'),
+    ).toHaveAttribute('src', 'https://github.com/principal-ai.png');
   });
 
   it('renders streamed updates and sends prompts for this tab only', async () => {
@@ -280,12 +295,40 @@ describe('ACPTabContent', () => {
     await waitFor(() =>
       expect(mocked.prompt).toHaveBeenCalledWith('acp-/repo', 'List the files'),
     );
+    expect(screen.getByText('Thinking…')).toBeInTheDocument();
     expect(screen.getByTestId('acp-agent-markdown')).toHaveAttribute(
       'data-streaming',
       'false',
     );
 
     act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-thinking-test',
+            title: 'Reading files',
+            status: 'in_progress',
+          },
+        },
+      });
+    });
+    expect(screen.getByText('Running Reading files')).toBeInTheDocument();
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call_update',
+            toolCallId: 'call-thinking-test',
+            status: 'completed',
+          },
+        },
+      });
       emit?.({
         sessionKey: 'acp-/repo',
         event: {
@@ -306,6 +349,7 @@ describe('ACPTabContent', () => {
       'data-streaming',
       'true',
     );
+    expect(screen.queryByText('Thinking…')).not.toBeInTheDocument();
   });
 
   it('lists ACP tool calls in the activity panel and updates their status', async () => {
@@ -385,6 +429,58 @@ describe('ACPTabContent', () => {
     ).not.toHaveAttribute('open');
   });
 
+  it('filters activity to calls made through the Principal MCP bridge', async () => {
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Session ready');
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-read',
+            title: 'Read a file',
+            name: 'read_file',
+            status: 'completed',
+          },
+        },
+      });
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-principal-mcp',
+            title: 'Search topics',
+            name: 'mcp__principal-mcp__search_topics',
+            status: 'completed',
+          },
+        },
+      });
+    });
+
+    expect(screen.getByText('Read a file')).toBeInTheDocument();
+    expect(screen.getByText('Search topics')).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Filter Principal MCP calls' }),
+    );
+
+    expect(screen.queryByText('Read a file')).not.toBeInTheDocument();
+    expect(screen.getByText('Search topics')).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('1 Principal MCP tool calls'),
+    ).toHaveTextContent('1');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Filter Principal MCP calls' }),
+    );
+    expect(screen.getByText('Read a file')).toBeInTheDocument();
+  });
+
   it('shows the ACP-local File City below tool calls in the same scroll view', async () => {
     const dirtyStatus: GitStatusWithFiles = {
       repoPath: '/repo',
@@ -451,8 +547,9 @@ describe('ACPTabContent', () => {
     });
 
     const fileCityRegion = screen.getByRole('region', {
-      name: 'Workspace File City',
+      name: 'repo',
     });
+    expect(screen.getByRole('heading', { name: 'repo' })).toBeInTheDocument();
     const toolPanelContent = container.querySelector(
       '.acp-session__tool-panel-content',
     );
@@ -507,6 +604,7 @@ describe('ACPTabContent', () => {
       });
     });
 
+    expect(screen.getByText('Waiting for approval')).toBeInTheDocument();
     fireEvent.click(await screen.findByText('Allow once'));
 
     expect(mocked.respondPermission).toHaveBeenCalledWith({

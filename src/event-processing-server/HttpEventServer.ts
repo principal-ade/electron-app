@@ -326,6 +326,49 @@ export class HttpEventServer extends EventEmitter {
    * repository-relative highlight paths to the owning ACP tab.
    */
   async processACPEvent(rawData: OpenCodeACPEventInput): Promise<void> {
+    const span = getTracer('principal-ade-event-processor').startSpan(
+      'acp.tool.processing',
+    );
+    span.setAttribute('acp.tool.update_type', rawData.update.sessionUpdate);
+    span.setAttribute('acp.tool.status', rawData.update.status ?? 'unknown');
+    span.setAttribute(
+      'acp.tool.location_count',
+      rawData.update.locations?.length ?? 0,
+    );
+    span.setAttribute(
+      'acp.tool.has_raw_input',
+      rawData.update.rawInput !== undefined && rawData.update.rawInput !== null,
+    );
+    span.setAttribute(
+      'acp.tool.has_raw_output',
+      rawData.update.rawOutput !== undefined &&
+        rawData.update.rawOutput !== null,
+    );
+    span.setAttribute(
+      'acp.tool.diff_count',
+      (rawData.update.content ?? []).filter(
+        (part) =>
+          typeof part === 'object' &&
+          part !== null &&
+          'type' in part &&
+          part.type === 'diff',
+      ).length,
+    );
+    const reportOutcome = (
+      outcome: AcpToolProcessingOutcome,
+      highlightPaths?: string[],
+    ) => {
+      span.setAttribute('acp.tool.processing.outcome', outcome);
+      span.setAttribute(
+        'acp.tool.processing.highlight_path_count',
+        highlightPaths?.length ?? 0,
+      );
+      span.setStatus({
+        code: outcome === 'failed' ? SpanStatusCode.ERROR : SpanStatusCode.OK,
+      });
+      this.reportACPToolProcessing(rawData, outcome, highlightPaths);
+    };
+
     try {
       const event = await this.acpPipeline.processRawEvent(
         SupportedAgent.OPENCODE,
@@ -334,14 +377,24 @@ export class HttpEventServer extends EventEmitter {
       const repository = event.repository?.root;
       const toolCallId = event.data?.toolCallId;
       if (typeof toolCallId !== 'string') {
+        span.setAttribute(
+          'acp.tool.processing.outcome',
+          'missing-tool-call-id',
+        );
+        span.setStatus({ code: SpanStatusCode.ERROR });
         return;
       }
+      span.setAttribute('acp.repository.found', Boolean(repository));
+      span.setAttribute(
+        'acp.tool.processing.normalized_file_count',
+        event.files?.length ?? 0,
+      );
       if (!repository) {
-        this.reportACPToolProcessing(rawData, 'no-repository');
+        reportOutcome('no-repository');
         return;
       }
       if (!event.files?.length) {
-        this.reportACPToolProcessing(rawData, 'no-file-paths');
+        reportOutcome('no-file-paths');
         return;
       }
 
@@ -355,9 +408,9 @@ export class HttpEventServer extends EventEmitter {
           !seenPaths.has(path as string)
         );
       });
+      span.setAttribute('acp.tool.processing.new_file_count', newFiles.length);
       if (newFiles.length === 0) {
-        this.reportACPToolProcessing(
-          rawData,
+        reportOutcome(
           seenPaths.size > 0 ? 'already-highlighted' : 'no-file-paths',
         );
         return;
@@ -377,11 +430,20 @@ export class HttpEventServer extends EventEmitter {
         if (oldestKey === undefined) break;
         this.acpToolCallPaths.delete(oldestKey);
       }
-      this.reportACPToolProcessing(rawData, 'highlighted', highlightPaths);
+      reportOutcome('highlighted', highlightPaths);
+      span.setStatus({ code: SpanStatusCode.OK });
     } catch (error) {
       this.errorCount++;
       this.log('error', `Error processing OpenCode ACP event: ${error}`);
-      this.reportACPToolProcessing(rawData, 'failed');
+      span.setAttribute('acp.tool.processing.outcome', 'failed');
+      span.setAttribute(
+        'error.type',
+        error instanceof Error ? error.name : typeof error,
+      );
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      reportOutcome('failed');
+    } finally {
+      span.end();
     }
   }
 

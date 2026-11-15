@@ -560,16 +560,16 @@ export function ACPTabContent({
     [onSessionIdChange, tab.id, tab.sessionId],
   );
 
-  // Quick Open opens an ACP tab with `autoStart`, so land directly in a live
-  // session. Restored tabs never carry `autoStart`, so they stay on setup.
+  // Quick Open starts a new session automatically. Restored tabs with a saved
+  // session ID reconnect and load that session; other restored tabs stay on setup.
   useEffect(() => {
-    if (!tab.autoStart || autoStartedRef.current) return;
+    if ((!tab.autoStart && !tab.sessionId) || autoStartedRef.current) return;
     autoStartedRef.current = true;
     void (async () => {
       const connected = await connect(agentId);
       if (connected) await startSession();
     })();
-  }, [agentId, connect, startSession, tab.autoStart]);
+  }, [agentId, connect, startSession, tab.autoStart, tab.sessionId]);
 
   const retry = useCallback(async () => {
     const connected = await connect(agentId);

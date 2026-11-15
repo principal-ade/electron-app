@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTheme } from '@principal-ade/industry-theme';
 import {
   ArrowRight,
   Check,
@@ -16,6 +17,7 @@ import {
   type AcpAgentId,
 } from '../../../shared/main-process-api-interfaces/AcpAPI';
 import './ACPClientView.css';
+import { getAcpThemeStyle } from './acpTheme';
 
 export type ACPAgentId = AcpAgentId;
 export type ACPClientViewState = 'setup' | 'initializing' | 'ready' | 'error';
@@ -64,6 +66,7 @@ export function ACPClientView({
   onStartSession,
   onRetry,
 }: ACPClientViewProps) {
+  const { theme } = useTheme();
   const [selectedAgent, setSelectedAgent] = useState<ACPAgentId>(initialAgent);
   const agent = agents.find((item) => item.id === selectedAgent) ?? agents[0];
   const isInitializing = state === 'initializing';
@@ -76,7 +79,11 @@ export function ACPClientView({
   };
 
   return (
-    <main className="acp-client" aria-label="ACP agent workspace">
+    <main
+      className="acp-client"
+      aria-label="ACP agent workspace"
+      style={getAcpThemeStyle(theme)}
+    >
       <header className="acp-client__topbar">
         <div className="acp-client__brand">
           {repository ? (

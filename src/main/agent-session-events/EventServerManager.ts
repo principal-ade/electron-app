@@ -32,6 +32,7 @@ import { getSessionManagerInstance } from '../terminal/sessionManagerSingleton';
 import { broadcastTerminalSessionsChanged } from '../terminal/tipc/terminalRouter';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
 import { childTelemetryEnv } from '../telemetry/settings-cache';
+import { repositoryTelemetryId } from '../telemetry/repositoryIdentity';
 import { AgentSessionSDKAPIEvents } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
 import {
   TopicAPIEvent,
@@ -521,16 +522,18 @@ export class EventServerManager extends EventEmitter {
   /**
    * Send message to worker
    */
-  private sendToWorker(message: MainToServerMessage): void {
+  private sendToWorker(message: MainToServerMessage): boolean {
     if (!this.worker) {
       this.log('error', 'Cannot send message: worker not running');
-      return;
+      return false;
     }
 
     try {
       this.worker.postMessage(message);
+      return true;
     } catch (error) {
       this.log('error', `Failed to send message to worker: ${error}`);
+      return false;
     }
   }
 
@@ -539,7 +542,18 @@ export class EventServerManager extends EventEmitter {
    * the same path normalization and repository-scoped renderer ports as hooks.
    */
   processACPEvent(rawData: OpenCodeACPEventInput): void {
+    const span = getTracer('principal-ade-main').startSpan(
+      'acp.tool.processing.dispatch',
+    );
+    span.setAttribute(
+      'principal.repository.telemetry_id',
+      repositoryTelemetryId(rawData.workingDirectory),
+    );
+    span.setAttribute('acp.tool.update_type', rawData.update.sessionUpdate);
+    span.setAttribute('acp.tool.status', rawData.update.status ?? 'unknown');
     if (!this.isRunning || !this.worker) {
+      span.setAttribute('acp.tool.processing.worker_available', false);
+      span.setAttribute('acp.tool.processing.outcome', 'unavailable');
       this.emit('acp-tool-processing-result', {
         type: 'ACP_TOOL_PROCESSING_RESULT',
         id: `acp-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -548,14 +562,51 @@ export class EventServerManager extends EventEmitter {
         toolCallId: rawData.update.toolCallId,
         outcome: 'unavailable',
       } satisfies ACPToolProcessingResultMessage);
+      span.setStatus({ code: SpanStatusCode.OK });
+      span.end();
       return;
     }
-    this.sendToWorker({
-      type: 'PROCESS_ACP_EVENT',
-      id: `acp-event-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      timestamp: Date.now(),
-      rawData,
-    });
+    span.setAttribute('acp.tool.processing.worker_available', true);
+    try {
+      const dispatched = this.sendToWorker({
+        type: 'PROCESS_ACP_EVENT',
+        id: `acp-event-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: Date.now(),
+        rawData,
+      });
+      span.setAttribute('acp.tool.processing.dispatched', dispatched);
+      if (dispatched) {
+        span.setStatus({ code: SpanStatusCode.OK });
+      } else {
+        span.setAttribute('acp.tool.processing.outcome', 'unavailable');
+        this.emit('acp-tool-processing-result', {
+          type: 'ACP_TOOL_PROCESSING_RESULT',
+          id: `acp-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          timestamp: Date.now(),
+          sessionId: rawData.sessionId,
+          toolCallId: rawData.update.toolCallId,
+          outcome: 'unavailable',
+        } satisfies ACPToolProcessingResultMessage);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+      }
+    } catch (error) {
+      span.setAttribute(
+        'error.type',
+        error instanceof Error ? error.name : typeof error,
+      );
+      span.setAttribute('acp.tool.processing.outcome', 'unavailable');
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      this.emit('acp-tool-processing-result', {
+        type: 'ACP_TOOL_PROCESSING_RESULT',
+        id: `acp-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: Date.now(),
+        sessionId: rawData.sessionId,
+        toolCallId: rawData.update.toolCallId,
+        outcome: 'unavailable',
+      } satisfies ACPToolProcessingResultMessage);
+    } finally {
+      span.end();
+    }
   }
 
   /**

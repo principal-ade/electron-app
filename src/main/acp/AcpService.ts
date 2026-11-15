@@ -616,39 +616,70 @@ class AcpService {
   private readonly handleToolProcessingResult = (
     result: ACPToolProcessingResultMessage,
   ): void => {
+    const span = tracer.startSpan('acp.tool.processing.result');
+    span.setAttribute('acp.tool.processing.outcome', result.outcome);
+    let matchedSessionCount = 0;
+    let matchedToolCallCount = 0;
     const sessionResult: AcpToolProcessingResult = {
       sessionId: result.sessionId,
       toolCallId: result.toolCallId,
       outcome: result.outcome,
     };
-    for (const entry of this.entries.values()) {
-      if (
-        entry.closed ||
-        entry.agentId !== 'opencode' ||
-        entry.sessionId !== result.sessionId
-      ) {
-        continue;
-      }
-      const toolCall = entry.toolCalls.get(result.toolCallId);
-      const highlightPaths = [
-        ...new Set([
-          ...(toolCall?.highlightPaths ?? []),
-          ...(result.highlightPaths ?? []),
-        ]),
-      ];
-      if (toolCall) {
-        entry.toolCalls.delete(result.toolCallId);
-        entry.toolCalls.set(result.toolCallId, {
-          ...toolCall,
-          processing: result.outcome,
-          highlightPaths,
-          updatedAt: Date.now(),
+    try {
+      for (const entry of this.entries.values()) {
+        if (
+          entry.closed ||
+          entry.agentId !== 'opencode' ||
+          entry.sessionId !== result.sessionId
+        ) {
+          continue;
+        }
+        matchedSessionCount++;
+        span.setAttribute(
+          'principal.repository.telemetry_id',
+          repositoryTelemetryId(entry.directory),
+        );
+        const toolCall = entry.toolCalls.get(result.toolCallId);
+        const highlightPaths = [
+          ...new Set([
+            ...(toolCall?.highlightPaths ?? []),
+            ...(result.highlightPaths ?? []),
+          ]),
+        ];
+        if (toolCall) {
+          matchedToolCallCount++;
+          entry.toolCalls.delete(result.toolCallId);
+          entry.toolCalls.set(result.toolCallId, {
+            ...toolCall,
+            processing: result.outcome,
+            highlightPaths,
+            updatedAt: Date.now(),
+          });
+        }
+        this.emit(entry, {
+          type: 'tool-processing',
+          result: { ...sessionResult, highlightPaths },
         });
       }
-      this.emit(entry, {
-        type: 'tool-processing',
-        result: { ...sessionResult, highlightPaths },
-      });
+      span.setAttribute(
+        'acp.tool.processing.matched_live_session',
+        matchedSessionCount > 0,
+      );
+      span.setAttribute(
+        'acp.tool.processing.matched_tool_call',
+        matchedToolCallCount > 0,
+      );
+      span.setAttribute(
+        'acp.tool.processing.highlight_path_count',
+        result.highlightPaths?.length ?? 0,
+      );
+      if (matchedSessionCount === 0) {
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        return;
+      }
+      span.setStatus({ code: SpanStatusCode.OK });
+    } finally {
+      span.end();
     }
   };
 
