@@ -61,6 +61,7 @@ import {
   type PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { agentSessionTabId } from '../../shared/agentSessionBookmark';
 import {
   TerminalProvider,
   useTerminalProvider,
@@ -354,8 +355,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
 
       void UserPreferencesService.getPreferences()
         .then((preferences) => {
-          const pinnedTabs =
-            preferences.interactiveShell?.homePinnedTabs ?? [];
+          const pinnedTabs = preferences.interactiveShell?.homePinnedTabs ?? [];
           let changed = false;
           const nextPinnedTabs = pinnedTabs.map((entry) => {
             if (entry.id !== tabId || entry.kind !== 'acp') return entry;
@@ -789,6 +789,59 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   const [requestFocusTabId, setRequestFocusTabId] = useState<string | null>(
     null,
   );
+  const [requestCloseTabId, setRequestCloseTabId] = useState<string | null>(
+    null,
+  );
+  const pendingTabCloseRef = useRef(
+    new Map<string, { resolve: () => void; timeoutId: number }>(),
+  );
+  const handleTerminalTabsChange = useCallback(
+    (nextTabs: WorkspaceTab[]) => {
+      setTabs(nextTabs);
+      const remainingTabIds = new Set(nextTabs.map((tab) => tab.id));
+      for (const [tabId, pending] of pendingTabCloseRef.current) {
+        if (remainingTabIds.has(tabId)) continue;
+        window.clearTimeout(pending.timeoutId);
+        pendingTabCloseRef.current.delete(tabId);
+        setRequestCloseTabId((current) => (current === tabId ? null : current));
+        pending.resolve();
+      }
+    },
+    [setTabs],
+  );
+  const closeOpenCodeSessionTabs = useCallback(
+    async (directory: string, sessionId: string) => {
+      const expectedCommand = `opencode --session ${sessionId}`;
+      const expectedTabId = agentSessionTabId({
+        agent: 'OpenCode',
+        directory,
+        id: sessionId,
+      });
+      const tabIds = tabs
+        .filter(
+          (tab) =>
+            tab.contentType === 'terminal' &&
+            (tab.id === expectedTabId ||
+              (tab.agent === 'opencode' && tab.command === expectedCommand)),
+        )
+        .map((tab) => tab.id);
+
+      for (const tabId of tabIds) {
+        await new Promise<void>((resolve, reject) => {
+          const timeoutId = window.setTimeout(() => {
+            pendingTabCloseRef.current.delete(tabId);
+            setRequestCloseTabId((current) =>
+              current === tabId ? null : current,
+            );
+            reject(new Error('Could not close the OpenCode session tab'));
+          }, 10_000);
+          pendingTabCloseRef.current.set(tabId, { resolve, timeoutId });
+          setRequestCloseTabId(tabId);
+        });
+      }
+    },
+    [tabs],
+  );
   type BridgeAwareTerminalTabOpenRequest = TerminalTabOpenRequest & {
     requestId?: string;
     startupNotice?: {
@@ -1120,8 +1173,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   // a repo payload, or undefined when the terminal isn't rooted in a registered
   // clone.
   const resolveActiveTerminalRepoPayload = useCallback(():
-    | RepositorySelectedPayload
-    | undefined => {
+    RepositorySelectedPayload | undefined => {
     if (!activeTabDirectory) return undefined;
     try {
       return resolveRepoPayloadForDirectory(activeTabDirectory);
@@ -1494,7 +1546,10 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onOpenEntry={handleOpenHomeEntry}
             />
           ) : activeView === 'sessions' ? (
-            <SessionsLeftPanel repositories={repositories} />
+            <SessionsLeftPanel
+              repositories={repositories}
+              closeOpenCodeSessionTabs={closeOpenCodeSessionTabs}
+            />
           ) : activeView === 'projects' ? (
             <ProjectsLeftPanel
               repositories={repositories}
@@ -1545,11 +1600,12 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               programStatus={programStatus}
               initialTabs={tabs}
               {...terminalPanelRestoreOptions}
-              onTabsChange={setTabs}
+              onTabsChange={handleTerminalTabsChange}
               activeTabId={activeTabId}
               onActiveTabChange={setActiveTabId}
               requestFocusTabId={requestFocusTabId}
               onFocusTabHandled={handleFocusTabHandled}
+              requestCloseTabId={requestCloseTabId}
               requestOpenTab={requestOpenTab}
               onOpenTabHandled={handleOpenTabHandled}
               renderTabContent={renderTabContent}
@@ -1600,9 +1656,11 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       tabs,
       activeTabId,
       activeTab?.contentType,
-      setTabs,
       setActiveTabId,
       requestFocusTabId,
+      requestCloseTabId,
+      handleTerminalTabsChange,
+      closeOpenCodeSessionTabs,
       handleFocusTabHandled,
       requestOpenTab,
       handleOpenTabHandled,

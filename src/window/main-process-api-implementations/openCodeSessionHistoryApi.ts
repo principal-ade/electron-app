@@ -17,6 +17,12 @@ export const openCodeSessionHistoryAPI: OpenCodeSessionHistoryAPI = {
       directories,
       query,
     ),
+  delete: (directory, sessionId) =>
+    ipcRenderer.invoke(
+      OpenCodeSessionHistoryEvents.DELETE,
+      directory,
+      sessionId,
+    ),
   getResumeTarget: (directory, sessionId) =>
     ipcRenderer.invoke(
       OpenCodeSessionHistoryEvents.RESUME_TARGET,

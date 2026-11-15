@@ -1,25 +1,37 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Bookmark,
   BookmarkCheck,
   History,
   RefreshCw,
   Search,
+  Trash2,
   X,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { agentSessionBookmarkTabId } from '../../shared/agentSessionBookmark';
+import { agentSessionTabId } from '../../shared/agentSessionBookmark';
 import type { AgentSessionBookmarkProvider } from '../../shared/types/userPreferences.types';
 import { extractLocalClones } from '../events/repositorySelected';
 import { SessionHistoryService } from '../main-process-api/SessionHistoryService';
 import { AgentSessionIcon } from './AgentSessionIcon';
 import { sessionBookmarkKey, useSessionBookmarks } from './useSessionBookmarks';
+import { ConfirmDialog } from '../repo-explorer/components/ConfirmDialog';
 
 type Theme = ReturnType<typeof useTheme>['theme'];
 
 interface SessionsLeftPanelProps {
   repositories: AlexandriaEntry[];
+  closeOpenCodeSessionTabs?: (
+    directory: string,
+    sessionId: string,
+  ) => Promise<void>;
 }
 
 interface SessionHistoryEntry {
@@ -181,7 +193,15 @@ const SessionRow: React.FC<{
   bookmarked: boolean;
   onResume: () => void;
   onToggleBookmark: () => void;
-}> = ({ session, resuming, bookmarked, onResume, onToggleBookmark }) => {
+  onDelete?: () => void;
+}> = ({
+  session,
+  resuming,
+  bookmarked,
+  onResume,
+  onToggleBookmark,
+  onDelete,
+}) => {
   const { theme } = useTheme();
   const spacing = useSpacing(theme);
   const [hovered, setHovered] = useState(false);
@@ -311,6 +331,29 @@ const SessionRow: React.FC<{
         >
           {bookmarked ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
         </button>
+        {session.agent === 'OpenCode' && (
+          <button
+            type="button"
+            aria-label={`Delete OpenCode session: ${session.title}`}
+            title="Delete session"
+            onClick={onDelete}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              padding: spacing.xs,
+              background: 'transparent',
+              border: 'none',
+              color: hovered
+                ? (theme.colors.error ?? '#dc2626')
+                : theme.colors.textSecondary,
+              cursor: 'pointer',
+            }}
+          >
+            <Trash2 size={15} />
+          </button>
+        )}
         <span
           style={{
             display: 'inline-flex',
@@ -328,6 +371,7 @@ const SessionRow: React.FC<{
 
 export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
   repositories,
+  closeOpenCodeSessionTabs,
 }) => {
   const { theme } = useTheme();
   const spacing = useSpacing(theme);
@@ -336,6 +380,11 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resumingId, setResumingId] = useState<string | null>(null);
+  const [deletingSession, setDeletingSession] =
+    useState<SessionHistoryEntry | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteInProgress = useRef(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const { isBookmarked, toggleSessionBookmark, syncBookmarkDetails } =
     useSessionBookmarks();
@@ -471,9 +520,11 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
     async (session: SessionHistoryEntry) => {
       setResumingId(session.id);
       setError(null);
-      const tabId = isBookmarked(sessionBookmarkKey(session))
-        ? agentSessionBookmarkTabId(session)
-        : undefined;
+      const tabId =
+        session.agent === 'OpenCode' ||
+        isBookmarked(sessionBookmarkKey(session))
+          ? agentSessionTabId(session)
+          : undefined;
       try {
         if (session.agent === 'OpenCode') {
           if (tabId) {
@@ -523,6 +574,44 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
     },
     [isBookmarked],
   );
+
+  const deleteSession = useCallback(async () => {
+    if (!deletingSession || deleteInProgress.current) return;
+    deleteInProgress.current = true;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      await closeOpenCodeSessionTabs?.(
+        deletingSession.directory,
+        deletingSession.id,
+      );
+      await SessionHistoryService.openCode.delete(
+        deletingSession.directory,
+        deletingSession.id,
+      );
+      setSessions((current) =>
+        current.filter(
+          (session) =>
+            session.id !== deletingSession.id ||
+            session.directory !== deletingSession.directory,
+        ),
+      );
+      if (isBookmarked(sessionBookmarkKey(deletingSession))) {
+        toggleSessionBookmark(deletingSession);
+      }
+      setDeletingSession(null);
+    } catch (reason) {
+      setDeleteError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      deleteInProgress.current = false;
+      setDeleteBusy(false);
+    }
+  }, [
+    closeOpenCodeSessionTabs,
+    deletingSession,
+    isBookmarked,
+    toggleSessionBookmark,
+  ]);
 
   const renderContent = () => {
     if (loading && sessions.length === 0) return <EmptyState text="Loading…" />;
@@ -576,6 +665,10 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
             bookmarked={bookmarked}
             onResume={() => void resume(session)}
             onToggleBookmark={() => toggleSessionBookmark(session)}
+            onDelete={() => {
+              setDeleteError(null);
+              setDeletingSession(session);
+            }}
           />
         );
       });
@@ -696,6 +789,30 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
           <EmptyState text="Loading more sessions…" />
         )}
       </div>
+      {deletingSession && (
+        <ConfirmDialog
+          title="Delete OpenCode session"
+          message={
+            <>
+              Permanently delete <strong>“{deletingSession.title}”</strong>? Any
+              open tab will close first. This also deletes its child sessions
+              and cannot be undone.
+              {deleteError && (
+                <p role="alert" style={{ color: theme.colors.error }}>
+                  {deleteError}
+                </p>
+              )}
+            </>
+          }
+          confirmLabel="Delete session"
+          destructive
+          busy={deleteBusy}
+          onConfirm={() => void deleteSession()}
+          onCancel={() => {
+            if (!deleteInProgress.current) setDeletingSession(null);
+          }}
+        />
+      )}
     </div>
   );
 };

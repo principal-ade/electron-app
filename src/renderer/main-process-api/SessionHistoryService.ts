@@ -8,6 +8,8 @@ export class SessionHistoryService {
         directories,
         query,
       ),
+    delete: (directory: string, sessionId: string) =>
+      window.mainProcess.openCodeSessionHistory.delete(directory, sessionId),
     resume: (directory: string, sessionId: string, tabId?: string) =>
       tabId
         ? window.mainProcess.openCodeSessionHistory.resume(

@@ -59,6 +59,7 @@ describe('SessionsLeftPanel', () => {
       listProjects: jest.fn(),
       search: jest.fn(),
       searchProjects: jest.fn(),
+      delete: jest.fn().mockResolvedValue(undefined),
       getResumeTarget: jest.fn(),
       resume: jest.fn().mockResolvedValue(undefined),
     };
@@ -110,9 +111,7 @@ describe('SessionsLeftPanel', () => {
       name: 'Bookmark OpenCode session: Fix the session picker',
     });
     expect(
-      bookmark.nextElementSibling?.querySelector(
-        '[data-agent-icon="opencode"]',
-      ),
+      bookmark.parentElement?.querySelector('[data-agent-icon="opencode"]'),
     ).not.toBeNull();
 
     fireEvent.click(
@@ -124,7 +123,87 @@ describe('SessionsLeftPanel', () => {
       expect(history.resume).toHaveBeenCalledWith(
         '/work/example',
         'ses_history1',
+        agentSessionBookmarkTabId({
+          agent: 'OpenCode',
+          directory: '/work/example',
+          id: 'ses_history1',
+        }),
       );
+    });
+  });
+
+  it('requires confirmation before deleting an OpenCode session', async () => {
+    let finishClosingTab!: () => void;
+    const closeOpenCodeSessionTabs = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishClosingTab = resolve;
+        }),
+    );
+    history.listProjects.mockResolvedValue([
+      {
+        id: 'ses_delete01',
+        title: 'Remove this session',
+        directory: '/work/example',
+        createdAt: RECENT_SESSION_TIME - 60_000,
+        updatedAt: RECENT_SESSION_TIME,
+      },
+    ]);
+
+    render(
+      <SessionsLeftPanel
+        repositories={[{ path: '/work/example' } as AlexandriaEntry]}
+        closeOpenCodeSessionTabs={closeOpenCodeSessionTabs}
+      />,
+    );
+
+    const deleteButton = await screen.findByRole('button', {
+      name: 'Delete OpenCode session: Remove this session',
+    });
+    fireEvent.click(deleteButton);
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Delete OpenCode session' }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/also deletes its child sessions and cannot be undone/i),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('dialog', { name: 'Delete OpenCode session' }),
+      ).toBeNull();
+    });
+    expect(history.delete).not.toHaveBeenCalled();
+    expect(screen.getByText('Remove this session')).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Delete OpenCode session: Remove this session',
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Delete session' }),
+    );
+    await waitFor(() => {
+      expect(closeOpenCodeSessionTabs).toHaveBeenCalledWith(
+        '/work/example',
+        'ses_delete01',
+      );
+    });
+    expect(history.delete).not.toHaveBeenCalled();
+
+    await act(async () => {
+      finishClosingTab();
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(history.delete).toHaveBeenCalledWith(
+        '/work/example',
+        'ses_delete01',
+      );
+      expect(screen.queryByText('Remove this session')).toBeNull();
     });
   });
 

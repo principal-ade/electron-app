@@ -10,9 +10,14 @@ export function agentSessionBookmarkKey(session: AgentSessionIdentity): string {
   return JSON.stringify([session.agent, session.directory, session.id]);
 }
 
-/** Stable workspace tab id used to associate a resumed bookmarked session. */
+/** Stable workspace tab id used to associate a resumed agent session. */
+export function agentSessionTabId(session: AgentSessionIdentity): string {
+  return `agent-session-bookmark:${encodeURIComponent(agentSessionBookmarkKey(session))}`;
+}
+
+/** Backwards-compatible name for the tab id used by bookmarked sessions. */
 export function agentSessionBookmarkTabId(
   session: AgentSessionIdentity,
 ): string {
-  return `agent-session-bookmark:${encodeURIComponent(agentSessionBookmarkKey(session))}`;
+  return agentSessionTabId(session);
 }

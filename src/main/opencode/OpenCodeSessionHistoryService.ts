@@ -186,6 +186,17 @@ export class OpenCodeSessionHistoryService {
     return this.searchSessions(await this.listProjects(directories), query);
   }
 
+  async delete(directory: string, sessionId: string): Promise<void> {
+    if (!SAFE_SESSION_ID.test(sessionId)) {
+      throw new Error('Invalid OpenCode session ID');
+    }
+    const sessions = await this.list(directory);
+    if (!sessions.some((session) => session.id === sessionId)) {
+      throw new Error('OpenCode session was not found in this project');
+    }
+    await this.run(['session', 'delete', sessionId], directory);
+  }
+
   private async searchSessions(
     sessions: OpenCodeSessionSummary[],
     query: string,

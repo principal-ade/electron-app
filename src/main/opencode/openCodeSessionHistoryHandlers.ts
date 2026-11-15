@@ -25,6 +25,11 @@ export function registerOpenCodeSessionHistoryHandlers(): void {
       openCodeSessionHistoryService.searchProjects(directories, query),
   );
   ipcMain.handle(
+    OpenCodeSessionHistoryEvents.DELETE,
+    (_event, directory: string, sessionId: string) =>
+      openCodeSessionHistoryService.delete(directory, sessionId),
+  );
+  ipcMain.handle(
     OpenCodeSessionHistoryEvents.RESUME_TARGET,
     (_event, directory: string, sessionId: string) =>
       openCodeSessionHistoryService.getResumeTarget(directory, sessionId),

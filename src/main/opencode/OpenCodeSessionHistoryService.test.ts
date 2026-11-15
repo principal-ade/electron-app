@@ -139,6 +139,42 @@ describe('OpenCodeSessionHistoryService', () => {
     ).rejects.toThrow('Invalid OpenCode session ID');
   });
 
+  it('deletes a session only when it belongs to the selected project', async () => {
+    const run = jest
+      .fn()
+      .mockResolvedValueOnce(
+        JSON.stringify([{ id: 'ses_delete1', title: 'Delete this session' }]),
+      )
+      .mockResolvedValueOnce('');
+    const service = new OpenCodeSessionHistoryService(run);
+
+    await expect(
+      service.delete(directory, 'ses_delete1'),
+    ).resolves.toBeUndefined();
+    expect(run).toHaveBeenNthCalledWith(
+      1,
+      ['session', 'list', '--format', 'json', '--max-count', '100'],
+      directory,
+    );
+    expect(run).toHaveBeenNthCalledWith(
+      2,
+      ['session', 'delete', 'ses_delete1'],
+      directory,
+    );
+
+    const missingSessionService = new OpenCodeSessionHistoryService(
+      jest.fn().mockResolvedValue('[]'),
+    );
+    await expect(
+      missingSessionService.delete(directory, 'ses_delete1'),
+    ).rejects.toThrow('OpenCode session was not found in this project');
+
+    const invalidIdService = new OpenCodeSessionHistoryService(jest.fn());
+    await expect(
+      invalidIdService.delete(directory, 'not-a-session'),
+    ).rejects.toThrow('Invalid OpenCode session ID');
+  });
+
   it('rejects non-absolute and missing project directories', async () => {
     const service = new OpenCodeSessionHistoryService(jest.fn());
     await expect(service.list('relative/path')).rejects.toThrow(

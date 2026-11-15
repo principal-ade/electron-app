@@ -18,6 +18,7 @@ export enum OpenCodeSessionHistoryEvents {
   LIST_PROJECTS = 'opencode-session-history:list-projects',
   SEARCH = 'opencode-session-history:search',
   SEARCH_PROJECTS = 'opencode-session-history:search-projects',
+  DELETE = 'opencode-session-history:delete',
   RESUME_TARGET = 'opencode-session-history:resume-target',
   RESUME = 'opencode-session-history:resume',
 }
@@ -30,6 +31,7 @@ export interface OpenCodeSessionHistoryAPI {
     directories: string[],
     query: string,
   ): Promise<OpenCodeSessionSummary[]>;
+  delete(directory: string, sessionId: string): Promise<void>;
   getResumeTarget(
     directory: string,
     sessionId: string,
