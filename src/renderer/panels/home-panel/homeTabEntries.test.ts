@@ -782,7 +782,7 @@ describe('Home processes', () => {
     expect(result.pinnedTabs).toEqual([]);
   });
 
-  it('keeps unrelated browsers and browsers without a repo process in Open Tabs', () => {
+  it('keeps unrelated browsers and browsers without a matching process in Open Tabs', () => {
     const unrelated = {
       ...browser,
       id: 'unrelated',
@@ -798,15 +798,32 @@ describe('Home processes', () => {
     );
     expect(result.openTabs.map((tab) => tab.id)).toEqual(['unrelated']);
     expect(result.processTabs.size).toBe(0);
-    const standalone = buildHomeTabEntries(
-      [],
-      [],
-      [browser],
-      [],
-      [],
-      [process],
-    );
-    expect(standalone.openTabs.map((tab) => tab.id)).toEqual([browser.id]);
+    const withoutProcess = buildHomeTabEntries([], [], [browser], []);
+    expect(withoutProcess.openTabs.map((tab) => tab.id)).toEqual([browser.id]);
+  });
+
+  it('represents a standalone process browser on the process row', () => {
+    const external = {
+      ...process,
+      id: 'detected:123',
+      origin: 'detected' as const,
+      cwd: '/outside/repository',
+      port: 5173,
+    };
+    const unlinked = {
+      ...browser,
+      id: 'localhost-browser-5173',
+      processId: undefined,
+    };
+
+    const result = buildHomeTabEntries([], [], [unlinked], [], [], [external]);
+
+    expect(result.processes).toEqual([external]);
+    expect(result.openTabs).toEqual([]);
+    expect(result.processTabs.get(external.id)).toEqual({
+      id: unlinked.id,
+      number: 1,
+    });
   });
 
   it('prefers a managed browser identity over an unrelated unlinked tab on the same port', () => {

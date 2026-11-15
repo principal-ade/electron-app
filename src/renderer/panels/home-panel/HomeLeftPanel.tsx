@@ -928,6 +928,8 @@ export const HomeLeftPanel: React.FC<HomeLeftPanelProps> = ({
                     <HomeProcessRow
                       key={process.id}
                       entry={process}
+                      openTab={homeTabs.processTabs.get(process.id)}
+                      onActivateTab={onActivateTab}
                       onProcessKilled={refreshProcesses}
                     />
                   ))}

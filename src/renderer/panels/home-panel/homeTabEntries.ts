@@ -77,7 +77,7 @@ export interface HomeRepoRow extends HomeRepository {
 export interface HomeTabEntries {
   /** Open requests and remembered routes, grouped only by their optional target metadata. */
   requests: RequestPurlGroup[];
-  /** Process id → its browser tab, already represented under a repository. */
+  /** Process id → its browser tab, already represented on the process row. */
   processTabs: Map<string, HomeProcessTab>;
   /** Active/pinned processes outside registered repositories. */
   processes: ProcessEntry[];
@@ -365,29 +365,30 @@ export function buildHomeTabEntries(
   const openTabs: HomeTabEntry[] = [];
   const processTabs = new Map<string, HomeProcessTab>();
   const representedBrowserIds = new Set<string>();
-  for (const row of rows.values()) {
-    for (const process of row.processes) {
-      // Managed browsers retain identity across port changes. Detected
-      // processes open unlinked browsers, so match those by their current port.
-      let index = tabs.findIndex(
+  const allProcesses = [
+    ...Array.from(rows.values()).flatMap((row) => row.processes),
+    ...standaloneProcesses,
+  ];
+  for (const process of allProcesses) {
+    // Managed browsers retain identity across port changes. Detected
+    // processes open unlinked browsers, so match those by their current port.
+    let index = tabs.findIndex(
+      (tab) =>
+        tab.contentType === 'localhost-browser' && tab.processId === process.id,
+    );
+    if (index < 0 && !['stopped', 'failed'].includes(process.status)) {
+      index = tabs.findIndex(
         (tab) =>
           tab.contentType === 'localhost-browser' &&
-          tab.processId === process.id,
+          !tab.processId &&
+          process.port != null &&
+          tab.port === process.port,
       );
-      if (index < 0 && !['stopped', 'failed'].includes(process.status)) {
-        index = tabs.findIndex(
-          (tab) =>
-            tab.contentType === 'localhost-browser' &&
-            !tab.processId &&
-            process.port != null &&
-            tab.port === process.port,
-        );
-      }
-      const tab = tabs[index];
-      if (!tab || representedBrowserIds.has(tab.id)) continue;
-      processTabs.set(process.id, { id: tab.id, number: index + 1 });
-      representedBrowserIds.add(tab.id);
     }
+    const tab = tabs[index];
+    if (!tab || representedBrowserIds.has(tab.id)) continue;
+    processTabs.set(process.id, { id: tab.id, number: index + 1 });
+    representedBrowserIds.add(tab.id);
   }
 
   // Terminal tabs are labelled `⌘ N` by the tab host, where N is the tab's
