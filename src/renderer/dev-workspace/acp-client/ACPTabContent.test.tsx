@@ -14,6 +14,7 @@ import type { AcpSessionEventEnvelope } from '../../../shared/main-process-api-i
 import type { AcpTab } from '../../events/portalTabs';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import { AcpService } from '../../main-process-api/AcpService';
+import { TopicService } from '../../main-process-api/TopicService';
 import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 import { ACPTabContent } from './ACPTabContent';
 import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
@@ -58,6 +59,42 @@ jest.mock('../../components/StreamdownMarkdown', () => ({
     ),
 }));
 
+jest.mock('themed-markdown', () => ({
+  IndustryMarkdownSlide: ({
+    content,
+    onSelectionChange,
+  }: {
+    content: string;
+    onSelectionChange?: (selection: {
+      anchor: { exact: string; prefix?: string; suffix?: string };
+      rect: DOMRect;
+    }) => void;
+  }) =>
+    jest.requireActual<typeof React>('react').createElement(
+      'div',
+      { 'data-testid': 'industry-markdown-slide' },
+      jest
+        .requireActual<typeof React>('react')
+        .createElement('div', null, content),
+      jest.requireActual<typeof React>('react').createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: () =>
+            onSelectionChange?.({
+              anchor: {
+                exact: 'selected excerpt',
+                prefix: 'before ',
+                suffix: ' after',
+              },
+              rect: {} as DOMRect,
+            }),
+        },
+        'Select passage',
+      ),
+    ),
+}));
+
 jest.mock('../../hooks/useRepositoryGitStatus', () => ({
   useRepositoryGitStatus: jest.fn(),
 }));
@@ -80,7 +117,14 @@ jest.mock('../../main-process-api/RepositoryMonitoringService', () => ({
   },
 }));
 
+jest.mock('../../main-process-api/TopicService', () => ({
+  TopicService: {
+    getTopic: jest.fn(),
+  },
+}));
+
 const mocked = AcpService as jest.Mocked<typeof AcpService>;
+const mockedTopicService = TopicService as jest.Mocked<typeof TopicService>;
 const mockedRepositoryMonitoring = RepositoryMonitoringService as jest.Mocked<
   typeof RepositoryMonitoringService
 >;
@@ -105,6 +149,10 @@ let emit: ((envelope: AcpSessionEventEnvelope) => void) | null = null;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockedTopicService.getTopic.mockResolvedValue({
+    title: 'Investigate the bridge',
+    description: '## Goal\nReview the bridge behavior.',
+  } as never);
   Element.prototype.scrollIntoView = jest.fn();
   emit = null;
   mocked.connect.mockResolvedValue({ protocolVersion: 1 });
@@ -196,6 +244,10 @@ describe('ACPTabContent', () => {
     const identity = repoName.closest('.acp-session__identity');
     expect(identity).toHaveTextContent('subsystem-modeling');
     expect(identity).not.toHaveTextContent('OpenCode');
+    expect(screen.queryByText('Connected')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Disconnect' }),
+    ).not.toBeInTheDocument();
     expect(identity?.querySelector('img')).toHaveAttribute(
       'src',
       'https://github.com/principal-ai.png',
@@ -472,13 +524,118 @@ describe('ACPTabContent', () => {
     expect(screen.queryByText('Read a file')).not.toBeInTheDocument();
     expect(screen.getByText('Search topics')).toBeInTheDocument();
     expect(
-      screen.getByLabelText('1 Principal MCP tool calls'),
-    ).toHaveTextContent('1');
+      screen.getByRole('button', { name: 'Filter Principal MCP calls' }),
+    ).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Filter Principal MCP calls' }),
     );
     expect(screen.getByText('Read a file')).toBeInTheDocument();
+  });
+
+  it('shows topics opened through Principal MCP in the Artifacts view', async () => {
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Session ready');
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-topic-open',
+            title: 'Open a topic',
+            name: 'http_request',
+            status: 'completed',
+            rawInput: {
+              method: 'POST',
+              path: '/api/topics/topic-123/activate',
+            },
+          },
+        },
+      });
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Filter Principal MCP calls' }),
+    );
+    expect(screen.getByText('Open a topic')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Filter Principal MCP calls' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    expect(
+      screen.getByRole('tablist', { name: 'Activity view' }).parentElement,
+    ).toHaveClass('acp-session__topbar');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Filter Principal MCP calls' }),
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
+
+    expect(
+      await screen.findByText('Investigate the bridge'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Topic')).toBeInTheDocument();
+    expect(screen.queryByText('Open a topic')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('repo')).toBeInTheDocument();
+    expect(mockedTopicService.getTopic).toHaveBeenCalledWith('topic-123');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open topic Investigate the bridge in chat',
+      }),
+    );
+    const topicPreview = await screen.findByRole('region', {
+      name: 'Topic preview: Investigate the bridge',
+    });
+    expect(topicPreview).toHaveStyle({ height: '75%' });
+    fireEvent.keyDown(
+      screen.getByRole('separator', { name: 'Resize topic preview' }),
+      { key: 'ArrowDown' },
+    );
+    expect(topicPreview).toHaveStyle({ height: '80%' });
+    expect(topicPreview.parentElement).toHaveClass(
+      'acp-session__chat-viewport',
+    );
+    expect(
+      screen.getByRole('button', {
+        name: 'Close topic Investigate the bridge preview',
+      }),
+    ).toHaveClass('is-selected');
+    expect(topicPreview).toHaveTextContent('Review the bridge behavior.');
+    const composer = screen.getByLabelText('Message the agent');
+    expect(composer).toBeInTheDocument();
+    expect(topicPreview).not.toContainElement(composer);
+    fireEvent.click(screen.getByRole('button', { name: 'Select passage' }));
+    expect(
+      screen.getByText('Reference · Investigate the bridge'),
+    ).toBeInTheDocument();
+    fireEvent.change(composer, { target: { value: 'Explain this passage' } });
+    fireEvent.keyDown(composer, { key: 'Enter' });
+    await waitFor(() =>
+      expect(mocked.prompt).toHaveBeenCalledWith(
+        'acp-/repo',
+        expect.stringContaining('selected excerpt'),
+      ),
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Close topic Investigate the bridge preview',
+      }),
+    );
+    expect(topicPreview).toHaveClass('is-closing');
+    const animationEnd = new Event('animationend', { bubbles: true });
+    Object.defineProperty(animationEnd, 'animationName', {
+      value: 'acp-topic-preview-exit',
+    });
+    act(() => topicPreview.dispatchEvent(animationEnd));
+    expect(
+      screen.queryByRole('region', {
+        name: 'Topic preview: Investigate the bridge',
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the ACP-local File City below tool calls in the same scroll view', async () => {

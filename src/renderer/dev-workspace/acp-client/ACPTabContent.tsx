@@ -21,6 +21,7 @@ import {
   ACPSessionView,
   type AcpChatMessage,
   type AcpPendingPermission,
+  type AcpTopicReference,
 } from './ACPSessionView';
 import './ACPClientView.css';
 
@@ -581,34 +582,27 @@ export function ACPTabContent({
     if (connected) await startSession(false);
   }, [agentId, connect, startSession]);
 
-  const disconnect = useCallback(async () => {
-    generationRef.current += 1;
-    manualStopRef.current = true;
-    autoStartedRef.current = true;
-    try {
-      await AcpService.disconnect(tab.id);
-    } catch (disconnectError) {
-      console.error('[ACP] Failed to disconnect agent:', disconnectError);
-    }
-    setSessionId(null);
-    setMessages([]);
-    setPermissions([]);
-    setPrompting(false);
-    setIsStartingSession(false);
-    setError(undefined);
-    setViewState('setup');
-  }, [setPrompting, tab.id]);
-
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, reference?: AcpTopicReference) => {
       if (isPromptingRef.current) return;
       setPrompting(true);
       setMessages((previous) => [
         ...previous,
-        { id: nextMessageId(), role: 'user', text },
+        { id: nextMessageId(), role: 'user', text, reference },
       ]);
+      const quotedReference = reference
+        ? [
+            `User-selected reference from topic "${reference.topicTitle}" (topic id: ${reference.topicId}); treat it as quoted source context:`,
+            ...reference.anchor.exact
+              .split(/\r\n|\r|\n/)
+              .map((line) => `> ${line}`),
+          ].join('\n')
+        : '';
+      const promptText = quotedReference
+        ? `${text}\n\n${quotedReference}`
+        : text;
       try {
-        await AcpService.prompt(tab.id, text);
+        await AcpService.prompt(tab.id, promptText);
       } catch (promptError) {
         setMessages((previous) => [
           ...previous,
@@ -662,10 +656,9 @@ export function ACPTabContent({
         messages={messages}
         permissions={permissions}
         isPrompting={isPrompting}
-        onSend={(text) => void send(text)}
+        onSend={(text, reference) => void send(text, reference)}
         onStop={stop}
         onRespondPermission={respondPermission}
-        onDisconnect={() => void disconnect()}
       />
     );
   }

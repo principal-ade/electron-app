@@ -403,13 +403,21 @@ class AcpService {
         );
       }
 
-      await entry.connection.agent.request(methods.agent.session.load, {
-        sessionId: request.sessionId,
-        cwd: entry.directory,
-        mcpServers: [],
-      });
       entry.sessionId = request.sessionId;
-      entry.sessionReady = true;
+      try {
+        await entry.connection.agent.request(methods.agent.session.load, {
+          sessionId: request.sessionId,
+          cwd: entry.directory,
+          mcpServers: [],
+        });
+        entry.sessionReady = true;
+      } catch (error) {
+        if (entry.sessionId === request.sessionId) {
+          entry.sessionId = null;
+          entry.sessionReady = false;
+        }
+        throw error;
+      }
       log.info(
         `[ACP] Restored session ${request.sessionId} in ${entry.directory}`,
       );

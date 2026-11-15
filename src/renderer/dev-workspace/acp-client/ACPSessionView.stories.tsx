@@ -81,6 +81,5 @@ export const ToolCallActivity: Story = {
     onSend: () => {},
     onStop: () => {},
     onRespondPermission: () => {},
-    onDisconnect: () => {},
   },
 };
