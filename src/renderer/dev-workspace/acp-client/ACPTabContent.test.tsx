@@ -1,10 +1,21 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
+import { ArchitectureMapHighlightLayers } from '@principal-ai/file-city-react';
+import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import type { AcpSessionEventEnvelope } from '../../../shared/main-process-api-interfaces/AcpAPI';
 import type { AcpTab } from '../../events/portalTabs';
+import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import { AcpService } from '../../main-process-api/AcpService';
+import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 import { ACPTabContent } from './ACPTabContent';
+import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
 
 jest.mock('../../main-process-api/AcpService', () => ({
   AcpService: {
@@ -19,7 +30,58 @@ jest.mock('../../main-process-api/AcpService', () => ({
   },
 }));
 
+jest.mock('../../components/StreamdownMarkdown', () => ({
+  StreamdownMarkdown: ({
+    className,
+    streaming,
+    text,
+  }: {
+    className: string;
+    streaming?: boolean;
+    text: string;
+  }) =>
+    jest.requireActual<typeof React>('react').createElement(
+      'div',
+      {
+        className,
+        'data-testid': 'acp-agent-markdown',
+        'data-streaming': String(Boolean(streaming)),
+      },
+      text,
+    ),
+}));
+
+jest.mock('../../hooks/useRepositoryGitStatus', () => ({
+  useRepositoryGitStatus: jest.fn(),
+}));
+
+jest.mock('../../panels/home-panel/useRepoWatch', () => ({
+  useRepoWatch: jest.fn(),
+}));
+
+jest.mock('@principal-ai/file-city-react', () => ({
+  ArchitectureMapHighlightLayers: jest.fn(() => null),
+}));
+
+jest.mock('../file-city-panel/buildCityDataFromContext', () => ({
+  buildCityDataFromContext: jest.fn(),
+}));
+
+jest.mock('../../main-process-api/RepositoryMonitoringService', () => ({
+  RepositoryMonitoringService: {
+    getFileTree: jest.fn(),
+  },
+}));
+
 const mocked = AcpService as jest.Mocked<typeof AcpService>;
+const mockedRepositoryMonitoring = RepositoryMonitoringService as jest.Mocked<
+  typeof RepositoryMonitoringService
+>;
+const mockedBuildCityData = buildCityDataFromContext as jest.MockedFunction<
+  typeof buildCityDataFromContext
+>;
+const mockedUseRepositoryGitStatus =
+  useRepositoryGitStatus as jest.MockedFunction<typeof useRepositoryGitStatus>;
 
 function makeTab(overrides: Partial<AcpTab> = {}): AcpTab {
   return {
@@ -45,6 +107,11 @@ beforeEach(() => {
   mocked.cancel.mockResolvedValue();
   mocked.respondPermission.mockResolvedValue();
   mocked.disconnect.mockResolvedValue();
+  mockedRepositoryMonitoring.getFileTree.mockResolvedValue({} as never);
+  mockedBuildCityData.mockResolvedValue({} as never);
+  mockedUseRepositoryGitStatus.mockReturnValue({
+    gitStatusWithFiles: null,
+  } as ReturnType<typeof useRepositoryGitStatus>);
   mocked.onSessionEvent.mockImplementation((callback) => {
     emit = callback;
     return () => {
@@ -182,7 +249,7 @@ describe('ACPTabContent', () => {
           update: {
             sessionUpdate: 'agent_message_chunk',
             messageId: 'message-agent-1',
-            content: { type: 'text', text: 'Hello from the agent' },
+            content: { type: 'text', text: '**Hello from the agent**' },
           },
         },
       });
@@ -193,22 +260,229 @@ describe('ACPTabContent', () => {
     );
     expect(onSessionTitleChange).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Earlier request')).toBeInTheDocument();
-    expect(screen.getByText('Hello from the agent')).toBeInTheDocument();
+    expect(screen.getByTestId('acp-agent-markdown')).toHaveTextContent(
+      '**Hello from the agent**',
+    );
+    expect(screen.getByTestId('acp-agent-markdown')).toHaveAttribute(
+      'data-streaming',
+      'false',
+    );
     expect(screen.queryByText('not mine')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Message the agent'), {
       target: { value: 'List the files' },
     });
+    mocked.prompt.mockImplementation(() => new Promise(() => {}));
     fireEvent.keyDown(screen.getByLabelText('Message the agent'), {
       key: 'Enter',
     });
 
     await waitFor(() =>
-      expect(mocked.prompt).toHaveBeenCalledWith(
-        'acp-/repo',
-        'List the files',
-      ),
+      expect(mocked.prompt).toHaveBeenCalledWith('acp-/repo', 'List the files'),
     );
+    expect(screen.getByTestId('acp-agent-markdown')).toHaveAttribute(
+      'data-streaming',
+      'false',
+    );
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            content: { type: 'text', text: 'New response in progress' },
+          },
+        },
+      });
+    });
+
+    const agentMessages = screen.getAllByTestId('acp-agent-markdown');
+    expect(agentMessages[agentMessages.length - 1]).toHaveTextContent(
+      'New response in progress',
+    );
+    expect(agentMessages[agentMessages.length - 1]).toHaveAttribute(
+      'data-streaming',
+      'true',
+    );
+  });
+
+  it('lists ACP tool calls in the activity panel and updates their status', async () => {
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Session ready');
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-read',
+            title: 'Reading package.json',
+            name: 'read_file',
+            kind: 'read',
+            status: 'in_progress',
+            locations: [{ path: '/repo/package.json', line: 1 }],
+            rawInput: { path: 'package.json' },
+          },
+        },
+      });
+    });
+
+    expect(screen.getByLabelText('ACP activity')).toBeInTheDocument();
+    expect(screen.getByText('Reading package.json')).toBeInTheDocument();
+    expect(screen.getByText('read_file')).toBeInTheDocument();
+    expect(screen.getByText('/repo/package.json')).toBeInTheDocument();
+    expect(screen.getByText('in progress')).toBeInTheDocument();
+    expect(
+      screen
+        .getByText('Reading package.json')
+        .closest('.acp-session__messages'),
+    ).toBeNull();
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call_update',
+            toolCallId: 'call-read',
+            status: 'completed',
+            content: [
+              {
+                type: 'content',
+                content: { type: 'text', text: 'Read 42 lines' },
+              },
+            ],
+          },
+        },
+      });
+    });
+
+    expect(screen.getByText('completed')).toBeInTheDocument();
+    expect(screen.getByText('Read 42 lines')).toBeInTheDocument();
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'tool-processing',
+          result: {
+            sessionId: 'ses_1',
+            toolCallId: 'call-read',
+            outcome: 'highlighted',
+          },
+        },
+      });
+    });
+
+    expect(screen.getByText('Highlighted')).toBeInTheDocument();
+    expect(
+      screen.getByText('Reading package.json').closest('details'),
+    ).not.toHaveAttribute('open');
+  });
+
+  it('shows the ACP-local File City below tool calls in the same scroll view', async () => {
+    const dirtyStatus: GitStatusWithFiles = {
+      repoPath: '/repo',
+      branch: 'main',
+      isDirty: true,
+      hasUntracked: false,
+      hasStaged: false,
+      ahead: 0,
+      behind: 0,
+      watchingEnabled: true,
+      modifiedFiles: ['src/main.ts'],
+      untrackedFiles: [],
+      stagedFiles: [],
+      createdFiles: [],
+      deletedFiles: [],
+      hash: 'dirty-status',
+    };
+    mockedUseRepositoryGitStatus.mockReturnValue({
+      gitStatusWithFiles: dirtyStatus,
+    } as ReturnType<typeof useRepositoryGitStatus>);
+    const { container } = render(
+      <ACPTabContent tab={makeTab({ autoStart: true })} />,
+    );
+    await screen.findByText('Session ready');
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-city',
+            title: 'Read a source file',
+            name: 'read_file',
+            kind: 'read',
+            status: 'completed',
+            locations: [{ path: '/repo/src/main.ts' }],
+          },
+        },
+      });
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'tool-processing',
+          result: {
+            sessionId: 'ses_1',
+            toolCallId: 'call-city',
+            outcome: 'highlighted',
+            highlightPaths: ['src/main.ts'],
+          },
+        },
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockedRepositoryMonitoring.getFileTree).toHaveBeenCalledWith(
+        '/repo',
+      );
+      expect(mockedBuildCityData).toHaveBeenCalledWith(
+        expect.objectContaining({ repositoryPath: '/repo' }),
+      );
+      expect(ArchitectureMapHighlightLayers).toHaveBeenCalled();
+    });
+
+    const fileCityRegion = screen.getByRole('region', {
+      name: 'Workspace File City',
+    });
+    const toolPanelContent = container.querySelector(
+      '.acp-session__tool-panel-content',
+    );
+    expect(fileCityRegion).toBeInTheDocument();
+    expect(screen.getByText('Read a source file')).toBeInTheDocument();
+    expect(
+      container
+        .querySelector('.acp-session__tool-list')
+        ?.closest('.acp-session__tool-panel-content'),
+    ).toBe(toolPanelContent);
+    expect(fileCityRegion.parentElement).toBe(toolPanelContent);
+    expect(toolPanelContent?.lastElementChild).toBe(fileCityRegion);
+
+    const fileCityProps = (
+      ArchitectureMapHighlightLayers as jest.Mock
+    ).mock.calls.at(-1)?.[0];
+    expect(fileCityProps.highlightLayers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          items: [
+            expect.objectContaining({ path: 'src/main.ts', type: 'file' }),
+          ],
+        }),
+        expect.objectContaining({
+          id: 'acp-git-status-modified',
+          items: [expect.objectContaining({ path: 'src/main.ts' })],
+        }),
+      ]),
+    );
+    expect(screen.getByText('Modified (1)')).toBeInTheDocument();
   });
 
   it('answers permission requests with the chosen option', async () => {

@@ -23,11 +23,18 @@ import {
   type RequestPermissionRequest,
   type RequestPermissionResponse,
   type SessionNotification,
+  type ToolCallContent,
+  type ToolCallUpdate,
 } from '@agentclientprotocol/sdk';
+import type { OpenCodeACPEventInput } from '@principal-ai/agent-monitoring';
 import {
   AcpAPIEvent,
   DEFAULT_ACP_MODEL,
   getAcpAgent,
+  type AcpAgentId,
+  type AcpToolProcessingResult,
+  type AcpActiveSessionSummary,
+  type AcpToolCallSummary,
   type AcpConnectRequest,
   type AcpConnectResult,
   type AcpLoadSessionRequest,
@@ -39,10 +46,12 @@ import {
   type AcpSessionEvent,
   type AcpSessionEventEnvelope,
 } from '../../shared/main-process-api-interfaces/AcpAPI';
+import type { ACPToolProcessingResultMessage } from '../../event-processing-server/types';
 import { getTracer } from '../telemetry';
 import { repositoryTelemetryId } from '../telemetry/repositoryIdentity';
 import { openCodeSessionHistoryService } from '../opencode/OpenCodeSessionHistoryService';
 import { getProcessPath } from '../utils/processPath';
+import { getEventServerManager } from '../agent-session-events/EventServerManager';
 
 const tracer = getTracer('principal-ade-acp');
 const TITLE_LOOKUP_ATTEMPTS = 5;
@@ -50,6 +59,7 @@ const TITLE_LOOKUP_INTERVAL_MS = 1_500;
 
 interface AcpConnectionEntry {
   key: string;
+  agentId: AcpAgentId;
   directory: string;
   webContents: Electron.WebContents;
   child: ChildProcessWithoutNullStreams;
@@ -71,6 +81,8 @@ interface AcpConnectionEntry {
     updateCounts: Map<string, number>;
     permissionRequestCount: number;
   } | null;
+  toolCalls: Map<string, AcpToolCallSummary>;
+  lastActivityAt?: number;
 }
 
 const cancelledPermission = (): RequestPermissionResponse => ({
@@ -113,6 +125,13 @@ async function withAcpSpan<T>(
 class AcpService {
   private readonly entries = new Map<string, AcpConnectionEntry>();
 
+  constructor() {
+    getEventServerManager().on(
+      'acp-tool-processing-result',
+      this.handleToolProcessingResult,
+    );
+  }
+
   getActiveSessionInfo(directory: string): {
     sessionKey: string;
     agentName: string;
@@ -130,6 +149,48 @@ class AcpService {
       hasSession: entry.sessionReady,
       isPrompting: entry.activePrompt !== null,
     };
+  }
+
+  getActiveSessions(): AcpActiveSessionSummary[] {
+    return [...this.entries.values()]
+      .filter((entry) => !entry.closed && entry.sessionId && entry.sessionReady)
+      .map((entry) => ({
+        sessionId: entry.sessionId as string,
+        agentId: entry.agentId,
+        agentName: entry.agentName,
+        directory: entry.directory,
+        isPrompting: entry.activePrompt !== null,
+        toolCallCount: entry.toolCalls.size,
+        lastActivityAt: entry.lastActivityAt,
+      }))
+      .sort(
+        (left, right) =>
+          (right.lastActivityAt ?? 0) - (left.lastActivityAt ?? 0),
+      );
+  }
+
+  getToolCallsForSession(
+    sessionId: string,
+    directory?: string,
+  ): AcpToolCallSummary[] | null {
+    const matches = [...this.entries.values()].filter(
+      (entry) =>
+        !entry.closed &&
+        entry.sessionReady &&
+        entry.sessionId === sessionId &&
+        (!directory || entry.directory === directory),
+    );
+    if (matches.length !== 1) return null;
+
+    return [...matches[0].toolCalls.values()]
+      .sort((left, right) => right.updatedAt - left.updatedAt)
+      .map((toolCall) => ({
+        ...toolCall,
+        locations: toolCall.locations?.map((location) => ({
+          path: location.path,
+          line: location.line,
+        })),
+      }));
   }
 
   async connect(
@@ -176,6 +237,7 @@ class AcpService {
 
       const entry: AcpConnectionEntry = {
         key: request.sessionKey,
+        agentId: request.agent,
         directory: request.directory,
         webContents,
         child,
@@ -190,6 +252,8 @@ class AcpService {
         supportsLoadSession: false,
         agentName: agent.name,
         activePrompt: null,
+        toolCalls: new Map(),
+        lastActivityAt: Date.now(),
       };
 
       // Register handlers before connecting: the SDK dispatches the first
@@ -516,6 +580,22 @@ class AcpService {
     if (entry.closed) return;
     if (entry.sessionId && notification.sessionId !== entry.sessionId) return;
     const updateType = notification.update.sessionUpdate;
+    entry.lastActivityAt = Date.now();
+    if (updateType === 'tool_call' || updateType === 'tool_call_update') {
+      this.recordToolCallUpdate(entry, notification.update as ToolCallUpdate);
+    }
+    if (
+      entry.agentId === 'opencode' &&
+      entry.sessionId &&
+      (updateType === 'tool_call' || updateType === 'tool_call_update')
+    ) {
+      const acpEvent: OpenCodeACPEventInput = {
+        sessionId: notification.sessionId,
+        workingDirectory: entry.directory,
+        update: notification.update,
+      };
+      getEventServerManager().processACPEvent(acpEvent);
+    }
     const sessionTitle =
       notification.update.sessionUpdate === 'session_info_update'
         ? notification.update.title
@@ -531,6 +611,96 @@ class AcpService {
       this.recordSessionTitleUpdate(entry, sessionTitle, 'acp_notification');
     }
     this.emit(entry, { type: 'update', update: notification.update });
+  }
+
+  private readonly handleToolProcessingResult = (
+    result: ACPToolProcessingResultMessage,
+  ): void => {
+    const sessionResult: AcpToolProcessingResult = {
+      sessionId: result.sessionId,
+      toolCallId: result.toolCallId,
+      outcome: result.outcome,
+    };
+    for (const entry of this.entries.values()) {
+      if (
+        entry.closed ||
+        entry.agentId !== 'opencode' ||
+        entry.sessionId !== result.sessionId
+      ) {
+        continue;
+      }
+      const toolCall = entry.toolCalls.get(result.toolCallId);
+      const highlightPaths = [
+        ...new Set([
+          ...(toolCall?.highlightPaths ?? []),
+          ...(result.highlightPaths ?? []),
+        ]),
+      ];
+      if (toolCall) {
+        entry.toolCalls.delete(result.toolCallId);
+        entry.toolCalls.set(result.toolCallId, {
+          ...toolCall,
+          processing: result.outcome,
+          highlightPaths,
+          updatedAt: Date.now(),
+        });
+      }
+      this.emit(entry, {
+        type: 'tool-processing',
+        result: { ...sessionResult, highlightPaths },
+      });
+    }
+  };
+
+  private recordToolCallUpdate(
+    entry: AcpConnectionEntry,
+    update: ToolCallUpdate,
+  ): void {
+    const previous = entry.toolCalls.get(update.toolCallId);
+    const locations =
+      update.locations == null && update.content == null
+        ? previous?.locations
+        : this.mergeToolLocations(
+            update.locations ?? [],
+            update.content,
+            previous?.locations,
+          );
+    const next: AcpToolCallSummary = {
+      toolCallId: update.toolCallId,
+      title: update.title ?? previous?.title ?? 'Tool call',
+      name: update.name ?? previous?.name,
+      kind: update.kind ?? previous?.kind,
+      status: update.status ?? previous?.status,
+      locations,
+      highlightPaths: previous?.highlightPaths,
+      processing: previous?.processing,
+      updatedAt: Date.now(),
+    };
+    entry.toolCalls.delete(update.toolCallId);
+    entry.toolCalls.set(update.toolCallId, next);
+    while (entry.toolCalls.size > 500) {
+      const oldestId = entry.toolCalls.keys().next().value;
+      if (oldestId === undefined) break;
+      entry.toolCalls.delete(oldestId);
+    }
+  }
+
+  private mergeToolLocations(
+    locations: NonNullable<ToolCallUpdate['locations']>,
+    content?: ToolCallContent[] | null,
+    previous?: AcpToolCallSummary['locations'],
+  ): AcpToolCallSummary['locations'] {
+    const incoming = [
+      ...locations.map(({ path, line }) => ({ path, line })),
+      ...(content ?? []).flatMap((part) =>
+        part.type === 'diff' ? [{ path: part.path, line: undefined }] : [],
+      ),
+    ];
+    const unique = new Map<string, { path: string; line?: number | null }>();
+    for (const location of [...(previous ?? []), ...incoming]) {
+      unique.set(`${location.path}:${location.line ?? ''}`, location);
+    }
+    return [...unique.values()];
   }
 
   private scheduleOpenCodeTitleLookup(

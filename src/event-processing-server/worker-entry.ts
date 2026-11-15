@@ -5,6 +5,7 @@
 
 import { HttpEventServer } from './HttpEventServer';
 import { utilityTelemetry } from './telemetry';
+import { isProcessACPEventMessage } from './types';
 import type {
   MainToServerMessage,
   ServerToMainMessage,
@@ -169,6 +170,13 @@ function handleMessage(rawMessage: unknown): void {
 
   if (isUnregisterPortMessage(message)) {
     unregisterPort(message.windowId, message.repository);
+    return;
+  }
+
+  if (isProcessACPEventMessage(message)) {
+    if (server) {
+      void server.processACPEvent(message.rawData);
+    }
     return;
   }
 

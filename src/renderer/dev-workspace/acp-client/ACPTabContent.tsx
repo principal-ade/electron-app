@@ -3,13 +3,14 @@ import { Loader2, Sparkles, XCircle } from 'lucide-react';
 import type {
   ContentBlock,
   SessionUpdate,
-  ToolCall,
   ToolCallContent,
+  ToolCallLocation,
   ToolCallUpdate,
 } from '@agentclientprotocol/sdk';
 import {
   DEFAULT_ACP_AGENT,
   getAcpAgent,
+  type AcpToolProcessingResult,
   type AcpAgentId,
 } from '../../../shared/main-process-api-interfaces/AcpAPI';
 import type { AcpTab } from '../../events/portalTabs';
@@ -70,18 +71,6 @@ function toolDetail(
   return parts.length > 0 ? parts.join('\n') : undefined;
 }
 
-function toolMessage(call: ToolCall, id: string): AcpChatMessage {
-  return {
-    id,
-    role: 'tool',
-    toolCallId: call.toolCallId,
-    title: call.title,
-    status: call.status,
-    kind: call.kind,
-    detail: toolDetail(call.content),
-  };
-}
-
 function applyToolUpdate(
   previous: AcpChatMessage[],
   update: ToolCallUpdate,
@@ -99,9 +88,19 @@ function applyToolUpdate(
         role: 'tool',
         toolCallId: update.toolCallId,
         title: update.title ?? 'Tool call',
+        name: update.name ?? undefined,
         status: update.status ?? undefined,
         kind: update.kind ?? undefined,
         detail: toolDetail(update.content),
+        locations: update.locations ?? undefined,
+        rawInput:
+          update.rawInput !== undefined && update.rawInput !== null
+            ? update.rawInput
+            : undefined,
+        rawOutput:
+          update.rawOutput !== undefined && update.rawOutput !== null
+            ? update.rawOutput
+            : undefined,
       },
     ];
   }
@@ -111,12 +110,61 @@ function applyToolUpdate(
   const next: AcpChatMessage = {
     ...existing,
     title: update.title ?? existing.title,
+    name: update.name ?? existing.name,
     status: update.status ?? existing.status,
     kind: update.kind ?? existing.kind,
     detail:
-      update.content != null
-        ? toolDetail(update.content)
-        : existing.detail,
+      update.content != null ? toolDetail(update.content) : existing.detail,
+    locations:
+      update.locations != null
+        ? (update.locations as ToolCallLocation[])
+        : existing.locations,
+    rawInput:
+      update.rawInput !== undefined && update.rawInput !== null
+        ? update.rawInput
+        : existing.rawInput,
+    rawOutput:
+      update.rawOutput !== undefined && update.rawOutput !== null
+        ? update.rawOutput
+        : existing.rawOutput,
+  };
+  return [...previous.slice(0, index), next, ...previous.slice(index + 1)];
+}
+
+function applyToolProcessingResult(
+  previous: AcpChatMessage[],
+  result: AcpToolProcessingResult,
+  nextId: () => string,
+): AcpChatMessage[] {
+  const index = previous.findIndex(
+    (message) =>
+      message.role === 'tool' && message.toolCallId === result.toolCallId,
+  );
+  if (index === -1) {
+    return [
+      ...previous,
+      {
+        id: nextId(),
+        role: 'tool',
+        toolCallId: result.toolCallId,
+        title: 'Tool call',
+        processing: result.outcome,
+        highlightPaths: result.highlightPaths,
+      },
+    ];
+  }
+
+  const existing = previous[index];
+  if (existing.role !== 'tool') return previous;
+  const next: AcpChatMessage = {
+    ...existing,
+    processing: result.outcome,
+    highlightPaths: [
+      ...new Set([
+        ...(existing.highlightPaths ?? []),
+        ...(result.highlightPaths ?? []),
+      ]),
+    ],
   };
   return [...previous.slice(0, index), next, ...previous.slice(index + 1)];
 }
@@ -136,10 +184,7 @@ function applyUpdate(
         last?.role === 'user' &&
         (!protocolMessageId || last.protocolMessageId === protocolMessageId)
       ) {
-        return [
-          ...previous.slice(0, -1),
-          { ...last, text: last.text + text },
-        ];
+        return [...previous.slice(0, -1), { ...last, text: last.text + text }];
       }
       return [
         ...previous,
@@ -160,10 +205,7 @@ function applyUpdate(
         last?.role === 'agent' &&
         (!protocolMessageId || last.protocolMessageId === protocolMessageId)
       ) {
-        return [
-          ...previous.slice(0, -1),
-          { ...last, text: last.text + text },
-        ];
+        return [...previous.slice(0, -1), { ...last, text: last.text + text }];
       }
       return [
         ...previous,
@@ -179,10 +221,7 @@ function applyUpdate(
         last?.role === 'thought' &&
         (!protocolMessageId || last.protocolMessageId === protocolMessageId)
       ) {
-        return [
-          ...previous.slice(0, -1),
-          { ...last, text: last.text + text },
-        ];
+        return [...previous.slice(0, -1), { ...last, text: last.text + text }];
       }
       return [
         ...previous,
@@ -190,10 +229,7 @@ function applyUpdate(
       ];
     }
     case 'tool_call':
-      return [
-        ...previous,
-        toolMessage(update as ToolCall, nextId()),
-      ];
+      return applyToolUpdate(previous, update as ToolCallUpdate, nextId);
     case 'tool_call_update':
       return applyToolUpdate(previous, update as ToolCallUpdate, nextId);
     case 'plan': {
@@ -363,8 +399,7 @@ export function ACPTabContent({
   onSessionIdChange,
   onSessionTitleChange,
 }: ACPTabContentProps) {
-  const [viewState, setViewState] =
-    useState<ACPClientViewState>('setup');
+  const [viewState, setViewState] = useState<ACPClientViewState>('setup');
   const [agentId, setAgentId] = useState<AcpAgentId>(
     tab.agent ?? DEFAULT_ACP_AGENT,
   );
@@ -413,6 +448,13 @@ export function ACPTabContent({
           return;
         }
 
+        if (event.type === 'tool-processing') {
+          setMessages((previous) =>
+            applyToolProcessingResult(previous, event.result, nextMessageId),
+          );
+          return;
+        }
+
         if (event.type === 'permission') {
           setPermissions((previous) =>
             previous.some((entry) => entry.requestId === event.requestId)
@@ -435,7 +477,10 @@ export function ACPTabContent({
         setViewState('error');
       });
     } catch (subscriptionError) {
-      console.error('[ACP] Failed to subscribe to session events:', subscriptionError);
+      console.error(
+        '[ACP] Failed to subscribe to session events:',
+        subscriptionError,
+      );
       return () => {};
     }
   }, [nextMessageId, onSessionTitleChange, setPrompting, tab.id]);
@@ -599,7 +644,10 @@ export function ACPTabContent({
         requestId,
         optionId,
       }).catch((permissionError) => {
-        console.error('[ACP] Failed to answer permission request:', permissionError);
+        console.error(
+          '[ACP] Failed to answer permission request:',
+          permissionError,
+        );
       });
     },
     [tab.id],

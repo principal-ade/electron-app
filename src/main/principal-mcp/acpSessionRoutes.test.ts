@@ -14,11 +14,46 @@ function response() {
 function setup(overrides: Partial<AcpSessionRouteDependencies> = {}): {
   openHandler: (req: Request, res: Response) => Promise<void>;
   promptHandler: (req: Request, res: Response) => Promise<void>;
+  sessionsHandler: (req: Request, res: Response) => Promise<void>;
+  toolCallsHandler: (req: Request, res: Response) => Promise<void>;
   deps: AcpSessionRouteDependencies;
 } {
   const post = jest.fn();
+  const get = jest.fn();
   const deps: AcpSessionRouteDependencies = {
     getRepositoryDirectories: jest.fn(async () => ['/repos/acme']),
+    listActiveSessions: jest.fn(() => [
+      {
+        sessionId: 'ses_1',
+        agentId: 'opencode',
+        agentName: 'OpenCode',
+        directory: '/repos/acme/app',
+        isPrompting: false,
+        toolCallCount: 1,
+        lastActivityAt: 123,
+      },
+      {
+        sessionId: 'ses_outside',
+        agentId: 'opencode',
+        agentName: 'OpenCode',
+        directory: '/private',
+        isPrompting: false,
+        toolCallCount: 0,
+      },
+    ]),
+    getToolCallsForSession: jest.fn(() => [
+      {
+        toolCallId: 'call_1',
+        title: 'Reading package.json',
+        name: 'read_file',
+        kind: 'read',
+        status: 'completed',
+        locations: [{ path: '/repos/acme/app/package.json', line: 1 }],
+        highlightPaths: ['app/package.json'],
+        processing: 'highlighted',
+        updatedAt: 123,
+      },
+    ]),
     startSession: jest.fn(async () => ({
       agentName: 'OpenCode',
       alreadyRunning: false,
@@ -35,7 +70,7 @@ function setup(overrides: Partial<AcpSessionRouteDependencies> = {}): {
     })),
     ...overrides,
   };
-  registerAcpSessionRoutes({ post } as unknown as Application, deps);
+  registerAcpSessionRoutes({ get, post } as unknown as Application, deps);
   const findHandler = (
     routePath: string,
   ): ((req: Request, res: Response) => Promise<void>) =>
@@ -45,6 +80,13 @@ function setup(overrides: Partial<AcpSessionRouteDependencies> = {}): {
   return {
     openHandler: findHandler('/api/acp/sessions/open'),
     promptHandler: findHandler('/api/acp/prompt'),
+    sessionsHandler: get.mock.calls.find(
+      ([registeredPath]) => registeredPath === '/api/acp/sessions',
+    )?.[1] as (req: Request, res: Response) => Promise<void>,
+    toolCallsHandler: get.mock.calls.find(
+      ([registeredPath]) =>
+        registeredPath === '/api/acp/sessions/:sessionId/tool-calls',
+    )?.[1] as (req: Request, res: Response) => Promise<void>,
     deps,
   };
 }
@@ -186,6 +228,85 @@ test('opens an ACP session through the Principal renderer', async () => {
     alreadyRunning: false,
     agent: 'OpenCode',
   });
+});
+
+test('lists only active ACP sessions in registered repositories', async () => {
+  const { sessionsHandler } = setup();
+  const res = response();
+
+  await sessionsHandler({ headers: {}, query: {} } as unknown as Request, res);
+
+  expect(res.json).toHaveBeenCalledWith({
+    success: true,
+    sessions: [
+      expect.objectContaining({
+        sessionId: 'ses_1',
+        directory: '/repos/acme/app',
+      }),
+    ],
+  });
+});
+
+test('returns bounded tool-call summaries without raw input or output', async () => {
+  const { toolCallsHandler, deps } = setup();
+  const res = response();
+
+  await toolCallsHandler(
+    {
+      headers: {},
+      params: { sessionId: 'ses_1' },
+      query: { limit: '1' },
+    } as unknown as Request,
+    res,
+  );
+
+  expect(deps.getToolCallsForSession).toHaveBeenCalledWith(
+    'ses_1',
+    '/repos/acme/app',
+  );
+  expect(res.json).toHaveBeenCalledWith({
+    success: true,
+    session: expect.objectContaining({ sessionId: 'ses_1' }),
+    toolCalls: [
+      expect.objectContaining({
+        toolCallId: 'call_1',
+        processing: 'highlighted',
+        highlightPaths: ['app/package.json'],
+        locations: [{ path: 'app/package.json', line: 1 }],
+      }),
+    ],
+    count: 1,
+    limit: 1,
+  });
+  const payload = (res.json as jest.Mock).mock.calls[0][0];
+  expect(payload.toolCalls[0]).not.toHaveProperty('rawInput');
+  expect(payload.toolCalls[0]).not.toHaveProperty('rawOutput');
+});
+
+test('rejects browser-origin ACP inspection requests', async () => {
+  const { sessionsHandler, toolCallsHandler, deps } = setup();
+  const listResponse = response();
+  const callsResponse = response();
+
+  await sessionsHandler(
+    {
+      headers: { origin: 'https://example.test' },
+      query: {},
+    } as unknown as Request,
+    listResponse,
+  );
+  await toolCallsHandler(
+    {
+      headers: { origin: 'https://example.test' },
+      params: { sessionId: 'ses_1' },
+      query: {},
+    } as unknown as Request,
+    callsResponse,
+  );
+
+  expect(listResponse.status).toHaveBeenCalledWith(403);
+  expect(callsResponse.status).toHaveBeenCalledWith(403);
+  expect(deps.getToolCallsForSession).not.toHaveBeenCalled();
 });
 
 test('validates ACP open requests before dispatching', async () => {

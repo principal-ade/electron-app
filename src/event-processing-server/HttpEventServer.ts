@@ -12,7 +12,9 @@ import { promisify } from 'util';
 import { machineIdSync } from 'node-machine-id';
 import {
   SUPPORTED_AGENTS,
-  type SupportedAgent,
+  SupportedAgent,
+  OpenCodeACPEventProcessor,
+  type OpenCodeACPEventInput,
   AgentEventPipeline,
   PipelineMetrics,
   RepositoryInfo,
@@ -38,6 +40,7 @@ import {
   HOOK_DEBUG_CHANNEL,
   type HookDebugEvent,
 } from '../shared/ipc-events/HookDebugEvents';
+import type { AcpToolProcessingOutcome } from '../shared/main-process-api-interfaces/AcpAPI';
 
 /**
  * Server-side implementation of PathNormalizationAdapter
@@ -235,8 +238,10 @@ export class HttpEventServer extends EventEmitter {
   private maxPortRetries: number = 10;
 
   private pipeline!: AgentEventPipeline;
+  private acpPipeline!: AgentEventPipeline;
   private sendToMain: (message: ServerToMainMessage) => void;
   private config: EventProcessingServerConfig;
+  private acpToolCallPaths = new Map<string, Set<string>>();
 
   // Statistics
   private startTime: number;
@@ -305,8 +310,95 @@ export class HttpEventServer extends EventEmitter {
       logErrors: true,
       metrics,
     });
+    this.acpPipeline = new AgentEventPipeline(adapter, {
+      logErrors: true,
+      metrics,
+      customProcessors: new Map([
+        [SupportedAgent.OPENCODE, new OpenCodeACPEventProcessor()],
+      ]),
+    });
 
     this.log('info', 'Event processing pipeline initialized');
+  }
+
+  /**
+   * Process ACP tool updates through a separate OpenCode processor and return
+   * repository-relative highlight paths to the owning ACP tab.
+   */
+  async processACPEvent(rawData: OpenCodeACPEventInput): Promise<void> {
+    try {
+      const event = await this.acpPipeline.processRawEvent(
+        SupportedAgent.OPENCODE,
+        rawData,
+      );
+      const repository = event.repository?.root;
+      const toolCallId = event.data?.toolCallId;
+      if (typeof toolCallId !== 'string') {
+        return;
+      }
+      if (!repository) {
+        this.reportACPToolProcessing(rawData, 'no-repository');
+        return;
+      }
+      if (!event.files?.length) {
+        this.reportACPToolProcessing(rawData, 'no-file-paths');
+        return;
+      }
+
+      const callKey = `${event.sessionId}:${toolCallId}`;
+      const seenPaths = this.acpToolCallPaths.get(callKey) ?? new Set<string>();
+      const newFiles = event.files.filter((file) => {
+        const path = file.repository?.relativePath;
+        return (
+          Boolean(path) &&
+          file.context !== 'system_file' &&
+          !seenPaths.has(path as string)
+        );
+      });
+      if (newFiles.length === 0) {
+        this.reportACPToolProcessing(
+          rawData,
+          seenPaths.size > 0 ? 'already-highlighted' : 'no-file-paths',
+        );
+        return;
+      }
+
+      const highlightPaths = newFiles.flatMap((file) =>
+        file.repository?.relativePath ? [file.repository.relativePath] : [],
+      );
+      for (const file of newFiles) {
+        const path = file.repository?.relativePath;
+        if (path) seenPaths.add(path);
+      }
+      this.acpToolCallPaths.delete(callKey);
+      this.acpToolCallPaths.set(callKey, seenPaths);
+      while (this.acpToolCallPaths.size > 500) {
+        const oldestKey = this.acpToolCallPaths.keys().next().value;
+        if (oldestKey === undefined) break;
+        this.acpToolCallPaths.delete(oldestKey);
+      }
+      this.reportACPToolProcessing(rawData, 'highlighted', highlightPaths);
+    } catch (error) {
+      this.errorCount++;
+      this.log('error', `Error processing OpenCode ACP event: ${error}`);
+      this.reportACPToolProcessing(rawData, 'failed');
+    }
+  }
+
+  private reportACPToolProcessing(
+    rawData: OpenCodeACPEventInput,
+    outcome: AcpToolProcessingOutcome,
+    highlightPaths?: string[],
+  ): void {
+    this.sendToMain({
+      type: 'ACP_TOOL_PROCESSING_RESULT',
+      id: `acp-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: Date.now(),
+      sessionId: rawData.sessionId,
+      toolCallId: rawData.update.toolCallId,
+      outcome,
+      highlightPaths,
+    });
   }
 
   /**

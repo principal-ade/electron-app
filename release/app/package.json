@@ -22,7 +22,7 @@
     "@opentelemetry/sdk-trace-base": "^2.5.0",
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "@principal-ade/agent-manager": "^1.1.1",
-    "@principal-ai/agent-monitoring": "^0.3.44",
+    "@principal-ai/agent-monitoring": "^0.3.47",
     "@principal-ai/alexandria-core-library": "^0.7.0",
     "@principal-ai/codebase-composition": "^0.2.58",
     "@principal-ai/control-tower-core": "^0.6.2",

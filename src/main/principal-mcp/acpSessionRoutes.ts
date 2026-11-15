@@ -1,6 +1,10 @@
 import path from 'path';
 import type { Application, Request, Response } from 'express';
-import type { AcpPromptResult } from '../../shared/main-process-api-interfaces/AcpAPI';
+import type {
+  AcpActiveSessionSummary,
+  AcpPromptResult,
+  AcpToolCallSummary,
+} from '../../shared/main-process-api-interfaces/AcpAPI';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { getTracer } from '../telemetry';
 import { repositoryTelemetryId } from '../telemetry/repositoryIdentity';
@@ -10,6 +14,11 @@ const MAX_PROMPT_LENGTH = 20_000;
 
 export interface AcpSessionRouteDependencies {
   getRepositoryDirectories(): Promise<string[]>;
+  listActiveSessions(): AcpActiveSessionSummary[];
+  getToolCallsForSession(
+    sessionId: string,
+    directory?: string,
+  ): AcpToolCallSummary[] | null;
   startSession(
     directory: string,
   ): Promise<{ agentName: string; alreadyRunning: boolean } | null>;
@@ -58,6 +67,195 @@ export function registerAcpSessionRoutes(
   app: Application,
   deps: AcpSessionRouteDependencies,
 ): void {
+  app.get('/api/acp/sessions', async (req, res) => {
+    if (rejectBrowserOrigin(req, res)) return;
+
+    if (
+      req.query.directory !== undefined &&
+      typeof req.query.directory !== 'string'
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'directory must be a single absolute path',
+      });
+      return;
+    }
+    const directory =
+      typeof req.query.directory === 'string' ? req.query.directory : undefined;
+    if (directory !== undefined && !path.isAbsolute(directory)) {
+      res.status(400).json({
+        success: false,
+        error: 'directory must be absolute',
+      });
+      return;
+    }
+
+    try {
+      const repositoryDirectories = (
+        await deps.getRepositoryDirectories()
+      ).filter((value) => typeof value === 'string' && path.isAbsolute(value));
+      if (
+        directory &&
+        !repositoryDirectories.some((root) => isWithin(directory, root))
+      ) {
+        res.status(400).json({
+          success: false,
+          error: 'directory must be inside a registered repository',
+        });
+        return;
+      }
+
+      const sessions = deps
+        .listActiveSessions()
+        .filter(
+          (session) =>
+            (!directory || session.directory === directory) &&
+            repositoryDirectories.some((root) =>
+              isWithin(session.directory, root),
+            ),
+        );
+      res.json({ success: true, sessions });
+    } catch {
+      res.status(500).json({
+        success: false,
+        error: 'could not read active ACP sessions',
+      });
+    }
+  });
+
+  app.get('/api/acp/sessions/:sessionId/tool-calls', async (req, res) => {
+    if (rejectBrowserOrigin(req, res)) return;
+
+    const sessionId =
+      typeof req.params.sessionId === 'string' ? req.params.sessionId : '';
+    if (
+      req.query.directory !== undefined &&
+      typeof req.query.directory !== 'string'
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'directory must be a single absolute path',
+      });
+      return;
+    }
+    const directory =
+      typeof req.query.directory === 'string' ? req.query.directory : undefined;
+    if (req.query.limit !== undefined && typeof req.query.limit !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: 'limit must be a single integer',
+      });
+      return;
+    }
+    const rawLimit =
+      typeof req.query.limit === 'string' ? req.query.limit : undefined;
+    const limit = rawLimit === undefined ? 100 : Number(rawLimit);
+    if (!sessionId) {
+      res.status(400).json({ success: false, error: 'sessionId is required' });
+      return;
+    }
+    if (directory !== undefined && !path.isAbsolute(directory)) {
+      res.status(400).json({
+        success: false,
+        error: 'directory must be absolute',
+      });
+      return;
+    }
+    if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
+      res.status(400).json({
+        success: false,
+        error: 'limit must be an integer from 1 to 200',
+      });
+      return;
+    }
+
+    try {
+      const repositoryDirectories = (
+        await deps.getRepositoryDirectories()
+      ).filter((value) => typeof value === 'string' && path.isAbsolute(value));
+      if (
+        directory &&
+        !repositoryDirectories.some((root) => isWithin(directory, root))
+      ) {
+        res.status(400).json({
+          success: false,
+          error: 'directory must be inside a registered repository',
+        });
+        return;
+      }
+
+      const sessions = deps
+        .listActiveSessions()
+        .filter(
+          (session) =>
+            session.sessionId === sessionId &&
+            (!directory || session.directory === directory) &&
+            repositoryDirectories.some((root) =>
+              isWithin(session.directory, root),
+            ),
+        );
+      if (sessions.length === 0) {
+        res.status(404).json({
+          success: false,
+          error: 'no active ACP session found for this sessionId',
+        });
+        return;
+      }
+      if (sessions.length > 1) {
+        res.status(409).json({
+          success: false,
+          error: 'sessionId is ambiguous; provide the directory query',
+        });
+        return;
+      }
+
+      const session = sessions[0];
+      const toolCalls = deps.getToolCallsForSession(
+        sessionId,
+        session.directory,
+      );
+      if (!toolCalls) {
+        res.status(404).json({
+          success: false,
+          error: 'no active ACP session found for this sessionId',
+        });
+        return;
+      }
+      const safeToolCalls = toolCalls.slice(0, limit).map((toolCall) => ({
+        ...toolCall,
+        locations: toolCall.locations?.flatMap((location) => {
+          const absolutePath = path.resolve(
+            path.isAbsolute(location.path)
+              ? location.path
+              : path.resolve(session.directory, location.path),
+          );
+          const repositoryRoot = [...repositoryDirectories]
+            .filter((root) => isWithin(absolutePath, root))
+            .sort((left, right) => right.length - left.length)[0];
+          if (!repositoryRoot) return [];
+          return [
+            {
+              path: path.relative(repositoryRoot, absolutePath),
+              ...(location.line == null ? {} : { line: location.line }),
+            },
+          ];
+        }),
+      }));
+      res.json({
+        success: true,
+        session,
+        toolCalls: safeToolCalls,
+        count: toolCalls.length,
+        limit,
+      });
+    } catch {
+      res.status(500).json({
+        success: false,
+        error: 'could not read ACP tool calls',
+      });
+    }
+  });
+
   app.post('/api/acp/sessions/open', async (req, res) => {
     if (rejectBrowserOrigin(req, res)) return;
 

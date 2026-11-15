@@ -1127,6 +1127,9 @@ export class PrincipalMCPBridge extends EventEmitter {
         (await AlexandriaRegistryService.getInstance().getRepositories()).map(
           (repo) => repo.path,
         ),
+      listActiveSessions: () => getAcpService().getActiveSessions(),
+      getToolCallsForSession: (sessionId, directory) =>
+        getAcpService().getToolCallsForSession(sessionId, directory),
       startSession: startAcpSessionFromMainWindow,
       getActiveSessionInfo: (directory) =>
         getAcpService().getActiveSessionInfo(directory),

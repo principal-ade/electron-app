@@ -1098,8 +1098,56 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
   {
     name: 'acp-sessions',
     description:
-      'Open ACP sessions in the Principal window and send prompts to active sessions in registered repositories.',
+      'Inspect active ACP sessions and recent tool-call summaries, open ACP sessions in the Principal window, and send prompts to active sessions in registered repositories.',
     routes: [
+      {
+        method: 'GET',
+        path: '/api/acp/sessions',
+        summary: 'List active ACP sessions and their recent tool-call counts.',
+        query: {
+          directory:
+            'string (optional): absolute directory inside a registered repository; narrows the results.',
+        },
+        response:
+          '{ success: true, sessions: [{ sessionId, agentId, agentName, directory, isPrompting, toolCallCount, lastActivityAt? }] }',
+        errors: {
+          '400':
+            'Directory is not absolute or outside registered repositories.',
+          '403': 'Browser-origin requests are not allowed.',
+          '500': 'Active ACP sessions could not be read.',
+        },
+        notes: [
+          'Returns only connected, started sessions in registered repositories. Session and tool-call history is in-memory and disappears when the ACP connection closes or the app restarts.',
+        ],
+      },
+      {
+        method: 'GET',
+        path: '/api/acp/sessions/:sessionId/tool-calls',
+        summary:
+          'Read recent tool-call summaries and map-processing outcomes for an active ACP session.',
+        parameters: {
+          sessionId: 'ACP session ID from GET /api/acp/sessions.',
+        },
+        query: {
+          directory:
+            'string (optional): absolute session directory; required to disambiguate duplicate session IDs.',
+          limit:
+            'integer (optional): 1–200 summaries, most recently updated first; defaults to 100.',
+        },
+        response:
+          '{ success: true, session, toolCalls: [{ toolCallId, title, name?, kind?, status?, locations?: [{ path: "repo-relative", line? }], highlightPaths?: string[], processing?, updatedAt }], count, limit }',
+        errors: {
+          '400': 'Invalid limit or directory outside registered repositories.',
+          '403': 'Browser-origin requests are not allowed.',
+          '404': 'No active ACP session matches the session ID.',
+          '409': 'Session ID is ambiguous; provide the directory query.',
+          '500': 'ACP tool-call summaries could not be read.',
+        },
+        notes: [
+          'This returns bounded summaries, repository-relative file locations/highlight paths, and processing outcomes only. Raw tool inputs, outputs, and content bodies are not exposed.',
+          'Only active in-memory ACP sessions are available; closed-session history is not retained.',
+        ],
+      },
       {
         method: 'POST',
         path: '/api/acp/sessions/open',

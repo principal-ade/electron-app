@@ -19,6 +19,7 @@ import { SpanStatusCode } from '@opentelemetry/api';
 import {
   ServerToMainMessage,
   MainToServerMessage,
+  ACPToolProcessingResultMessage,
   WindowBroadcastMessage,
   isWindowBroadcastMessage,
   isLinkSessionToTopicMessage,
@@ -26,6 +27,7 @@ import {
   LinkSessionToTopicMessage,
   BindAgentSessionMessage,
 } from '../../event-processing-server/types';
+import type { OpenCodeACPEventInput } from '@principal-ai/agent-monitoring';
 import { getSessionManagerInstance } from '../terminal/sessionManagerSingleton';
 import { broadcastTerminalSessionsChanged } from '../terminal/tipc/terminalRouter';
 import { TopicRegistryService } from '../stores/TopicRegistryService';
@@ -413,6 +415,8 @@ export class EventServerManager extends EventEmitter {
 
       if (isWindowBroadcastMessage(msg)) {
         this.handleWindowBroadcast(msg);
+      } else if (msg.type === 'ACP_TOOL_PROCESSING_RESULT') {
+        this.emit('acp-tool-processing-result', msg);
       } else if (isLinkSessionToTopicMessage(msg)) {
         this.handleLinkSessionToTopic(msg);
       } else if (isBindAgentSessionMessage(msg)) {
@@ -528,6 +532,30 @@ export class EventServerManager extends EventEmitter {
     } catch (error) {
       this.log('error', `Failed to send message to worker: ${error}`);
     }
+  }
+
+  /**
+   * Send a live OpenCode ACP tool update through the event worker so it uses
+   * the same path normalization and repository-scoped renderer ports as hooks.
+   */
+  processACPEvent(rawData: OpenCodeACPEventInput): void {
+    if (!this.isRunning || !this.worker) {
+      this.emit('acp-tool-processing-result', {
+        type: 'ACP_TOOL_PROCESSING_RESULT',
+        id: `acp-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: Date.now(),
+        sessionId: rawData.sessionId,
+        toolCallId: rawData.update.toolCallId,
+        outcome: 'unavailable',
+      } satisfies ACPToolProcessingResultMessage);
+      return;
+    }
+    this.sendToWorker({
+      type: 'PROCESS_ACP_EVENT',
+      id: `acp-event-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: Date.now(),
+      rawData,
+    });
   }
 
   /**

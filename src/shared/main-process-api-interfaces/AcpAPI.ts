@@ -9,6 +9,7 @@
 import type {
   RequestPermissionRequest,
   SessionUpdate,
+  ToolCallLocation,
 } from '@agentclientprotocol/sdk';
 
 export enum AcpAPIEvent {
@@ -143,6 +144,43 @@ export interface AcpDisconnectRequest {
   sessionKey: string;
 }
 
+export type AcpToolProcessingOutcome =
+  | 'highlighted'
+  | 'already-highlighted'
+  | 'no-file-paths'
+  | 'no-repository'
+  | 'unavailable'
+  | 'failed';
+
+export interface AcpToolProcessingResult {
+  sessionId: string;
+  toolCallId: string;
+  outcome: AcpToolProcessingOutcome;
+  highlightPaths?: string[];
+}
+
+export interface AcpToolCallSummary {
+  toolCallId: string;
+  title: string;
+  name?: string;
+  kind?: string;
+  status?: string;
+  locations?: ToolCallLocation[];
+  highlightPaths?: string[];
+  processing?: AcpToolProcessingOutcome;
+  updatedAt: number;
+}
+
+export interface AcpActiveSessionSummary {
+  sessionId: string;
+  agentId: AcpAgentId;
+  agentName: string;
+  directory: string;
+  isPrompting: boolean;
+  toolCallCount: number;
+  lastActivityAt?: number;
+}
+
 export type AcpSessionEvent =
   | { type: 'update'; update: SessionUpdate }
   | {
@@ -150,6 +188,7 @@ export type AcpSessionEvent =
       requestId: string;
       request: RequestPermissionRequest;
     }
+  | { type: 'tool-processing'; result: AcpToolProcessingResult }
   | { type: 'closed'; reason?: string };
 
 export interface AcpSessionEventEnvelope {

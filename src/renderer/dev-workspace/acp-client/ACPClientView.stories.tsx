@@ -14,7 +14,7 @@ const meta: Meta<typeof ACPClientView> = {
     docs: {
       description: {
         component:
-          'A UI-only agent connection and initialization flow for a future ACP client tab. The workspace directory comes from the tab; agent commands and connection states are illustrative, and no ACP messages are exchanged.',
+          'A UI-only agent connection and initialization flow. The workspace directory comes from the tab; agent commands and connection states are illustrative, and no ACP messages are exchanged. See the ACP Session story for a live-session preview.',
       },
     },
   },

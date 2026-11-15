@@ -2,7 +2,11 @@
  * Types for communication between event processing server and main process
  */
 
-import type { SupportedAgent } from '@principal-ai/agent-monitoring';
+import type {
+  OpenCodeACPEventInput,
+  SupportedAgent,
+} from '@principal-ai/agent-monitoring';
+import type { AcpToolProcessingOutcome } from '../shared/main-process-api-interfaces/AcpAPI';
 
 /**
  * Configuration for the event processing server
@@ -65,6 +69,14 @@ export interface ProcessedEventMessage extends BaseServerMessage {
   type: 'PROCESSED_EVENT';
   event: unknown;
   provider: SupportedAgent;
+}
+
+export interface ACPToolProcessingResultMessage extends BaseServerMessage {
+  type: 'ACP_TOOL_PROCESSING_RESULT';
+  sessionId: string;
+  toolCallId: string;
+  outcome: AcpToolProcessingOutcome;
+  highlightPaths?: string[];
 }
 
 export interface StorageRequestMessage extends BaseServerMessage {
@@ -130,6 +142,7 @@ export interface BindAgentSessionMessage extends BaseServerMessage {
 export type ServerToMainMessage =
   | ReadyMessage
   | ProcessedEventMessage
+  | ACPToolProcessingResultMessage
   | StorageRequestMessage
   | WindowBroadcastMessage
   | ProcessingCompleteMessage
@@ -145,6 +158,11 @@ export interface ProcessEventMessage extends BaseClientMessage {
   type: 'PROCESS_EVENT';
   provider: SupportedAgent;
   rawData: unknown;
+}
+
+export interface ProcessACPEventMessage extends BaseClientMessage {
+  type: 'PROCESS_ACP_EVENT';
+  rawData: OpenCodeACPEventInput;
 }
 
 export interface StorageResponseMessage extends BaseClientMessage {
@@ -187,6 +205,7 @@ export interface UnregisterPortMessage extends BaseClientMessage {
 
 export type MainToServerMessage =
   | ProcessEventMessage
+  | ProcessACPEventMessage
   | StorageResponseMessage
   | ShutdownMessage
   | PingMessage
@@ -255,6 +274,12 @@ export function isProcessEventMessage(
   msg: MainToServerMessage,
 ): msg is ProcessEventMessage {
   return msg.type === 'PROCESS_EVENT';
+}
+
+export function isProcessACPEventMessage(
+  msg: MainToServerMessage,
+): msg is ProcessACPEventMessage {
+  return msg.type === 'PROCESS_ACP_EVENT';
 }
 
 export function isStorageRequestMessage(
