@@ -127,7 +127,7 @@ const repositoryOwners: Record<IntegrationId, string> = {
   maple: 'MapleTechLabs',
   studio: 'principal-ai',
   'studio-dev': 'principal-ai',
-  openbot: 'CopilotKit',
+  openbot: 'principal-ai',
 };
 
 /** Production starts with no Studio facts until the main process reports them. */
