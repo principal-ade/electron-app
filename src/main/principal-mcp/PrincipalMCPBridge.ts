@@ -1135,6 +1135,8 @@ export class PrincipalMCPBridge extends EventEmitter {
         getAcpService().getActiveSessionInfo(directory),
       prompt: (sessionKey, text) =>
         getAcpService().prompt({ sessionKey, text }),
+      associateArtifact: (sessionId, artifact, directory) =>
+        getAcpService().associateArtifact(sessionId, artifact, directory),
     });
 
     // ============================================

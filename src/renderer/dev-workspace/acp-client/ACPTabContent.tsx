@@ -10,6 +10,7 @@ import type {
 import {
   DEFAULT_ACP_AGENT,
   getAcpAgent,
+  type AcpArtifactAssociation,
   type AcpToolProcessingResult,
   type AcpAgentId,
 } from '../../../shared/main-process-api-interfaces/AcpAPI';
@@ -151,12 +152,18 @@ function applyToolProcessingResult(
         title: 'Tool call',
         processing: result.outcome,
         highlightPaths: result.highlightPaths,
+        highlightItems: result.highlightItems,
       },
     ];
   }
 
   const existing = previous[index];
   if (existing.role !== 'tool') return previous;
+  const highlightItemsByPath = new Map(
+    [...(existing.highlightItems ?? []), ...(result.highlightItems ?? [])].map(
+      (item) => [item.path, item],
+    ),
+  );
   const next: AcpChatMessage = {
     ...existing,
     processing: result.outcome,
@@ -164,8 +171,13 @@ function applyToolProcessingResult(
       ...new Set([
         ...(existing.highlightPaths ?? []),
         ...(result.highlightPaths ?? []),
+        ...[...highlightItemsByPath.keys()],
       ]),
     ],
+    highlightItems:
+      highlightItemsByPath.size > 0
+        ? [...highlightItemsByPath.values()]
+        : existing.highlightItems,
   };
   return [...previous.slice(0, index), next, ...previous.slice(index + 1)];
 }
@@ -410,6 +422,9 @@ export function ACPTabContent({
   const [messages, setMessages] = useState<AcpChatMessage[]>([]);
   const [permissions, setPermissions] = useState<AcpPendingPermission[]>([]);
   const [isPrompting, setIsPrompting] = useState(false);
+  const [associatedArtifacts, setAssociatedArtifacts] = useState<
+    AcpArtifactAssociation[]
+  >([]);
 
   const messageIdRef = useRef(0);
   const generationRef = useRef(0);
@@ -453,6 +468,22 @@ export function ACPTabContent({
           setMessages((previous) =>
             applyToolProcessingResult(previous, event.result, nextMessageId),
           );
+          return;
+        }
+
+        // The agent can surface the topics/subsystem models it is working with.
+        // Associations are deduped by kind + id and listed in the Artifacts view.
+        if (event.type === 'artifact') {
+          setAssociatedArtifacts((previous) => {
+            const key = `${event.artifact.kind}:${event.artifact.id}`;
+            const index = previous.findIndex(
+              (item) => `${item.kind}:${item.id}` === key,
+            );
+            if (index === -1) return [...previous, event.artifact];
+            const next = [...previous];
+            next[index] = { ...previous[index], ...event.artifact };
+            return next;
+          });
           return;
         }
 
@@ -509,6 +540,7 @@ export function ACPTabContent({
       setPermissions([]);
       setPrompting(false);
       setIsStartingSession(false);
+      setAssociatedArtifacts([]);
 
       try {
         await AcpService.connect({
@@ -656,6 +688,7 @@ export function ACPTabContent({
         messages={messages}
         permissions={permissions}
         isPrompting={isPrompting}
+        associatedArtifacts={associatedArtifacts}
         onSend={(text, reference) => void send(text, reference)}
         onStop={stop}
         onRespondPermission={respondPermission}

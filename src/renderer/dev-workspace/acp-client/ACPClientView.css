@@ -1087,6 +1087,13 @@
   padding: 20px;
 }
 
+.acp-session__topic-preview-content--graph {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
 .acp-session__topic-preview-markdown {
   width: 100%;
   min-width: 0;

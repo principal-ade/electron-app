@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Loader2,
+  Network,
   ShieldQuestion,
   Sparkles,
   Square,
@@ -36,16 +37,21 @@ import type {
 } from '@agentclientprotocol/sdk';
 import type {
   AcpAgentDefinition,
+  AcpArtifactAssociation,
+  AcpFileOperation,
+  AcpHighlightItem,
   AcpToolProcessingOutcome,
 } from '../../../shared/main-process-api-interfaces/AcpAPI';
 import { StreamdownMarkdown } from '../../components/StreamdownMarkdown';
 import { TopicsIcon } from '../../components/TopicsIcon';
 import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
+import { SubsystemModelService } from '../../main-process-api/SubsystemModelService';
 import { TopicService, type Topic } from '../../main-process-api/TopicService';
 import { useRepoWatch } from '../../panels/home-panel/useRepoWatch';
 import { gitStatusToHighlightLayers } from '../../utils/gitStatusHighlightLayers';
 import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
+import { SubsystemModelTabContent } from '../../subsystem-models/SubsystemModelTabContent';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
 import { getAcpThemeStyle } from './acpTheme';
 import { getTracer } from '../../telemetry';
@@ -71,6 +77,7 @@ export type AcpChatMessage =
       detail?: string;
       locations?: ToolCallLocation[];
       highlightPaths?: string[];
+      highlightItems?: AcpHighlightItem[];
       rawInput?: unknown;
       rawOutput?: unknown;
       processing?: AcpToolProcessingOutcome;
@@ -99,9 +106,141 @@ export interface ACPSessionViewProps {
   messages: AcpChatMessage[];
   permissions: AcpPendingPermission[];
   isPrompting: boolean;
+  associatedArtifacts?: AcpArtifactAssociation[];
   onSend: (text: string, reference?: AcpTopicReference) => void;
   onStop: () => void;
   onRespondPermission: (requestId: string, optionId: string | null) => void;
+}
+
+interface OperationLayerStyle {
+  label: string;
+  color: string;
+  priority: number;
+  opacity: number;
+  renderStrategy: 'fill' | 'border';
+  maxItems: number;
+}
+
+/**
+ * Activity is bucketed by operation so writes/deletes stay legible even when
+ * the session is dominated by reads. Priorities also decide which operation
+ * wins when the same file appears in several calls.
+ */
+const OPERATION_LAYER_STYLES: Record<AcpFileOperation, OperationLayerStyle> = {
+  delete: {
+    label: 'Deletes',
+    color: '#ef4444',
+    priority: 96,
+    opacity: 0.9,
+    renderStrategy: 'fill',
+    maxItems: 50,
+  },
+  write: {
+    label: 'Writes',
+    color: '#22c55e',
+    priority: 92,
+    opacity: 0.85,
+    renderStrategy: 'fill',
+    maxItems: 50,
+  },
+  create: {
+    label: 'New files',
+    color: '#10b981',
+    priority: 90,
+    opacity: 0.85,
+    renderStrategy: 'fill',
+    maxItems: 50,
+  },
+  edit: {
+    label: 'Edits',
+    color: '#f59e0b',
+    priority: 88,
+    opacity: 0.85,
+    renderStrategy: 'fill',
+    maxItems: 60,
+  },
+  move: {
+    label: 'Moves',
+    color: '#f97316',
+    priority: 86,
+    opacity: 0.8,
+    renderStrategy: 'fill',
+    maxItems: 40,
+  },
+  search: {
+    label: 'Searches',
+    color: '#8b5cf6',
+    priority: 60,
+    opacity: 0.5,
+    renderStrategy: 'border',
+    maxItems: 40,
+  },
+  list: {
+    label: 'Listings',
+    color: '#6366f1',
+    priority: 50,
+    opacity: 0.4,
+    renderStrategy: 'border',
+    maxItems: 20,
+  },
+  read: {
+    label: 'Reads',
+    color: '#3b82f6',
+    priority: 40,
+    opacity: 0.38,
+    renderStrategy: 'border',
+    maxItems: 30,
+  },
+  execute: {
+    label: 'Commands',
+    color: '#6b7280',
+    priority: 30,
+    opacity: 0.45,
+    renderStrategy: 'border',
+    maxItems: 25,
+  },
+};
+
+const OPERATION_ORDER: AcpFileOperation[] = [
+  'delete',
+  'write',
+  'create',
+  'edit',
+  'move',
+  'search',
+  'list',
+  'read',
+  'execute',
+];
+
+function operationFromTool(
+  call: Extract<AcpChatMessage, { role: 'tool' }>,
+): AcpFileOperation {
+  const kind = call.kind?.toLowerCase();
+  if (kind === 'read') return 'read';
+  if (kind === 'delete') return 'delete';
+  if (kind === 'move') return 'move';
+  if (kind === 'search') return 'search';
+  if (kind === 'edit') {
+    const name = call.name?.toLowerCase();
+    if (name === 'write') return 'write';
+    if (name === 'patch') return 'edit';
+    return 'edit';
+  }
+  return 'execute';
+}
+
+function callHighlightItems(
+  call: Extract<AcpChatMessage, { role: 'tool' }>,
+): AcpHighlightItem[] {
+  if (call.highlightItems && call.highlightItems.length > 0) {
+    return call.highlightItems;
+  }
+  const operation = operationFromTool(call);
+  return [...new Set(call.highlightPaths ?? [])].map((path) => ({
+    path,
+    operation,
+  }));
 }
 
 function toolStatusIcon(status?: string) {
@@ -155,29 +294,58 @@ function isPrincipalMcpToolCall(
   ).toLowerCase();
   const toolName = (call.name ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase();
   return (
-    toolName.includes(serverKey) || Boolean(topicIdFromActivationInput(call))
+    toolName.includes(serverKey) ||
+    Boolean(topicIdFromActivationInput(call)) ||
+    Boolean(subsystemModelIdFromReadInput(call))
   );
 }
 
-interface AcpTopicArtifact {
-  topicId: string;
+type AcpArtifactKind = 'topic' | 'subsystem-model';
+
+interface AcpArtifact {
+  kind: AcpArtifactKind;
+  id: string;
   openCount: number;
+}
+
+/** A selected artifact identity, used to drive the preview pane. */
+interface AcpArtifactRef {
+  kind: AcpArtifactKind;
+  id: string;
+  title: string;
 }
 
 type ACPActivityView = 'tools' | 'artifacts';
 
-function topicIdFromActivationInput(
+function artifactKey(kind: AcpArtifactKind, id: string): string {
+  return `${kind}:${id}`;
+}
+
+function toolCallInputText(
   call: Extract<AcpChatMessage, { role: 'tool' }>,
 ): string | undefined {
-  let input = '';
   try {
-    input =
-      typeof call.rawInput === 'string'
-        ? call.rawInput
-        : JSON.stringify(call.rawInput ?? '');
+    return typeof call.rawInput === 'string'
+      ? call.rawInput
+      : JSON.stringify(call.rawInput ?? '');
   } catch {
     return undefined;
   }
+}
+
+function decodeRouteId(id: string): string {
+  try {
+    return decodeURIComponent(id);
+  } catch {
+    return id;
+  }
+}
+
+function topicIdFromActivationInput(
+  call: Extract<AcpChatMessage, { role: 'tool' }>,
+): string | undefined {
+  const input = toolCallInputText(call);
+  if (input === undefined) return undefined;
 
   const route =
     /\/api\/topics\/([^/?#"'\\\s]+)\/activate(?:[?#"'\\\s]|$)/i.exec(
@@ -185,11 +353,22 @@ function topicIdFromActivationInput(
     );
   if (!route?.[1]) return undefined;
 
-  try {
-    return decodeURIComponent(route[1]);
-  } catch {
-    return route[1];
-  }
+  return decodeRouteId(route[1]);
+}
+
+function subsystemModelIdFromReadInput(
+  call: Extract<AcpChatMessage, { role: 'tool' }>,
+): string | undefined {
+  const input = toolCallInputText(call);
+  if (input === undefined) return undefined;
+
+  const route =
+    /\/api\/subsystem-models\/([^/?#"'\\\s]+)(?:[?#"'\\\s]|$)/i.exec(
+      `${call.name ?? ''}\n${call.title}\n${input}`,
+    );
+  if (!route?.[1]) return undefined;
+
+  return decodeRouteId(route[1]);
 }
 
 function topicIdOpenedByCall(
@@ -200,26 +379,72 @@ function topicIdOpenedByCall(
     : undefined;
 }
 
+function subsystemModelIdReadByCall(
+  call: Extract<AcpChatMessage, { role: 'tool' }>,
+): string | undefined {
+  return isPrincipalMcpToolCall(call)
+    ? subsystemModelIdFromReadInput(call)
+    : undefined;
+}
+
+function artifactsFromCalls(
+  calls: Extract<AcpChatMessage, { role: 'tool' }>[],
+): AcpArtifact[] {
+  const artifacts = new Map<string, AcpArtifact>();
+  const record = (kind: AcpArtifactKind, id: string) => {
+    const key = artifactKey(kind, id);
+    const existing = artifacts.get(key);
+    artifacts.set(key, { kind, id, openCount: (existing?.openCount ?? 0) + 1 });
+  };
+  for (const call of calls) {
+    const topicId = topicIdOpenedByCall(call);
+    if (topicId) record('topic', topicId);
+    const modelId = subsystemModelIdReadByCall(call);
+    if (modelId) record('subsystem-model', modelId);
+  }
+  return [...artifacts.values()];
+}
+
+function artifactKindLabel(kind: AcpArtifactKind): string {
+  return kind === 'topic' ? 'Topic' : 'Subsystem model';
+}
+
+function artifactTitle(
+  kind: AcpArtifactKind,
+  id: string,
+  titles: Record<string, string>,
+): string {
+  return (
+    titles[artifactKey(kind, id)] ??
+    `${kind === 'topic' ? 'Topic' : 'Subsystem model'} ${id}`
+  );
+}
+
 function ACPToolCallsPanel({
   calls,
   workspacePath,
   workspaceName,
   repository,
   activityView,
-  selectedTopicId,
-  onOpenTopic,
+  associatedArtifacts,
+  selectedArtifact,
+  onOpenArtifact,
 }: {
   calls: AcpChatMessage[];
   workspacePath: string;
   workspaceName: string;
   repository?: ACPSessionViewProps['repository'];
   activityView: ACPActivityView;
-  selectedTopicId: string | null;
-  onOpenTopic: (topicId: string) => void;
+  associatedArtifacts: AcpArtifactAssociation[];
+  selectedArtifact: AcpArtifactRef | null;
+  onOpenArtifact: (artifact: AcpArtifactRef) => void;
 }) {
+  const { theme } = useTheme();
   const [principalMcpOnly, setPrincipalMcpOnly] = useState(false);
-  const [topicTitles, setTopicTitles] = useState<Record<string, string>>({});
-  const topicTitleLookups = useRef(
+  const [artifactTitles, setArtifactTitles] = useState<Record<string, string>>(
+    {},
+  );
+  const artifactTitleLookups = useRef(
     new Map<string, Promise<string | undefined>>(),
   );
   const artifactClassificationStates = useRef(new Map<string, string>());
@@ -239,20 +464,23 @@ function ACPToolCallsPanel({
     for (const call of toolCalls) {
       const principalMcp = isPrincipalMcpToolCall(call);
       const topicActivationTopicId = topicIdFromActivationInput(call);
-      const topicId = principalMcp ? topicActivationTopicId : undefined;
+      const subsystemModelId = subsystemModelIdFromReadInput(call);
       const rawInputPresent =
         call.rawInput !== undefined && call.rawInput !== null;
       const classification = principalMcp
-        ? topicId
+        ? topicActivationTopicId
           ? 'topic-open'
-          : 'unrecognized-principal-mcp-call'
-        : topicActivationTopicId
-          ? 'topic-route-not-principal-mcp'
+          : subsystemModelId
+            ? 'subsystem-model-read'
+            : 'unrecognized-principal-mcp-call'
+        : topicActivationTopicId || subsystemModelId
+          ? 'bridge-route-not-principal-mcp'
           : 'not-principal-mcp';
       const stateKey = [
         principalMcp,
         rawInputPresent,
-        topicId ?? '',
+        topicActivationTopicId ?? '',
+        subsystemModelId ?? '',
         classification,
       ].join(':');
       if (
@@ -269,41 +497,75 @@ function ACPToolCallsPanel({
         'acp.artifact.topic_activation_route_found',
         Boolean(topicActivationTopicId),
       );
+      span.setAttribute(
+        'acp.artifact.subsystem_model_read_route_found',
+        Boolean(subsystemModelId),
+      );
       span.setAttribute('acp.artifact.classification', classification);
       span.setStatus({ code: SpanStatusCode.OK });
       span.end();
     }
   }, [toolCalls]);
-  const topicArtifacts = useMemo(() => {
-    const artifacts = new Map<string, AcpTopicArtifact>();
-    for (const call of principalMcpCalls) {
-      const topicId = topicIdOpenedByCall(call);
-      if (!topicId) continue;
-      const existing = artifacts.get(topicId);
-      artifacts.set(topicId, {
-        topicId,
-        openCount: (existing?.openCount ?? 0) + 1,
-      });
+  // Agent-associated artifacts are listed even when no Principal MCP call
+  // revealed them; the agent title is a fallback until the id is looked up.
+  const associatedTitles = useMemo(() => {
+    const titles: Record<string, string> = {};
+    for (const artifact of associatedArtifacts) {
+      if (artifact.title) {
+        titles[artifactKey(artifact.kind, artifact.id)] = artifact.title;
+      }
     }
-    return [...artifacts.values()];
-  }, [principalMcpCalls]);
+    return titles;
+  }, [associatedArtifacts]);
+  const artifacts = useMemo(() => {
+    const byKey = new Map(
+      artifactsFromCalls(principalMcpCalls).map((artifact) => [
+        artifactKey(artifact.kind, artifact.id),
+        artifact,
+      ]),
+    );
+    for (const association of associatedArtifacts) {
+      const key = artifactKey(association.kind, association.id);
+      if (!byKey.has(key)) {
+        byKey.set(key, {
+          kind: association.kind,
+          id: association.id,
+          openCount: 0,
+        });
+      }
+    }
+    return [...byKey.values()];
+  }, [associatedArtifacts, principalMcpCalls]);
   useEffect(() => {
-    if (topicArtifacts.length === 0) return undefined;
+    if (artifacts.length === 0) return undefined;
     let cancelled = false;
-    const lookups = topicArtifacts.map((artifact) => {
-      let lookup = topicTitleLookups.current.get(artifact.topicId);
+    const lookups = artifacts.map((artifact) => {
+      const key = artifactKey(artifact.kind, artifact.id);
+      let lookup = artifactTitleLookups.current.get(key);
       if (!lookup) {
-        const span = acpArtifactTracer.startSpan('acp.artifact.topic_lookup');
-        lookup = TopicService.getTopic(artifact.topicId)
-          .then((topic) => {
-            span.setAttribute('acp.artifact.topic_found', Boolean(topic));
-            span.setAttribute(
-              'acp.artifact.topic_title_present',
-              Boolean(topic?.title),
-            );
-            span.setStatus({ code: SpanStatusCode.OK });
-            return topic?.title;
-          })
+        const span = acpArtifactTracer.startSpan('acp.artifact.title_lookup');
+        span.setAttribute('acp.artifact.kind', artifact.kind);
+        lookup =
+          artifact.kind === 'topic'
+            ? TopicService.getTopic(artifact.id).then((topic) => {
+                span.setAttribute('acp.artifact.found', Boolean(topic));
+                span.setAttribute(
+                  'acp.artifact.title_present',
+                  Boolean(topic?.title),
+                );
+                span.setStatus({ code: SpanStatusCode.OK });
+                return topic?.title;
+              })
+            : SubsystemModelService.get(artifact.id).then((model) => {
+                span.setAttribute('acp.artifact.found', Boolean(model));
+                span.setAttribute(
+                  'acp.artifact.title_present',
+                  Boolean(model?.title),
+                );
+                span.setStatus({ code: SpanStatusCode.OK });
+                return model?.title;
+              });
+        lookup = lookup
           .catch((error: unknown) => {
             span.setAttribute(
               'error.type',
@@ -313,16 +575,16 @@ function ACPToolCallsPanel({
             return undefined;
           })
           .finally(() => span.end());
-        topicTitleLookups.current.set(artifact.topicId, lookup);
+        artifactTitleLookups.current.set(key, lookup);
       }
-      return lookup.then((title) => ({ topicId: artifact.topicId, title }));
+      return lookup.then((title) => ({ key, title }));
     });
     void Promise.all(lookups).then((results) => {
       if (cancelled) return;
-      setTopicTitles((previous) => {
+      setArtifactTitles((previous) => {
         const next = { ...previous };
-        for (const { topicId, title } of results) {
-          if (title) next[topicId] = title;
+        for (const { key, title } of results) {
+          if (title) next[key] = title;
         }
         return next;
       });
@@ -330,45 +592,118 @@ function ACPToolCallsPanel({
     return () => {
       cancelled = true;
     };
-  }, [topicArtifacts]);
+  }, [artifacts]);
   const visibleToolCalls = principalMcpOnly ? principalMcpCalls : toolCalls;
   const activeCount = visibleToolCalls.filter(
     (call) => call.status === 'in_progress' || call.status === 'pending',
   );
   const activeToolCount = activeCount.length;
   const highlightLayers = useMemo<HighlightLayer[]>(() => {
-    const operationColors: Record<string, string> = {
-      read: '#3b82f6',
-      edit: '#f59e0b',
-      write: '#22c55e',
-      delete: '#ef4444',
-      move: '#f97316',
-      search: '#8b5cf6',
-      execute: '#6b7280',
-    };
-    return toolCalls.slice(-40).flatMap((call) => {
-      const paths = [...new Set(call.highlightPaths ?? [])];
-      if (paths.length === 0) return [];
-      return [
-        {
-          id: `acp-tool-call-${call.toolCallId}`,
-          name: call.title,
+    // Newest first so recency wins ties and each bucket caps to its newest
+    // items. Paths are lifted to the strongest operation that touched them.
+    const recentCalls = toolCalls.slice(-60).reverse();
+    const activePaths = new Set<string>();
+    const byOperation = new Map<
+      AcpFileOperation,
+      Map<string, AcpHighlightItem>
+    >();
+
+    for (const call of recentCalls) {
+      const isActive =
+        call.status === 'pending' || call.status === 'in_progress';
+      for (const item of callHighlightItems(call)) {
+        const operation = item.operation;
+        const operationPriority = OPERATION_LAYER_STYLES[operation].priority;
+        let superseded = false;
+        for (const [otherOperation, bucket] of byOperation) {
+          if (
+            otherOperation !== operation &&
+            bucket.has(item.path) &&
+            OPERATION_LAYER_STYLES[otherOperation].priority > operationPriority
+          ) {
+            superseded = true;
+            break;
+          }
+        }
+        if (superseded) continue;
+
+        for (const [otherOperation, bucket] of byOperation) {
+          if (
+            otherOperation !== operation &&
+            OPERATION_LAYER_STYLES[otherOperation].priority < operationPriority
+          ) {
+            bucket.delete(item.path);
+          }
+        }
+
+        const bucket = byOperation.get(operation) ?? new Map();
+        if (!bucket.has(item.path)) {
+          bucket.set(item.path, item);
+        }
+        byOperation.set(operation, bucket);
+        if (isActive) activePaths.add(item.path);
+      }
+    }
+
+    const layers: HighlightLayer[] = [];
+    for (const operation of OPERATION_ORDER) {
+      const bucket = byOperation.get(operation);
+      if (!bucket || bucket.size === 0) continue;
+      const style = OPERATION_LAYER_STYLES[operation];
+      layers.push({
+        id: `acp-operation-${operation}`,
+        name: style.label,
+        enabled: true,
+        color: style.color,
+        opacity: style.opacity,
+        priority: style.priority,
+        dynamic: true,
+        items: [...bucket.values()].slice(0, style.maxItems).map((item) => ({
+          path: item.path,
+          type: item.kind === 'directory' ? 'directory' : 'file',
+          renderStrategy: activePaths.has(item.path)
+            ? ('border' as const)
+            : style.renderStrategy,
+        })),
+      });
+    }
+
+    if (activePaths.size > 0) {
+      const activeItems = [...activePaths].flatMap((path) => {
+        for (const bucket of byOperation.values()) {
+          const item = bucket.get(path);
+          if (item) {
+            return [
+              {
+                path,
+                type:
+                  item.kind === 'directory'
+                    ? ('directory' as const)
+                    : ('file' as const),
+                renderStrategy: 'border' as const,
+              },
+            ];
+          }
+        }
+        return [];
+      });
+      if (activeItems.length > 0) {
+        layers.push({
+          id: 'acp-active-tool',
+          name: 'Active tool',
           enabled: true,
-          color: operationColors[call.kind ?? ''] ?? '#6b7280',
-          opacity: 0.82,
-          priority: 80,
-          items: paths.map((path) => ({
-            path,
-            type: 'file' as const,
-            renderStrategy:
-              call.status === 'in_progress'
-                ? ('border' as const)
-                : ('fill' as const),
-          })),
-        },
-      ];
-    });
-  }, [toolCalls]);
+          color: theme.colors.primary,
+          opacity: 1,
+          borderWidth: 3,
+          priority: 120,
+          dynamic: true,
+          items: activeItems.slice(0, 40),
+        });
+      }
+    }
+
+    return layers;
+  }, [theme.colors.primary, toolCalls]);
   return (
     <aside className="acp-session__tool-panel" aria-label="ACP activity">
       <div className="acp-session__tool-panel-content">
@@ -493,40 +828,51 @@ function ACPToolCallsPanel({
           </>
         ) : (
           <div className="acp-session__artifact-activity">
-            {topicArtifacts.length === 0 ? (
+            {artifacts.length === 0 ? (
               <div
                 className="acp-session__tool-panel-empty acp-session__tool-panel-empty--activity"
                 role="status"
               >
                 <span>
-                  Topics opened through Principal MCP will appear here.
+                  Topics and subsystem models the agent uses through Principal
+                  MCP, or associates with this session, will appear here.
                 </span>
               </div>
             ) : (
               <ol className="acp-session__artifact-list">
-                {topicArtifacts.map(({ topicId, openCount }) => {
-                  const isSelected = selectedTopicId === topicId;
-                  const title = topicTitles[topicId] ?? topicId;
+                {artifacts.map(({ kind, id, openCount }) => {
+                  const isSelected =
+                    selectedArtifact?.kind === kind &&
+                    selectedArtifact.id === id;
+                  const title = artifactTitle(kind, id, {
+                    ...associatedTitles,
+                    ...artifactTitles,
+                  });
                   return (
-                    <li className="acp-session__artifact-card" key={topicId}>
+                    <li
+                      className="acp-session__artifact-card"
+                      key={artifactKey(kind, id)}
+                    >
                       <button
                         className={`acp-session__artifact-open${isSelected ? ' is-selected' : ''}`}
                         type="button"
-                        onClick={() => onOpenTopic(topicId)}
+                        onClick={() => onOpenArtifact({ kind, id, title })}
                         aria-pressed={isSelected}
                         aria-label={
                           isSelected
-                            ? `Close topic ${title} preview`
-                            : `Open topic ${title} in chat`
+                            ? `Close ${artifactKindLabel(kind)} ${title} preview`
+                            : `Open ${artifactKindLabel(kind)} ${title} in chat`
                         }
                       >
-                        <TopicsIcon size={16} strokeWidth={1.5} />
+                        {kind === 'topic' ? (
+                          <TopicsIcon size={16} strokeWidth={1.5} />
+                        ) : (
+                          <Network size={16} strokeWidth={1.5} />
+                        )}
                         <span>
-                          <strong>
-                            {topicTitles[topicId] ?? `Topic ${topicId}`}
-                          </strong>
+                          <strong>{title}</strong>
                           <small>
-                            Topic
+                            {artifactKindLabel(kind)}
                             {openCount > 1
                               ? ` · opened ${openCount} times`
                               : ''}
@@ -700,13 +1046,15 @@ export function ACPSessionView({
   messages,
   permissions,
   isPrompting,
+  associatedArtifacts = [],
   onSend,
   onStop,
   onRespondPermission,
 }: ACPSessionViewProps) {
   const { theme } = useTheme();
   const [activityView, setActivityView] = useState<ACPActivityView>('tools');
-  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [selectedArtifact, setSelectedArtifact] =
+    useState<AcpArtifactRef | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [topicPreviewClosing, setTopicPreviewClosing] = useState(false);
   const [selectedTopicReference, setSelectedTopicReference] =
@@ -723,6 +1071,8 @@ export function ACPSessionView({
     startHeight: number;
     viewportHeight: number;
   } | null>(null);
+  const selectedTopicId =
+    selectedArtifact?.kind === 'topic' ? selectedArtifact.id : null;
 
   const startTopicPreviewResize = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -822,15 +1172,18 @@ export function ACPSessionView({
     setSelectedTopicReference(null);
     onSend(text, reference);
   };
-  const openTopicPreview = useCallback(
-    (topicId: string) => {
-      if (selectedTopicId === topicId) {
+  const openArtifactPreview = useCallback(
+    (artifact: AcpArtifactRef) => {
+      const isSame =
+        selectedArtifact?.kind === artifact.kind &&
+        selectedArtifact.id === artifact.id;
+      if (isSame) {
         if (topicPreviewClosing) {
           setTopicPreviewClosing(false);
           return;
         }
         if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-          setSelectedTopicId(null);
+          setSelectedArtifact(null);
           return;
         }
         setTopicPreviewClosing(true);
@@ -838,15 +1191,15 @@ export function ACPSessionView({
       }
       setSelectedTopicReference(null);
       setTopicPreviewClosing(false);
-      setSelectedTopicId(topicId);
+      setSelectedArtifact(artifact);
     },
-    [selectedTopicId, topicPreviewClosing],
+    [selectedArtifact, topicPreviewClosing],
   );
   const finishTopicPreviewClose = useCallback(
     (event: React.AnimationEvent<HTMLElement>) => {
       if (event.animationName !== 'acp-topic-preview-exit') return;
       setTopicPreviewClosing(false);
-      setSelectedTopicId(null);
+      setSelectedArtifact(null);
     },
     [],
   );
@@ -915,7 +1268,7 @@ export function ACPSessionView({
     repository?.name ||
     workspacePath.split(/[\\/]/).filter(Boolean).pop() ||
     workspacePath;
-  const topicPreview = selectedTopicId ? (
+  const artifactPreview = selectedArtifact ? (
     <section
       className={`acp-session__topic-preview${topicPreviewClosing ? ' is-closing' : ''}`}
       style={
@@ -925,11 +1278,23 @@ export function ACPSessionView({
         } as React.CSSProperties
       }
       role="region"
-      aria-label={`Topic preview: ${selectedTopic?.title ?? `Topic ${selectedTopicId}`}`}
+      aria-label={`${artifactKindLabel(selectedArtifact.kind)} preview: ${
+        selectedArtifact.kind === 'topic'
+          ? (selectedTopic?.title ?? selectedArtifact.title)
+          : selectedArtifact.title
+      }`}
       onAnimationEnd={finishTopicPreviewClose}
     >
-      <div className="acp-session__topic-preview-content">
-        {topicPreviewLoading && !selectedTopic ? (
+      <div
+        className={`acp-session__topic-preview-content${
+          selectedArtifact.kind === 'subsystem-model'
+            ? ' acp-session__topic-preview-content--graph'
+            : ''
+        }`}
+      >
+        {selectedArtifact.kind === 'subsystem-model' ? (
+          <SubsystemModelTabContent modelId={selectedArtifact.id} />
+        ) : topicPreviewLoading && !selectedTopic ? (
           <div className="acp-session__topic-preview-message" role="status">
             <Loader2 className="acp-client__spinning" size={15} />
             Loading topic…
@@ -969,7 +1334,7 @@ export function ACPSessionView({
       <div
         className="acp-session__topic-preview-resize"
         role="separator"
-        aria-label="Resize topic preview"
+        aria-label="Resize preview"
         aria-orientation="horizontal"
         aria-valuemin={20}
         aria-valuemax={80}
@@ -1027,11 +1392,11 @@ export function ACPSessionView({
       <div className="acp-session__workspace">
         <div className="acp-session__main">
           <div className="acp-session__chat-viewport" ref={chatViewportRef}>
-            {topicPreview}
+            {artifactPreview}
             <div
               className="acp-session__messages"
               role="log"
-              aria-live={selectedTopicId ? 'off' : 'polite'}
+              aria-live={selectedArtifact ? 'off' : 'polite'}
             >
               {messages.filter((message) => message.role !== 'tool').length ===
               0 ? (
@@ -1240,8 +1605,9 @@ export function ACPSessionView({
           workspaceName={workspaceName}
           repository={repository}
           activityView={activityView}
-          selectedTopicId={selectedTopicId}
-          onOpenTopic={openTopicPreview}
+          associatedArtifacts={associatedArtifacts}
+          selectedArtifact={selectedArtifact}
+          onOpenArtifact={openArtifactPreview}
         />
       </div>
     </main>

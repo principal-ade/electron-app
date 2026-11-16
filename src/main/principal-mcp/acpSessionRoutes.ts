@@ -2,6 +2,7 @@ import path from 'path';
 import type { Application, Request, Response } from 'express';
 import type {
   AcpActiveSessionSummary,
+  AcpArtifactAssociation,
   AcpPromptResult,
   AcpToolCallSummary,
 } from '../../shared/main-process-api-interfaces/AcpAPI';
@@ -11,6 +12,9 @@ import { repositoryTelemetryId } from '../telemetry/repositoryIdentity';
 
 const tracer = getTracer('principal-ade-acp-mcp');
 const MAX_PROMPT_LENGTH = 20_000;
+const MAX_ARTIFACT_ID_LENGTH = 200;
+const MAX_ARTIFACT_TITLE_LENGTH = 300;
+const ARTIFACT_KINDS = ['topic', 'subsystem-model'] as const;
 
 export interface AcpSessionRouteDependencies {
   getRepositoryDirectories(): Promise<string[]>;
@@ -29,6 +33,11 @@ export interface AcpSessionRouteDependencies {
     isPrompting: boolean;
   } | null;
   prompt(sessionKey: string, text: string): Promise<AcpPromptResult>;
+  associateArtifact(
+    sessionId: string,
+    artifact: AcpArtifactAssociation,
+    directory?: string,
+  ): boolean;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -252,6 +261,157 @@ export function registerAcpSessionRoutes(
       res.status(500).json({
         success: false,
         error: 'could not read ACP tool calls',
+      });
+    }
+  });
+
+  app.post('/api/acp/sessions/:sessionId/artifacts', async (req, res) => {
+    if (rejectBrowserOrigin(req, res)) return;
+
+    const sessionId =
+      typeof req.params.sessionId === 'string' ? req.params.sessionId : '';
+    if (!sessionId) {
+      res.status(400).json({ success: false, error: 'sessionId is required' });
+      return;
+    }
+
+    const body = isObject(req.body) ? req.body : null;
+    if (
+      !body ||
+      Object.keys(body).some(
+        (key) => !['kind', 'id', 'title', 'directory'].includes(key),
+      )
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'body must contain only kind, id, title and directory',
+      });
+      return;
+    }
+
+    const kind = body.kind;
+    if (
+      typeof kind !== 'string' ||
+      !ARTIFACT_KINDS.includes(kind as (typeof ARTIFACT_KINDS)[number])
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'kind must be topic or subsystem-model',
+      });
+      return;
+    }
+
+    const id = typeof body.id === 'string' ? body.id.trim() : '';
+    if (!id || id.length > MAX_ARTIFACT_ID_LENGTH) {
+      res.status(400).json({
+        success: false,
+        error: 'id is required and must be at most 200 characters',
+      });
+      return;
+    }
+
+    if (body.title !== undefined && typeof body.title !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: 'title must be a string when provided',
+      });
+      return;
+    }
+    const trimmedTitle =
+      typeof body.title === 'string' ? body.title.trim() : undefined;
+    if (
+      trimmedTitle !== undefined &&
+      trimmedTitle.length > MAX_ARTIFACT_TITLE_LENGTH
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'title must be at most 300 characters when provided',
+      });
+      return;
+    }
+    const title = trimmedTitle ? trimmedTitle : undefined;
+
+    if (body.directory !== undefined && typeof body.directory !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: 'directory must be a string when provided',
+      });
+      return;
+    }
+    const directory =
+      typeof body.directory === 'string' ? body.directory : undefined;
+    if (directory !== undefined && !path.isAbsolute(directory)) {
+      res.status(400).json({
+        success: false,
+        error: 'directory must be absolute',
+      });
+      return;
+    }
+
+    try {
+      const repositoryDirectories = (
+        await deps.getRepositoryDirectories()
+      ).filter((value) => typeof value === 'string' && path.isAbsolute(value));
+      if (
+        directory &&
+        !repositoryDirectories.some((root) => isWithin(directory, root))
+      ) {
+        res.status(400).json({
+          success: false,
+          error: 'directory must be inside a registered repository',
+        });
+        return;
+      }
+
+      const sessions = deps
+        .listActiveSessions()
+        .filter(
+          (session) =>
+            session.sessionId === sessionId &&
+            (!directory || session.directory === directory) &&
+            repositoryDirectories.some((root) =>
+              isWithin(session.directory, root),
+            ),
+        );
+      if (sessions.length === 0) {
+        res.status(404).json({
+          success: false,
+          error: 'no active ACP session found for this sessionId',
+        });
+        return;
+      }
+      if (sessions.length > 1) {
+        res.status(409).json({
+          success: false,
+          error: 'sessionId is ambiguous; provide the directory',
+        });
+        return;
+      }
+
+      const session = sessions[0];
+      const artifact: AcpArtifactAssociation = {
+        kind: kind as AcpArtifactAssociation['kind'],
+        id,
+        ...(title === undefined ? {} : { title }),
+      };
+      const associated = deps.associateArtifact(
+        sessionId,
+        artifact,
+        session.directory,
+      );
+      if (!associated) {
+        res.status(404).json({
+          success: false,
+          error: 'no active ACP session found for this sessionId',
+        });
+        return;
+      }
+
+      res.json({ success: true, artifact });
+    } catch {
+      res.status(500).json({
+        success: false,
+        error: 'could not associate the artifact with the ACP session',
       });
     }
   });

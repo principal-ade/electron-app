@@ -551,6 +551,8 @@ export class EventServerManager extends EventEmitter {
     );
     span.setAttribute('acp.tool.update_type', rawData.update.sessionUpdate);
     span.setAttribute('acp.tool.status', rawData.update.status ?? 'unknown');
+    span.setAttribute('acp.tool.name', rawData.update.name ?? 'unknown');
+    span.setAttribute('acp.tool.kind', rawData.update.kind ?? 'unknown');
     if (!this.isRunning || !this.worker) {
       span.setAttribute('acp.tool.processing.worker_available', false);
       span.setAttribute('acp.tool.processing.outcome', 'unavailable');

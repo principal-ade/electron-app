@@ -152,11 +152,39 @@ export type AcpToolProcessingOutcome =
   | 'unavailable'
   | 'failed';
 
+/**
+ * What the agent was doing to a highlighted file. Rendered as a distinct layer
+ * color/render strategy so the city reads as activity, not just a file list.
+ */
+export type AcpFileOperation =
+  | 'read'
+  | 'write'
+  | 'create'
+  | 'edit'
+  | 'delete'
+  | 'move'
+  | 'search'
+  | 'list'
+  | 'execute';
+
+export interface AcpHighlightItem {
+  /** Repository-relative path. */
+  path: string;
+  operation: AcpFileOperation;
+  /** How the path should be treated by the File City layer system. */
+  kind?: 'file' | 'directory';
+}
+
 export interface AcpToolProcessingResult {
   sessionId: string;
   toolCallId: string;
   outcome: AcpToolProcessingOutcome;
   highlightPaths?: string[];
+  /**
+   * Per-path intent. `highlightPaths` stays for older renderers/consumers; new
+   * ones should prefer this when present.
+   */
+  highlightItems?: AcpHighlightItem[];
 }
 
 export interface AcpToolCallSummary {
@@ -167,6 +195,7 @@ export interface AcpToolCallSummary {
   status?: string;
   locations?: ToolCallLocation[];
   highlightPaths?: string[];
+  highlightItems?: AcpHighlightItem[];
   processing?: AcpToolProcessingOutcome;
   updatedAt: number;
 }
@@ -181,6 +210,20 @@ export interface AcpActiveSessionSummary {
   lastActivityAt?: number;
 }
 
+/** App artifact kinds an ACP agent can associate with its session. */
+export type AcpArtifactKind = 'topic' | 'subsystem-model';
+
+/**
+ * An artifact the agent explicitly associated with its session (e.g. a
+ * subsystem model it is searching). The renderer resolves a display title from
+ * the id, falling back to {@link title} when the id cannot be looked up.
+ */
+export interface AcpArtifactAssociation {
+  kind: AcpArtifactKind;
+  id: string;
+  title?: string;
+}
+
 export type AcpSessionEvent =
   | { type: 'update'; update: SessionUpdate }
   | {
@@ -189,6 +232,7 @@ export type AcpSessionEvent =
       request: RequestPermissionRequest;
     }
   | { type: 'tool-processing'; result: AcpToolProcessingResult }
+  | { type: 'artifact'; artifact: AcpArtifactAssociation }
   | { type: 'closed'; reason?: string };
 
 export interface AcpSessionEventEnvelope {

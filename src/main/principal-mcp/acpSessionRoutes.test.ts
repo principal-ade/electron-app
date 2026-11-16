@@ -16,6 +16,7 @@ function setup(overrides: Partial<AcpSessionRouteDependencies> = {}): {
   promptHandler: (req: Request, res: Response) => Promise<void>;
   sessionsHandler: (req: Request, res: Response) => Promise<void>;
   toolCallsHandler: (req: Request, res: Response) => Promise<void>;
+  artifactsHandler: (req: Request, res: Response) => Promise<void>;
   deps: AcpSessionRouteDependencies;
 } {
   const post = jest.fn();
@@ -68,6 +69,7 @@ function setup(overrides: Partial<AcpSessionRouteDependencies> = {}): {
       stopReason: 'end_turn',
       sessionUpdates: { agent_message_chunk: 2, tool_call: 1 },
     })),
+    associateArtifact: jest.fn(() => true),
     ...overrides,
   };
   registerAcpSessionRoutes({ get, post } as unknown as Application, deps);
@@ -87,6 +89,7 @@ function setup(overrides: Partial<AcpSessionRouteDependencies> = {}): {
       ([registeredPath]) =>
         registeredPath === '/api/acp/sessions/:sessionId/tool-calls',
     )?.[1] as (req: Request, res: Response) => Promise<void>,
+    artifactsHandler: findHandler('/api/acp/sessions/:sessionId/artifacts'),
     deps,
   };
 }
@@ -332,4 +335,160 @@ test('validates ACP open requests before dispatching', async () => {
   );
   expect(malformed.status).toHaveBeenCalledWith(400);
   expect(deps.startSession).not.toHaveBeenCalled();
+});
+
+test('associates an artifact with an active ACP session', async () => {
+  const { artifactsHandler, deps } = setup();
+  const res = response();
+
+  await artifactsHandler(
+    {
+      headers: {},
+      params: { sessionId: 'ses_1' },
+      body: { kind: 'subsystem-model', id: 'sm_123', title: 'ACP bridge' },
+    } as unknown as Request,
+    res,
+  );
+
+  expect(deps.associateArtifact).toHaveBeenCalledWith(
+    'ses_1',
+    { kind: 'subsystem-model', id: 'sm_123', title: 'ACP bridge' },
+    '/repos/acme/app',
+  );
+  expect(res.json).toHaveBeenCalledWith({
+    success: true,
+    artifact: { kind: 'subsystem-model', id: 'sm_123', title: 'ACP bridge' },
+  });
+});
+
+test('omits a blank title when associating an artifact', async () => {
+  const { artifactsHandler, deps } = setup();
+  const res = response();
+
+  await artifactsHandler(
+    {
+      headers: {},
+      params: { sessionId: 'ses_1' },
+      body: { kind: 'topic', id: 'topic-123', title: '   ' },
+    } as unknown as Request,
+    res,
+  );
+
+  expect(deps.associateArtifact).toHaveBeenCalledWith(
+    'ses_1',
+    { kind: 'topic', id: 'topic-123' },
+    '/repos/acme/app',
+  );
+  expect(res.json).toHaveBeenCalledWith({
+    success: true,
+    artifact: { kind: 'topic', id: 'topic-123' },
+  });
+});
+
+test('rejects malformed artifact association requests', async () => {
+  const { artifactsHandler, deps } = setup();
+  const badBodies = [
+    { kind: 'file', id: 'abc' },
+    { kind: 'topic' },
+    { kind: 'topic', id: '' },
+    { kind: 'topic', id: 'x'.repeat(201) },
+    { kind: 'topic', id: 'abc', title: 'x'.repeat(301) },
+    { kind: 'topic', id: 'abc', title: 5 },
+    { kind: 'topic', id: 'abc', directory: 'relative/path' },
+    { kind: 'topic', id: 'abc', extra: true },
+  ];
+
+  for (const body of badBodies) {
+    const res = response();
+    await artifactsHandler(
+      {
+        headers: {},
+        params: { sessionId: 'ses_1' },
+        body,
+      } as unknown as Request,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+  }
+  expect(deps.associateArtifact).not.toHaveBeenCalled();
+});
+
+test('rejects browser-origin artifact association requests', async () => {
+  const { artifactsHandler, deps } = setup();
+  const res = response();
+
+  await artifactsHandler(
+    {
+      headers: { origin: 'https://example.test' },
+      params: { sessionId: 'ses_1' },
+      body: { kind: 'topic', id: 'topic-123' },
+    } as unknown as Request,
+    res,
+  );
+
+  expect(res.status).toHaveBeenCalledWith(403);
+  expect(deps.associateArtifact).not.toHaveBeenCalled();
+});
+
+test('returns 404 when no active session matches the association', async () => {
+  const noSessions = setup({ listActiveSessions: jest.fn(() => []) });
+  const noSessionsResponse = response();
+  await noSessions.artifactsHandler(
+    {
+      headers: {},
+      params: { sessionId: 'ses_missing' },
+      body: { kind: 'topic', id: 'topic-123' },
+    } as unknown as Request,
+    noSessionsResponse,
+  );
+  expect(noSessionsResponse.status).toHaveBeenCalledWith(404);
+  expect(noSessions.deps.associateArtifact).not.toHaveBeenCalled();
+
+  const rejected = setup({ associateArtifact: jest.fn(() => false) });
+  const rejectedResponse = response();
+  await rejected.artifactsHandler(
+    {
+      headers: {},
+      params: { sessionId: 'ses_1' },
+      body: { kind: 'topic', id: 'topic-123' },
+    } as unknown as Request,
+    rejectedResponse,
+  );
+  expect(rejectedResponse.status).toHaveBeenCalledWith(404);
+});
+
+test('returns 409 when the session id is ambiguous', async () => {
+  const { artifactsHandler, deps } = setup({
+    listActiveSessions: jest.fn(() => [
+      {
+        sessionId: 'ses_1',
+        agentId: 'opencode',
+        agentName: 'OpenCode',
+        directory: '/repos/acme/app',
+        isPrompting: false,
+        toolCallCount: 0,
+      },
+      {
+        sessionId: 'ses_1',
+        agentId: 'opencode',
+        agentName: 'OpenCode',
+        directory: '/repos/acme/other',
+        isPrompting: false,
+        toolCallCount: 0,
+      },
+    ]),
+  });
+  const res = response();
+
+  await artifactsHandler(
+    {
+      headers: {},
+      params: { sessionId: 'ses_1' },
+      body: { kind: 'topic', id: 'topic-123' },
+    } as unknown as Request,
+    res,
+  );
+
+  expect(res.status).toHaveBeenCalledWith(409);
+  expect(deps.associateArtifact).not.toHaveBeenCalled();
 });

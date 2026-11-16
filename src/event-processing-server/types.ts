@@ -6,8 +6,10 @@ import type {
   OpenCodeACPEventInput,
   SupportedAgent,
 } from '@principal-ai/agent-monitoring';
-import type { AcpToolProcessingOutcome } from '../shared/main-process-api-interfaces/AcpAPI';
-
+import type {
+  AcpHighlightItem,
+  AcpToolProcessingOutcome,
+} from '../shared/main-process-api-interfaces/AcpAPI';
 /**
  * Configuration for the event processing server
  */
@@ -77,6 +79,7 @@ export interface ACPToolProcessingResultMessage extends BaseServerMessage {
   toolCallId: string;
   outcome: AcpToolProcessingOutcome;
   highlightPaths?: string[];
+  highlightItems?: AcpHighlightItem[];
 }
 
 export interface StorageRequestMessage extends BaseServerMessage {

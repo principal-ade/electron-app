@@ -78,6 +78,10 @@ export const ToolCallActivity: Story = {
     messages,
     permissions: [],
     isPrompting: true,
+    associatedArtifacts: [
+      { kind: 'subsystem-model', id: 'sm_123', title: 'ACP bridge' },
+      { kind: 'topic', id: 'topic-123' },
+    ],
     onSend: () => {},
     onStop: () => {},
     onRespondPermission: () => {},

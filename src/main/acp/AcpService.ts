@@ -32,6 +32,7 @@ import {
   DEFAULT_ACP_MODEL,
   getAcpAgent,
   type AcpAgentId,
+  type AcpArtifactAssociation,
   type AcpToolProcessingResult,
   type AcpActiveSessionSummary,
   type AcpToolCallSummary,
@@ -45,6 +46,7 @@ import {
   type AcpRespondPermissionRequest,
   type AcpSessionEvent,
   type AcpSessionEventEnvelope,
+  type AcpHighlightItem,
 } from '../../shared/main-process-api-interfaces/AcpAPI';
 import type { ACPToolProcessingResultMessage } from '../../event-processing-server/types';
 import { getTracer } from '../telemetry';
@@ -56,6 +58,17 @@ import { getEventServerManager } from '../agent-session-events/EventServerManage
 const tracer = getTracer('principal-ade-acp');
 const TITLE_LOOKUP_ATTEMPTS = 5;
 const TITLE_LOOKUP_INTERVAL_MS = 1_500;
+
+function mergeHighlightItems(
+  previous: AcpHighlightItem[] | undefined,
+  next: AcpHighlightItem[] | undefined,
+): AcpHighlightItem[] {
+  const byPath = new Map<string, AcpHighlightItem>();
+  for (const item of [...(previous ?? []), ...(next ?? [])]) {
+    byPath.set(item.path, item);
+  }
+  return [...byPath.values()];
+}
 
 interface AcpConnectionEntry {
   key: string;
@@ -524,6 +537,28 @@ class AcpService {
     });
   }
 
+  /**
+   * Record an artifact the agent associated with its session. The association
+   * is forwarded to the owning renderer tab, which lists it under Artifacts.
+   * Returns false when no single active session matches.
+   */
+  associateArtifact(
+    sessionId: string,
+    artifact: AcpArtifactAssociation,
+    directory?: string,
+  ): boolean {
+    const matches = [...this.entries.values()].filter(
+      (entry) =>
+        !entry.closed &&
+        entry.sessionReady &&
+        entry.sessionId === sessionId &&
+        (!directory || entry.directory === directory),
+    );
+    if (matches.length !== 1) return false;
+    this.emit(matches[0], { type: 'artifact', artifact });
+    return true;
+  }
+
   async disconnect(request: { sessionKey: string }): Promise<void> {
     return withAcpSpan('acp.disconnect', async (span) => {
       const entry = this.entries.get(request.sessionKey);
@@ -648,10 +683,15 @@ class AcpService {
           repositoryTelemetryId(entry.directory),
         );
         const toolCall = entry.toolCalls.get(result.toolCallId);
+        const highlightItems = mergeHighlightItems(
+          toolCall?.highlightItems,
+          result.highlightItems,
+        );
         const highlightPaths = [
           ...new Set([
             ...(toolCall?.highlightPaths ?? []),
             ...(result.highlightPaths ?? []),
+            ...highlightItems.map((item) => item.path),
           ]),
         ];
         if (toolCall) {
@@ -661,12 +701,14 @@ class AcpService {
             ...toolCall,
             processing: result.outcome,
             highlightPaths,
+            highlightItems:
+              highlightItems.length > 0 ? highlightItems : undefined,
             updatedAt: Date.now(),
           });
         }
         this.emit(entry, {
           type: 'tool-processing',
-          result: { ...sessionResult, highlightPaths },
+          result: { ...sessionResult, highlightPaths, highlightItems },
         });
       }
       span.setAttribute(
@@ -680,6 +722,10 @@ class AcpService {
       span.setAttribute(
         'acp.tool.processing.highlight_path_count',
         result.highlightPaths?.length ?? 0,
+      );
+      span.setAttribute(
+        'acp.tool.processing.highlight_item_count',
+        result.highlightItems?.length ?? 0,
       );
       if (matchedSessionCount === 0) {
         span.setStatus({ code: SpanStatusCode.ERROR });
@@ -712,6 +758,7 @@ class AcpService {
       status: update.status ?? previous?.status,
       locations,
       highlightPaths: previous?.highlightPaths,
+      highlightItems: previous?.highlightItems,
       processing: previous?.processing,
       updatedAt: Date.now(),
     };

@@ -7,6 +7,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import { Server } from 'http';
 import { EventEmitter } from 'events';
 import * as os from 'os';
+import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { machineIdSync } from 'node-machine-id';
@@ -24,6 +25,31 @@ import {
 import { getTracer } from './telemetry';
 import { parseGitRemoteUrl as parseGitRemote } from '../shared/utils/gitRemoteUrl';
 import { SpanStatusCode } from '@opentelemetry/api';
+import type {
+  AcpFileOperation,
+  AcpHighlightItem,
+} from '../shared/main-process-api-interfaces/AcpAPI';
+
+const ACP_FILE_OPERATIONS = new Set<string>([
+  'read',
+  'write',
+  'create',
+  'edit',
+  'delete',
+  'move',
+  'search',
+  'list',
+  'execute',
+]);
+
+function toAcpOperation(
+  value: unknown,
+  fallback: AcpFileOperation,
+): AcpFileOperation {
+  return typeof value === 'string' && ACP_FILE_OPERATIONS.has(value)
+    ? (value as AcpFileOperation)
+    : fallback;
+}
 
 const execAsync = promisify(exec);
 
@@ -322,41 +348,70 @@ export class HttpEventServer extends EventEmitter {
   }
 
   /**
-   * Process ACP tool updates through a separate OpenCode processor and return
-   * repository-relative highlight paths to the owning ACP tab.
+   * Process ACP tool updates through the OpenCode ACP processor and return
+   * repository-relative highlight items to the owning ACP tab.
+   *
+   * Tool-shape extraction (locations, patch text, shell commands, diff parts,
+   * and search hits) lives in `@principal-ai/agent-monitoring`. This method
+   * translates the normalized `event.files` into the ACP tab's workspace-
+   * relative highlight items and enforces per-tool-call deduplication.
    */
   async processACPEvent(rawData: OpenCodeACPEventInput): Promise<void> {
     const span = getTracer('principal-ade-event-processor').startSpan(
       'acp.tool.processing',
     );
-    span.setAttribute('acp.tool.update_type', rawData.update.sessionUpdate);
-    span.setAttribute('acp.tool.status', rawData.update.status ?? 'unknown');
-    span.setAttribute(
-      'acp.tool.location_count',
-      rawData.update.locations?.length ?? 0,
+    const update = rawData.update;
+    const contentParts = update.content ?? [];
+    const partTypes = contentParts.flatMap((part) =>
+      typeof part === 'object' &&
+      part !== null &&
+      'type' in part &&
+      typeof part.type === 'string'
+        ? [part.type]
+        : [],
     );
+    const nonEmptyLocationCount = (update.locations ?? []).filter(
+      (location) =>
+        typeof location.path === 'string' && location.path.trim().length > 0,
+    ).length;
+    const rawInputKeyCount =
+      typeof update.rawInput === 'object' &&
+      update.rawInput !== null &&
+      !Array.isArray(update.rawInput)
+        ? Object.keys(update.rawInput).length
+        : 0;
+
+    span.setAttribute('acp.tool.update_type', update.sessionUpdate);
+    span.setAttribute('acp.tool.status', update.status ?? 'unknown');
+    span.setAttribute('acp.tool.name', update.name ?? 'unknown');
+    span.setAttribute('acp.tool.kind', update.kind ?? 'unknown');
+    span.setAttribute('acp.tool.location_count', update.locations?.length ?? 0);
+    span.setAttribute(
+      'acp.tool.location_nonempty_count',
+      nonEmptyLocationCount,
+    );
+    span.setAttribute('acp.tool.raw_input_key_count', rawInputKeyCount);
     span.setAttribute(
       'acp.tool.has_raw_input',
-      rawData.update.rawInput !== undefined && rawData.update.rawInput !== null,
+      update.rawInput !== undefined && update.rawInput !== null,
     );
     span.setAttribute(
       'acp.tool.has_raw_output',
-      rawData.update.rawOutput !== undefined &&
-        rawData.update.rawOutput !== null,
+      update.rawOutput !== undefined && update.rawOutput !== null,
     );
     span.setAttribute(
       'acp.tool.diff_count',
-      (rawData.update.content ?? []).filter(
-        (part) =>
-          typeof part === 'object' &&
-          part !== null &&
-          'type' in part &&
-          part.type === 'diff',
-      ).length,
+      partTypes.filter((t) => t === 'diff').length,
     );
+    span.setAttribute(
+      'acp.tool.content_part_types',
+      [...new Set(partTypes)].join(',') || 'none',
+    );
+
     const reportOutcome = (
       outcome: AcpToolProcessingOutcome,
       highlightPaths?: string[],
+      highlightItems?: AcpHighlightItem[],
     ) => {
       span.setAttribute('acp.tool.processing.outcome', outcome);
       span.setAttribute(
@@ -366,7 +421,12 @@ export class HttpEventServer extends EventEmitter {
       span.setStatus({
         code: outcome === 'failed' ? SpanStatusCode.ERROR : SpanStatusCode.OK,
       });
-      this.reportACPToolProcessing(rawData, outcome, highlightPaths);
+      this.reportACPToolProcessing(
+        rawData,
+        outcome,
+        highlightPaths,
+        highlightItems,
+      );
     };
 
     try {
@@ -389,39 +449,89 @@ export class HttpEventServer extends EventEmitter {
         'acp.tool.processing.normalized_file_count',
         event.files?.length ?? 0,
       );
-      if (!repository) {
+
+      // Completion updates often omit name/kind; the processor's merged event
+      // carries them forward from the earlier in-progress update.
+      const mergedToolName =
+        typeof event.toolName === 'string' ? event.toolName : undefined;
+      const mergedToolKind =
+        typeof event.data?.toolKind === 'string'
+          ? event.data.toolKind
+          : undefined;
+      const effectiveName = update.name ?? mergedToolName;
+      const effectiveKind = update.kind ?? mergedToolKind;
+      span.setAttribute('acp.tool.effective_name', effectiveName ?? 'unknown');
+      span.setAttribute('acp.tool.effective_kind', effectiveKind ?? 'unknown');
+
+      // The ACP tab's File City renders the session directory. Resolve every
+      // path against it so highlights line up even when the session directory
+      // is a subdirectory of the git root.
+      const repoRoot = rawData.workingDirectory;
+      if (!repoRoot) {
         reportOutcome('no-repository');
         return;
       }
-      if (!event.files?.length) {
-        reportOutcome('no-file-paths');
-        return;
+
+      const fallbackOperation = toAcpOperation(event.operation, 'execute');
+      const items: AcpHighlightItem[] = [];
+      const itemPaths = new Set<string>();
+      const sources = new Set<string>();
+
+      for (const file of event.files ?? []) {
+        if (file.context === 'system_file') continue;
+        const absolutePath = file.absolutePath;
+        if (!absolutePath) continue;
+        const relative = path.relative(repoRoot, absolutePath);
+        if (
+          !relative ||
+          relative.startsWith('..') ||
+          path.isAbsolute(relative)
+        ) {
+          continue;
+        }
+        const relativePath = relative.split(path.sep).join('/');
+        if (itemPaths.has(relativePath)) continue;
+        itemPaths.add(relativePath);
+
+        const intent = file as typeof file & {
+          operation?: unknown;
+          kind?: 'file' | 'directory';
+          source?: string;
+        };
+        if (intent.source) sources.add(intent.source);
+        items.push({
+          path: relativePath,
+          operation: toAcpOperation(intent.operation, fallbackOperation),
+          kind: intent.kind ?? 'file',
+        });
       }
+
+      span.setAttribute('acp.tool.processing.repo_intent_count', items.length);
+      span.setAttribute(
+        'acp.tool.processing.operations',
+        [...new Set(items.map((item) => item.operation))].join(',') || 'none',
+      );
+      span.setAttribute(
+        'acp.tool.processing.extraction_sources',
+        [...sources].join(',') || 'none',
+      );
 
       const callKey = `${event.sessionId}:${toolCallId}`;
       const seenPaths = this.acpToolCallPaths.get(callKey) ?? new Set<string>();
-      const newFiles = event.files.filter((file) => {
-        const path = file.repository?.relativePath;
-        return (
-          Boolean(path) &&
-          file.context !== 'system_file' &&
-          !seenPaths.has(path as string)
-        );
-      });
-      span.setAttribute('acp.tool.processing.new_file_count', newFiles.length);
-      if (newFiles.length === 0) {
+      const newItems = items.filter((item) => !seenPaths.has(item.path));
+      span.setAttribute('acp.tool.processing.new_file_count', newItems.length);
+
+      if (newItems.length === 0) {
+        const reason = items.length > 0 ? 'duplicate' : 'no-usable-paths';
+        span.setAttribute('acp.tool.processing.dropped_reason', reason);
         reportOutcome(
-          seenPaths.size > 0 ? 'already-highlighted' : 'no-file-paths',
+          items.length > 0 ? 'already-highlighted' : 'no-file-paths',
         );
         return;
       }
 
-      const highlightPaths = newFiles.flatMap((file) =>
-        file.repository?.relativePath ? [file.repository.relativePath] : [],
-      );
-      for (const file of newFiles) {
-        const path = file.repository?.relativePath;
-        if (path) seenPaths.add(path);
+      for (const item of newItems) {
+        seenPaths.add(item.path);
       }
       this.acpToolCallPaths.delete(callKey);
       this.acpToolCallPaths.set(callKey, seenPaths);
@@ -430,7 +540,8 @@ export class HttpEventServer extends EventEmitter {
         if (oldestKey === undefined) break;
         this.acpToolCallPaths.delete(oldestKey);
       }
-      reportOutcome('highlighted', highlightPaths);
+      const highlightPaths = newItems.map((item) => item.path);
+      reportOutcome('highlighted', highlightPaths, newItems);
       span.setStatus({ code: SpanStatusCode.OK });
     } catch (error) {
       this.errorCount++;
@@ -451,6 +562,7 @@ export class HttpEventServer extends EventEmitter {
     rawData: OpenCodeACPEventInput,
     outcome: AcpToolProcessingOutcome,
     highlightPaths?: string[],
+    highlightItems?: AcpHighlightItem[],
   ): void {
     this.sendToMain({
       type: 'ACP_TOOL_PROCESSING_RESULT',
@@ -460,6 +572,7 @@ export class HttpEventServer extends EventEmitter {
       toolCallId: rawData.update.toolCallId,
       outcome,
       highlightPaths,
+      highlightItems,
     });
   }
 

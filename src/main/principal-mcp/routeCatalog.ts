@@ -1098,7 +1098,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
   {
     name: 'acp-sessions',
     description:
-      'Inspect active ACP sessions and recent tool-call summaries, open ACP sessions in the Principal window, and send prompts to active sessions in registered repositories.',
+      'Inspect active ACP sessions and recent tool-call summaries, associate app artifacts with a session, open ACP sessions in the Principal window, and send prompts to active sessions in registered repositories.',
     routes: [
       {
         method: 'GET',
@@ -1147,6 +1147,44 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           'This returns bounded summaries, repository-relative file locations/highlight paths, and processing outcomes only. Raw tool inputs, outputs, and content bodies are not exposed.',
           'Only active in-memory ACP sessions are available; closed-session history is not retained.',
         ],
+      },
+      {
+        method: 'POST',
+        path: '/api/acp/sessions/:sessionId/artifacts',
+        summary:
+          'Associate an app artifact (topic or subsystem model) with an active ACP session so the ACP tab lists it under Artifacts.',
+        parameters: {
+          sessionId:
+            'ACP session ID from GET /api/acp/sessions. For an OpenCode agent this equals the shell environment variable OPENCODE_SESSION_ID (echo $OPENCODE_SESSION_ID).',
+        },
+        body: {
+          kind: 'string (required): "topic" or "subsystem-model".',
+          id: 'string (required): artifact ID, at most 200 characters.',
+          title:
+            'string (optional): display title, at most 300 characters; blank is ignored.',
+          directory:
+            'string (optional): absolute session directory; required to disambiguate duplicate session IDs.',
+        },
+        response: '{ success: true, artifact: { kind, id, title? } }',
+        errors: {
+          '400':
+            'Malformed request, invalid kind/id/title, or directory outside registered repositories.',
+          '403': 'Browser-origin requests are not allowed.',
+          '404': 'No active ACP session matches the session ID.',
+          '409': 'Session ID is ambiguous; provide the directory.',
+          '500': 'The artifact could not be associated with the ACP session.',
+        },
+        notes: [
+          'Use this to surface the topics or subsystem models you are working with so the user sees them in the ACP tab without you pasting IDs into chat.',
+          'The association is in-memory and disappears when the ACP session closes or the app restarts; it does not modify the artifact itself.',
+          'The artifact is listed only; it does not open or focus the preview pane.',
+          'An OpenCode agent can discover its own session ID by running echo $OPENCODE_SESSION_ID in a shell.',
+        ],
+        example: {
+          kind: 'subsystem-model',
+          id: 'sm_123',
+          title: 'ACP bridge',
+        },
       },
       {
         method: 'POST',

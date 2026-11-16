@@ -14,6 +14,7 @@ import type { AcpSessionEventEnvelope } from '../../../shared/main-process-api-i
 import type { AcpTab } from '../../events/portalTabs';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import { AcpService } from '../../main-process-api/AcpService';
+import { SubsystemModelService } from '../../main-process-api/SubsystemModelService';
 import { TopicService } from '../../main-process-api/TopicService';
 import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 import { ACPTabContent } from './ACPTabContent';
@@ -123,8 +124,30 @@ jest.mock('../../main-process-api/TopicService', () => ({
   },
 }));
 
+jest.mock('../../main-process-api/SubsystemModelService', () => ({
+  SubsystemModelService: {
+    list: jest.fn(),
+    get: jest.fn(),
+    getFilePath: jest.fn(),
+  },
+}));
+
+jest.mock('../../subsystem-models/SubsystemModelTabContent', () => ({
+  SubsystemModelTabContent: ({ modelId }: { modelId: string }) =>
+    jest
+      .requireActual<typeof React>('react')
+      .createElement(
+        'div',
+        { 'data-testid': 'subsystem-model-preview' },
+        modelId,
+      ),
+}));
+
 const mocked = AcpService as jest.Mocked<typeof AcpService>;
 const mockedTopicService = TopicService as jest.Mocked<typeof TopicService>;
+const mockedSubsystemModelService = SubsystemModelService as jest.Mocked<
+  typeof SubsystemModelService
+>;
 const mockedRepositoryMonitoring = RepositoryMonitoringService as jest.Mocked<
   typeof RepositoryMonitoringService
 >;
@@ -152,6 +175,10 @@ beforeEach(() => {
   mockedTopicService.getTopic.mockResolvedValue({
     title: 'Investigate the bridge',
     description: '## Goal\nReview the bridge behavior.',
+  } as never);
+  mockedSubsystemModelService.get.mockResolvedValue({
+    id: 'model-1',
+    title: 'Bridge Subsystem',
   } as never);
   Element.prototype.scrollIntoView = jest.fn();
   emit = null;
@@ -583,7 +610,7 @@ describe('ACPTabContent', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Open topic Investigate the bridge in chat',
+        name: 'Open Topic Investigate the bridge in chat',
       }),
     );
     const topicPreview = await screen.findByRole('region', {
@@ -591,7 +618,7 @@ describe('ACPTabContent', () => {
     });
     expect(topicPreview).toHaveStyle({ height: '75%' });
     fireEvent.keyDown(
-      screen.getByRole('separator', { name: 'Resize topic preview' }),
+      screen.getByRole('separator', { name: 'Resize preview' }),
       { key: 'ArrowDown' },
     );
     expect(topicPreview).toHaveStyle({ height: '80%' });
@@ -600,7 +627,7 @@ describe('ACPTabContent', () => {
     );
     expect(
       screen.getByRole('button', {
-        name: 'Close topic Investigate the bridge preview',
+        name: 'Close Topic Investigate the bridge preview',
       }),
     ).toHaveClass('is-selected');
     expect(topicPreview).toHaveTextContent('Review the bridge behavior.');
@@ -622,7 +649,7 @@ describe('ACPTabContent', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Close topic Investigate the bridge preview',
+        name: 'Close Topic Investigate the bridge preview',
       }),
     );
     expect(topicPreview).toHaveClass('is-closing');
@@ -636,6 +663,120 @@ describe('ACPTabContent', () => {
         name: 'Topic preview: Investigate the bridge',
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it('shows subsystem models read through Principal MCP in the Artifacts view', async () => {
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Session ready');
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-model-read',
+            title: 'Read a subsystem model',
+            name: 'http_request',
+            status: 'completed',
+            rawInput: {
+              method: 'GET',
+              path: '/api/subsystem-models/model-1',
+            },
+          },
+        },
+      });
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
+
+    expect(await screen.findByText('Bridge Subsystem')).toBeInTheDocument();
+    expect(screen.getByText('Subsystem model')).toBeInTheDocument();
+    expect(mockedSubsystemModelService.get).toHaveBeenCalledWith('model-1');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open Subsystem model Bridge Subsystem in chat',
+      }),
+    );
+    const modelPreview = await screen.findByRole('region', {
+      name: 'Subsystem model preview: Bridge Subsystem',
+    });
+    expect(modelPreview).toHaveStyle({ height: '75%' });
+    expect(screen.getByTestId('subsystem-model-preview')).toHaveTextContent(
+      'model-1',
+    );
+    expect(modelPreview.parentElement).toHaveClass(
+      'acp-session__chat-viewport',
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Close Subsystem model Bridge Subsystem preview',
+      }),
+    );
+    expect(modelPreview).toHaveClass('is-closing');
+    const animationEnd = new Event('animationend', { bubbles: true });
+    Object.defineProperty(animationEnd, 'animationName', {
+      value: 'acp-topic-preview-exit',
+    });
+    act(() => modelPreview.dispatchEvent(animationEnd));
+    expect(
+      screen.queryByRole('region', {
+        name: 'Subsystem model preview: Bridge Subsystem',
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('lists artifacts the agent associates with the session', async () => {
+    mockedTopicService.getTopic.mockResolvedValue(null as never);
+    mockedSubsystemModelService.get.mockResolvedValue(null as never);
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Session ready');
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'artifact',
+          artifact: { kind: 'topic', id: 'topic-999', title: 'Agent topic' },
+        },
+      });
+      // Re-associating the same artifact must not duplicate the row.
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'artifact',
+          artifact: { kind: 'topic', id: 'topic-999', title: 'Agent topic' },
+        },
+      });
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'artifact',
+          artifact: {
+            kind: 'subsystem-model',
+            id: 'model-2',
+            title: 'Agent model',
+          },
+        },
+      });
+      emit?.({
+        sessionKey: 'acp-other',
+        event: {
+          type: 'artifact',
+          artifact: { kind: 'topic', id: 'topic-other', title: 'Other tab' },
+        },
+      });
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
+
+    expect(await screen.findByText('Agent topic')).toBeInTheDocument();
+    expect(screen.getByText('Agent model')).toBeInTheDocument();
+    expect(screen.queryByText('Other tab')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Agent topic')).toHaveLength(1);
   });
 
   it('shows the ACP-local File City below tool calls in the same scroll view', async () => {

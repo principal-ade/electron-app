@@ -38,15 +38,12 @@ describe('HttpEventServer ACP events', () => {
         .mockResolvedValueOnce(secondEvent)
         .mockResolvedValueOnce(thirdEvent),
     };
-    const server = Object.assign(
-      Object.create(HttpEventServer.prototype),
-      {
-        acpPipeline,
-        sendToMain,
-        acpToolCallPaths: new Map<string, Set<string>>(),
-        errorCount: 0,
-      },
-    ) as Pick<HttpEventServer, 'processACPEvent'>;
+    const server = Object.assign(Object.create(HttpEventServer.prototype), {
+      acpPipeline,
+      sendToMain,
+      acpToolCallPaths: new Map<string, Set<string>>(),
+      errorCount: 0,
+    }) as Pick<HttpEventServer, 'processACPEvent'>;
 
     await server.processACPEvent(acpInput('call-1'));
     await server.processACPEvent(acpInput('call-1'));
@@ -81,6 +78,38 @@ describe('HttpEventServer ACP events', () => {
         sessionId: 'session-1',
         toolCallId: 'call-1',
         outcome: 'already-highlighted',
+      }),
+    );
+  });
+
+  it('carries per-path operations supplied by the pipeline', async () => {
+    const sendToMain = jest.fn();
+    const event = normalizedEvent('call-2', ['src/a.ts']);
+    const acpPipeline = {
+      processRawEvent: jest.fn().mockResolvedValue(event),
+    };
+    const server = Object.assign(Object.create(HttpEventServer.prototype), {
+      acpPipeline,
+      sendToMain,
+      acpToolCallPaths: new Map<string, Set<string>>(),
+      errorCount: 0,
+    }) as Pick<HttpEventServer, 'processACPEvent'>;
+
+    await server.processACPEvent({
+      sessionId: 'session-1',
+      workingDirectory: '/repo',
+      update: {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-2',
+        status: 'completed',
+      },
+    });
+
+    expect(sendToMain).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outcome: 'highlighted',
+        highlightPaths: ['src/a.ts'],
+        highlightItems: [{ path: 'src/a.ts', operation: 'read', kind: 'file' }],
       }),
     );
   });
@@ -120,6 +149,11 @@ function normalizedEvent(
       context: 'repo_file' as NonNullable<
         RepoNormalizedUniversalAgentSessionEvent['files']
       >[number]['context'],
+      operation: 'read' as unknown as NonNullable<
+        RepoNormalizedUniversalAgentSessionEvent['files']
+      >[number]['operation'],
+      kind: 'file',
+      source: 'location',
       repository: { gitRoot: '/repo', relativePath },
     })),
   };
