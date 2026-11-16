@@ -37,7 +37,6 @@ import type {
 } from '@agentclientprotocol/sdk';
 import type {
   AcpAgentDefinition,
-  AcpArtifactAssociation,
   AcpFileOperation,
   AcpHighlightItem,
   AcpToolProcessingOutcome,
@@ -106,7 +105,6 @@ export interface ACPSessionViewProps {
   messages: AcpChatMessage[];
   permissions: AcpPendingPermission[];
   isPrompting: boolean;
-  associatedArtifacts?: AcpArtifactAssociation[];
   onSend: (text: string, reference?: AcpTopicReference) => void;
   onStop: () => void;
   onRespondPermission: (requestId: string, optionId: string | null) => void;
@@ -296,7 +294,8 @@ function isPrincipalMcpToolCall(
   return (
     toolName.includes(serverKey) ||
     Boolean(topicIdFromActivationInput(call)) ||
-    Boolean(subsystemModelIdFromReadInput(call))
+    Boolean(subsystemModelIdFromReadInput(call)) ||
+    Boolean(artifactAssociationFromInput(call))
   );
 }
 
@@ -371,6 +370,48 @@ function subsystemModelIdFromReadInput(
   return decodeRouteId(route[1]);
 }
 
+interface AcpArtifactAssociationInput {
+  kind: AcpArtifactKind;
+  id: string;
+  title?: string;
+}
+
+/**
+ * An explicit artifact↔session association is itself a Principal MCP bridge
+ * call (`POST /api/acp/sessions/:sessionId/artifacts`), usually issued via a
+ * shell `curl`. `session/load` replays tool calls including their inputs, so
+ * the Artifacts list can be derived from the conversation with no app-side
+ * store: matching the route here keeps the list durable across restarts.
+ */
+function artifactAssociationFromInput(
+  call: Extract<AcpChatMessage, { role: 'tool' }>,
+): AcpArtifactAssociationInput | undefined {
+  const input = toolCallInputText(call);
+  if (input === undefined) return undefined;
+
+  const haystack = `${call.name ?? ''}\n${call.title}\n${input}`;
+  const route =
+    /\/api\/acp\/sessions\/[^/?#"'\\\s]+\/artifacts(?:[?#"'\\\s]|$)/i.exec(
+      haystack,
+    );
+  if (!route) return undefined;
+
+  // Tool inputs arrive JSON-stringified, so a shell `curl -d '{"kind":…}'`
+  // body shows up with escaped quotes. Normalize before extracting fields.
+  const normalized = haystack.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  const kindMatch = /"kind"\s*:\s*"(topic|subsystem-model)"/i.exec(normalized);
+  const idMatch = /(?:^|[^A-Za-z0-9_])"id"\s*:\s*"([^"]+)"/.exec(normalized);
+  if (!kindMatch?.[1] || !idMatch?.[1]) return undefined;
+  const kind = kindMatch[1].toLowerCase() as AcpArtifactKind;
+  const id = idMatch[1].trim();
+  if (!id) return undefined;
+  const titleMatch = /(?:^|[^A-Za-z0-9_])"title"\s*:\s*"([^"]*)"/.exec(
+    normalized,
+  );
+  const title = titleMatch?.[1]?.trim();
+  return { kind, id, ...(title ? { title } : {}) };
+}
+
 function topicIdOpenedByCall(
   call: Extract<AcpChatMessage, { role: 'tool' }>,
 ): string | undefined {
@@ -401,8 +442,24 @@ function artifactsFromCalls(
     if (topicId) record('topic', topicId);
     const modelId = subsystemModelIdReadByCall(call);
     if (modelId) record('subsystem-model', modelId);
+    const association = artifactAssociationFromInput(call);
+    if (association) record(association.kind, association.id);
   }
   return [...artifacts.values()];
+}
+
+/** Agent-provided association titles, used as a fallback until looked up. */
+function associationTitlesFromCalls(
+  calls: Extract<AcpChatMessage, { role: 'tool' }>[],
+): Record<string, string> {
+  const titles: Record<string, string> = {};
+  for (const call of calls) {
+    const association = artifactAssociationFromInput(call);
+    if (association?.title) {
+      titles[artifactKey(association.kind, association.id)] = association.title;
+    }
+  }
+  return titles;
 }
 
 function artifactKindLabel(kind: AcpArtifactKind): string {
@@ -426,7 +483,6 @@ function ACPToolCallsPanel({
   workspaceName,
   repository,
   activityView,
-  associatedArtifacts,
   selectedArtifact,
   onOpenArtifact,
 }: {
@@ -435,7 +491,6 @@ function ACPToolCallsPanel({
   workspaceName: string;
   repository?: ACPSessionViewProps['repository'];
   activityView: ACPActivityView;
-  associatedArtifacts: AcpArtifactAssociation[];
   selectedArtifact: AcpArtifactRef | null;
   onOpenArtifact: (artifact: AcpArtifactRef) => void;
 }) {
@@ -465,6 +520,7 @@ function ACPToolCallsPanel({
       const principalMcp = isPrincipalMcpToolCall(call);
       const topicActivationTopicId = topicIdFromActivationInput(call);
       const subsystemModelId = subsystemModelIdFromReadInput(call);
+      const association = artifactAssociationFromInput(call);
       const rawInputPresent =
         call.rawInput !== undefined && call.rawInput !== null;
       const classification = principalMcp
@@ -472,8 +528,10 @@ function ACPToolCallsPanel({
           ? 'topic-open'
           : subsystemModelId
             ? 'subsystem-model-read'
-            : 'unrecognized-principal-mcp-call'
-        : topicActivationTopicId || subsystemModelId
+            : association
+              ? 'artifact-association'
+              : 'unrecognized-principal-mcp-call'
+        : topicActivationTopicId || subsystemModelId || association
           ? 'bridge-route-not-principal-mcp'
           : 'not-principal-mcp';
       const stateKey = [
@@ -481,6 +539,7 @@ function ACPToolCallsPanel({
         rawInputPresent,
         topicActivationTopicId ?? '',
         subsystemModelId ?? '',
+        association ? `${association.kind}:${association.id}` : '',
         classification,
       ].join(':');
       if (
@@ -501,41 +560,28 @@ function ACPToolCallsPanel({
         'acp.artifact.subsystem_model_read_route_found',
         Boolean(subsystemModelId),
       );
+      span.setAttribute(
+        'acp.artifact.association_route_found',
+        Boolean(association),
+      );
+      if (association) {
+        span.setAttribute('acp.artifact.kind', association.kind);
+      }
       span.setAttribute('acp.artifact.classification', classification);
       span.setStatus({ code: SpanStatusCode.OK });
       span.end();
     }
   }, [toolCalls]);
-  // Agent-associated artifacts are listed even when no Principal MCP call
-  // revealed them; the agent title is a fallback until the id is looked up.
-  const associatedTitles = useMemo(() => {
-    const titles: Record<string, string> = {};
-    for (const artifact of associatedArtifacts) {
-      if (artifact.title) {
-        titles[artifactKey(artifact.kind, artifact.id)] = artifact.title;
-      }
-    }
-    return titles;
-  }, [associatedArtifacts]);
-  const artifacts = useMemo(() => {
-    const byKey = new Map(
-      artifactsFromCalls(principalMcpCalls).map((artifact) => [
-        artifactKey(artifact.kind, artifact.id),
-        artifact,
-      ]),
-    );
-    for (const association of associatedArtifacts) {
-      const key = artifactKey(association.kind, association.id);
-      if (!byKey.has(key)) {
-        byKey.set(key, {
-          kind: association.kind,
-          id: association.id,
-          openCount: 0,
-        });
-      }
-    }
-    return [...byKey.values()];
-  }, [associatedArtifacts, principalMcpCalls]);
+  // Explicit associations carry an agent-provided title, used as a fallback
+  // until the artifact id is looked up.
+  const associatedTitles = useMemo(
+    () => associationTitlesFromCalls(toolCalls),
+    [toolCalls],
+  );
+  const artifacts = useMemo(
+    () => artifactsFromCalls(principalMcpCalls),
+    [principalMcpCalls],
+  );
   useEffect(() => {
     if (artifacts.length === 0) return undefined;
     let cancelled = false;
@@ -834,8 +880,8 @@ function ACPToolCallsPanel({
                 role="status"
               >
                 <span>
-                  Topics and subsystem models the agent uses through Principal
-                  MCP, or associates with this session, will appear here.
+                  Topics and subsystem models the agent works with through
+                  Principal MCP will appear here.
                 </span>
               </div>
             ) : (
@@ -1046,7 +1092,6 @@ export function ACPSessionView({
   messages,
   permissions,
   isPrompting,
-  associatedArtifacts = [],
   onSend,
   onStop,
   onRespondPermission,
@@ -1605,7 +1650,6 @@ export function ACPSessionView({
           workspaceName={workspaceName}
           repository={repository}
           activityView={activityView}
-          associatedArtifacts={associatedArtifacts}
           selectedArtifact={selectedArtifact}
           onOpenArtifact={openArtifactPreview}
         />

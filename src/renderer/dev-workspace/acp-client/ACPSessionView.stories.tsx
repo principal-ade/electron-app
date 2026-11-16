@@ -68,6 +68,32 @@ const messages: AcpChatMessage[] = [
     role: 'agent',
     text: 'The main process forwards each session update to the renderer.\n\n- ACP chunks are accumulated in the tab\n- Streamdown renders the reply as Markdown',
   },
+  {
+    id: 'tool-3',
+    role: 'tool',
+    toolCallId: 'call-associate-model',
+    title: 'Associating the ACP bridge model',
+    name: 'shell',
+    kind: 'execute',
+    status: 'completed',
+    rawInput: {
+      command:
+        'curl -s -X POST http://[::1]:3054/api/acp/sessions/ses_story/artifacts -d \'{"kind":"subsystem-model","id":"sm_123","title":"ACP bridge"}\'',
+    },
+  },
+  {
+    id: 'tool-4',
+    role: 'tool',
+    toolCallId: 'call-associate-topic',
+    title: 'Associating the bridge topic',
+    name: 'shell',
+    kind: 'execute',
+    status: 'completed',
+    rawInput: {
+      command:
+        'curl -s -X POST http://[::1]:3054/api/acp/sessions/ses_story/artifacts -d \'{"kind":"topic","id":"topic-123"}\'',
+    },
+  },
 ];
 
 export const ToolCallActivity: Story = {
@@ -78,10 +104,6 @@ export const ToolCallActivity: Story = {
     messages,
     permissions: [],
     isPrompting: true,
-    associatedArtifacts: [
-      { kind: 'subsystem-model', id: 'sm_123', title: 'ACP bridge' },
-      { kind: 'topic', id: 'topic-123' },
-    ],
     onSend: () => {},
     onStop: () => {},
     onRespondPermission: () => {},

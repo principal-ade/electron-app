@@ -1176,7 +1176,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         },
         notes: [
           'Use this to surface the topics or subsystem models you are working with so the user sees them in the ACP tab without you pasting IDs into chat.',
-          'The association is in-memory and disappears when the ACP session closes or the app restarts; it does not modify the artifact itself.',
+          'The Artifacts list is derived from the replayed conversation, so the association survives renderer reloads and app restarts; it does not modify the artifact itself.',
           'The artifact is listed only; it does not open or focus the preview pane.',
           'An OpenCode agent can discover its own session ID by running echo $OPENCODE_SESSION_ID in a shell.',
         ],

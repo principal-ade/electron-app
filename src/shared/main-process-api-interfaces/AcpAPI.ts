@@ -116,12 +116,6 @@ export interface AcpLoadSessionRequest extends AcpNewSessionRequest {
 
 export interface AcpNewSessionResult {
   sessionId: string;
-  /**
-   * Artifacts the agent previously associated with this session. Present when a
-   * saved session is restored so the renderer can rebuild its Artifacts list
-   * after a reload; live associations arrive as `artifact` session events.
-   */
-  artifacts?: AcpArtifactAssociation[];
 }
 
 export interface AcpPromptRequest {
@@ -221,8 +215,9 @@ export type AcpArtifactKind = 'topic' | 'subsystem-model';
 
 /**
  * An artifact the agent explicitly associated with its session (e.g. a
- * subsystem model it is searching). The renderer resolves a display title from
- * the id, falling back to {@link title} when the id cannot be looked up.
+ * subsystem model it is searching). The ACP tab derives the Artifacts list from
+ * the replayed conversation, resolving a display title from the id and falling
+ * back to {@link title} when the id cannot be looked up.
  */
 export interface AcpArtifactAssociation {
   kind: AcpArtifactKind;
@@ -238,7 +233,6 @@ export type AcpSessionEvent =
       request: RequestPermissionRequest;
     }
   | { type: 'tool-processing'; result: AcpToolProcessingResult }
-  | { type: 'artifact'; artifact: AcpArtifactAssociation }
   | { type: 'closed'; reason?: string };
 
 export interface AcpSessionEventEnvelope {

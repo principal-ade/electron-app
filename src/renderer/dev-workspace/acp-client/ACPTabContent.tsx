@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2, Sparkles, XCircle } from 'lucide-react';
-import { SpanStatusCode } from '@opentelemetry/api';
 import type {
   ContentBlock,
   SessionUpdate,
@@ -11,7 +10,6 @@ import type {
 import {
   DEFAULT_ACP_AGENT,
   getAcpAgent,
-  type AcpArtifactAssociation,
   type AcpToolProcessingResult,
   type AcpAgentId,
 } from '../../../shared/main-process-api-interfaces/AcpAPI';
@@ -25,10 +23,7 @@ import {
   type AcpPendingPermission,
   type AcpTopicReference,
 } from './ACPSessionView';
-import { getTracer } from '../../telemetry';
 import './ACPClientView.css';
-
-const acpTracer = getTracer('principal-ade-dev-workspace');
 
 export interface ACPTabContentProps {
   tab: AcpTab;
@@ -275,25 +270,6 @@ function applyUpdate(
   }
 }
 
-// Merge artifact associations by kind + id, newer values winning per field. Used
-// both for live `artifact` events and for the list main replays when a session
-// is restored after a renderer reload.
-function mergeArtifacts(
-  previous: AcpArtifactAssociation[],
-  incoming: AcpArtifactAssociation[],
-): AcpArtifactAssociation[] {
-  if (incoming.length === 0) return previous;
-  const byKey = new Map(
-    previous.map((item) => [`${item.kind}:${item.id}`, item]),
-  );
-  for (const item of incoming) {
-    const key = `${item.kind}:${item.id}`;
-    const existing = byKey.get(key);
-    byKey.set(key, existing ? { ...existing, ...item } : item);
-  }
-  return [...byKey.values()];
-}
-
 function ACPStartupView({
   tab,
   state,
@@ -445,9 +421,6 @@ export function ACPTabContent({
   const [messages, setMessages] = useState<AcpChatMessage[]>([]);
   const [permissions, setPermissions] = useState<AcpPendingPermission[]>([]);
   const [isPrompting, setIsPrompting] = useState(false);
-  const [associatedArtifacts, setAssociatedArtifacts] = useState<
-    AcpArtifactAssociation[]
-  >([]);
 
   const messageIdRef = useRef(0);
   const generationRef = useRef(0);
@@ -490,23 +463,6 @@ export function ACPTabContent({
         if (event.type === 'tool-processing') {
           setMessages((previous) =>
             applyToolProcessingResult(previous, event.result, nextMessageId),
-          );
-          return;
-        }
-
-        // The agent can surface the topics/subsystem models it is working with.
-        // Associations are deduped by kind + id and listed in the Artifacts view.
-        if (event.type === 'artifact') {
-          const span = acpTracer.startSpan('acp.artifact.received');
-          span.setAttribute('acp.artifact.kind', event.artifact.kind);
-          span.setAttribute(
-            'acp.artifact.has_title',
-            Boolean(event.artifact.title),
-          );
-          span.setStatus({ code: SpanStatusCode.OK });
-          span.end();
-          setAssociatedArtifacts((previous) =>
-            mergeArtifacts(previous, [event.artifact]),
           );
           return;
         }
@@ -564,7 +520,6 @@ export function ACPTabContent({
       setPermissions([]);
       setPrompting(false);
       setIsStartingSession(false);
-      setAssociatedArtifacts([]);
 
       try {
         await AcpService.connect({
@@ -600,11 +555,6 @@ export function ACPTabContent({
             : await AcpService.newSession(tab.id);
         if (generation !== generationRef.current) return false;
         setSessionId(result.sessionId);
-        // Restoring a saved session replays the conversation, but not the
-        // artifacts the agent associated with it, so seed them from main.
-        setAssociatedArtifacts((previous) =>
-          mergeArtifacts(previous, result.artifacts ?? []),
-        );
         onSessionIdChange?.(result.sessionId);
         setViewState('ready');
         return true;
@@ -717,7 +667,6 @@ export function ACPTabContent({
         messages={messages}
         permissions={permissions}
         isPrompting={isPrompting}
-        associatedArtifacts={associatedArtifacts}
         onSend={(text, reference) => void send(text, reference)}
         onStop={stop}
         onRespondPermission={respondPermission}

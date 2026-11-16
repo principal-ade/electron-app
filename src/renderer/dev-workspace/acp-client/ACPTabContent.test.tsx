@@ -735,38 +735,70 @@ describe('ACPTabContent', () => {
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
     await screen.findByText('Session ready');
 
+    const associateCall = (
+      toolCallId: string,
+      kind: string,
+      id: string,
+      title: string,
+    ) => ({
+      sessionUpdate: 'tool_call' as const,
+      toolCallId,
+      title: `Associate ${id}`,
+      name: 'shell',
+      status: 'completed' as const,
+      rawInput: {
+        command: `curl -s -X POST http://[::1]:3054/api/acp/sessions/ses_1/artifacts -d '{"kind":"${kind}","id":"${id}","title":"${title}"}'`,
+      },
+    });
+
     act(() => {
       emit?.({
         sessionKey: 'acp-/repo',
         event: {
-          type: 'artifact',
-          artifact: { kind: 'topic', id: 'topic-999', title: 'Agent topic' },
+          type: 'update',
+          update: associateCall(
+            'call-topic-999',
+            'topic',
+            'topic-999',
+            'Agent topic',
+          ),
         },
       });
       // Re-associating the same artifact must not duplicate the row.
       emit?.({
         sessionKey: 'acp-/repo',
         event: {
-          type: 'artifact',
-          artifact: { kind: 'topic', id: 'topic-999', title: 'Agent topic' },
+          type: 'update',
+          update: associateCall(
+            'call-topic-999-dup',
+            'topic',
+            'topic-999',
+            'Agent topic',
+          ),
         },
       });
       emit?.({
         sessionKey: 'acp-/repo',
         event: {
-          type: 'artifact',
-          artifact: {
-            kind: 'subsystem-model',
-            id: 'model-2',
-            title: 'Agent model',
-          },
+          type: 'update',
+          update: associateCall(
+            'call-model-2',
+            'subsystem-model',
+            'model-2',
+            'Agent model',
+          ),
         },
       });
       emit?.({
         sessionKey: 'acp-other',
         event: {
-          type: 'artifact',
-          artifact: { kind: 'topic', id: 'topic-other', title: 'Other tab' },
+          type: 'update',
+          update: associateCall(
+            'call-other',
+            'topic',
+            'topic-other',
+            'Other tab',
+          ),
         },
       });
     });
@@ -779,18 +811,51 @@ describe('ACPTabContent', () => {
     expect(screen.getAllByText('Agent topic')).toHaveLength(1);
   });
 
-  it('restores artifacts main replays when a saved session is reconnected', async () => {
+  it('restores associated artifacts from the replayed conversation', async () => {
     mockedTopicService.getTopic.mockResolvedValue(null as never);
     mockedSubsystemModelService.get.mockResolvedValue(null as never);
     mocked.loadSession.mockResolvedValue({
       sessionId: 'ses_saved',
-      artifacts: [
-        { kind: 'subsystem-model', id: 'model-7', title: 'Restored model' },
-        { kind: 'topic', id: 'topic-7', title: 'Restored topic' },
-      ],
     });
     render(<ACPTabContent tab={makeTab({ sessionId: 'ses_saved' })} />);
     await screen.findByText('Session ready');
+
+    // session/load replays tool calls including their inputs, so association
+    // calls reappear here and the Artifacts list is derived from them.
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-model-7',
+            title: 'Associate model-7',
+            name: 'shell',
+            status: 'completed',
+            rawInput: {
+              command: `curl -s -X POST http://[::1]:3054/api/acp/sessions/ses_saved/artifacts -d '{"kind":"subsystem-model","id":"model-7","title":"Restored model"}'`,
+            },
+          },
+        },
+      });
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-topic-7',
+            title: 'Associate topic-7',
+            name: 'shell',
+            status: 'completed',
+            rawInput: {
+              command: `curl -s -X POST http://[::1]:3054/api/acp/sessions/ses_saved/artifacts -d '{"kind":"topic","id":"topic-7","title":"Restored topic"}'`,
+            },
+          },
+        },
+      });
+    });
 
     fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
 
