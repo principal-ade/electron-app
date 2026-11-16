@@ -348,6 +348,14 @@ export function registerAcpSessionRoutes(
       return;
     }
 
+    const span = tracer.startSpan('principal_mcp.acp.session.artifacts', {
+      attributes: {
+        'acp.artifact.kind': kind,
+        'acp.artifact.has_title': title !== undefined,
+        'http.method': 'POST',
+        'http.path': '/api/acp/sessions/:sessionId/artifacts',
+      },
+    });
     try {
       const repositoryDirectories = (
         await deps.getRepositoryDirectories()
@@ -356,6 +364,10 @@ export function registerAcpSessionRoutes(
         directory &&
         !repositoryDirectories.some((root) => isWithin(directory, root))
       ) {
+        span.addEvent('principal_mcp.acp.artifact.rejected', {
+          reason: 'directory-outside-repositories',
+        });
+        span.setStatus({ code: SpanStatusCode.ERROR });
         res.status(400).json({
           success: false,
           error: 'directory must be inside a registered repository',
@@ -373,7 +385,12 @@ export function registerAcpSessionRoutes(
               isWithin(session.directory, root),
             ),
         );
+      span.setAttribute('acp.session.match_count', sessions.length);
       if (sessions.length === 0) {
+        span.addEvent('principal_mcp.acp.artifact.rejected', {
+          reason: 'no-session',
+        });
+        span.setStatus({ code: SpanStatusCode.ERROR });
         res.status(404).json({
           success: false,
           error: 'no active ACP session found for this sessionId',
@@ -381,6 +398,10 @@ export function registerAcpSessionRoutes(
         return;
       }
       if (sessions.length > 1) {
+        span.addEvent('principal_mcp.acp.artifact.rejected', {
+          reason: 'ambiguous-session',
+        });
+        span.setStatus({ code: SpanStatusCode.ERROR });
         res.status(409).json({
           success: false,
           error: 'sessionId is ambiguous; provide the directory',
@@ -389,6 +410,11 @@ export function registerAcpSessionRoutes(
       }
 
       const session = sessions[0];
+      span.setAttribute('acp.agent.name', session.agentName);
+      span.setAttribute(
+        'principal.repository.telemetry_id',
+        repositoryTelemetryId(session.directory),
+      );
       const artifact: AcpArtifactAssociation = {
         kind: kind as AcpArtifactAssociation['kind'],
         id,
@@ -399,7 +425,12 @@ export function registerAcpSessionRoutes(
         artifact,
         session.directory,
       );
+      span.setAttribute('acp.artifact.associated', associated);
       if (!associated) {
+        span.addEvent('principal_mcp.acp.artifact.rejected', {
+          reason: 'associate-failed',
+        });
+        span.setStatus({ code: SpanStatusCode.ERROR });
         res.status(404).json({
           success: false,
           error: 'no active ACP session found for this sessionId',
@@ -407,12 +438,23 @@ export function registerAcpSessionRoutes(
         return;
       }
 
+      span.addEvent('principal_mcp.acp.artifact.associated', {
+        'acp.artifact.kind': artifact.kind,
+      });
+      span.setStatus({ code: SpanStatusCode.OK });
       res.json({ success: true, artifact });
-    } catch {
+    } catch (error) {
+      span.setAttribute(
+        'error.type',
+        error instanceof Error ? error.name : typeof error,
+      );
+      span.setStatus({ code: SpanStatusCode.ERROR });
       res.status(500).json({
         success: false,
         error: 'could not associate the artifact with the ACP session',
       });
+    } finally {
+      span.end();
     }
   });
 

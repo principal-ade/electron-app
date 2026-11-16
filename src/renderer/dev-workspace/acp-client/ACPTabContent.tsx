@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2, Sparkles, XCircle } from 'lucide-react';
+import { SpanStatusCode } from '@opentelemetry/api';
 import type {
   ContentBlock,
   SessionUpdate,
@@ -24,7 +25,10 @@ import {
   type AcpPendingPermission,
   type AcpTopicReference,
 } from './ACPSessionView';
+import { getTracer } from '../../telemetry';
 import './ACPClientView.css';
+
+const acpTracer = getTracer('principal-ade-dev-workspace');
 
 export interface ACPTabContentProps {
   tab: AcpTab;
@@ -474,6 +478,14 @@ export function ACPTabContent({
         // The agent can surface the topics/subsystem models it is working with.
         // Associations are deduped by kind + id and listed in the Artifacts view.
         if (event.type === 'artifact') {
+          const span = acpTracer.startSpan('acp.artifact.received');
+          span.setAttribute('acp.artifact.kind', event.artifact.kind);
+          span.setAttribute(
+            'acp.artifact.has_title',
+            Boolean(event.artifact.title),
+          );
+          span.setStatus({ code: SpanStatusCode.OK });
+          span.end();
           setAssociatedArtifacts((previous) => {
             const key = `${event.artifact.kind}:${event.artifact.id}`;
             const index = previous.findIndex(

@@ -547,16 +547,39 @@ class AcpService {
     artifact: AcpArtifactAssociation,
     directory?: string,
   ): boolean {
-    const matches = [...this.entries.values()].filter(
-      (entry) =>
-        !entry.closed &&
-        entry.sessionReady &&
-        entry.sessionId === sessionId &&
-        (!directory || entry.directory === directory),
-    );
-    if (matches.length !== 1) return false;
-    this.emit(matches[0], { type: 'artifact', artifact });
-    return true;
+    const span = tracer.startSpan('acp.artifact.associate', {
+      attributes: {
+        'acp.artifact.kind': artifact.kind,
+        'acp.artifact.has_directory': directory !== undefined,
+      },
+    });
+    try {
+      const matches = [...this.entries.values()].filter(
+        (entry) =>
+          !entry.closed &&
+          entry.sessionReady &&
+          entry.sessionId === sessionId &&
+          (!directory || entry.directory === directory),
+      );
+      span.setAttribute('acp.session.match_count', matches.length);
+      if (matches.length !== 1) {
+        span.setAttribute('acp.artifact.associated', false);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        return false;
+      }
+      const [entry] = matches;
+      span.setAttribute('acp.agent.name', entry.agentName);
+      span.setAttribute(
+        'principal.repository.telemetry_id',
+        repositoryTelemetryId(entry.directory),
+      );
+      this.emit(entry, { type: 'artifact', artifact });
+      span.setAttribute('acp.artifact.associated', true);
+      span.setStatus({ code: SpanStatusCode.OK });
+      return true;
+    } finally {
+      span.end();
+    }
   }
 
   async disconnect(request: { sessionKey: string }): Promise<void> {
