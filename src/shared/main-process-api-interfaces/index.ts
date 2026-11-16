@@ -19,6 +19,27 @@ import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-ser
 import type { HomeRepositoryRefreshInterest } from '../homeRepositoryRefresh';
 
 // Extended RepositoryMonitoringAPI with app-specific methods
+export interface DaemonProcessInfo {
+  pid: number;
+  /** Whether a process with this PID currently exists (signal 0 probe). */
+  alive: boolean;
+  /** Full command line from `ps`; null when it could not be read. */
+  command: string | null;
+  /** Parent PID; null when unknown. */
+  ppid: number | null;
+}
+
+export interface KillDaemonProcessResult {
+  success: boolean;
+  /** The daemon PID that was targeted; null when no PID was known. */
+  pid: number | null;
+  /** Signal that actually ended the process; null when already dead. */
+  signal: 'SIGTERM' | 'SIGKILL' | null;
+  /** True when no process with the known PID existed. */
+  alreadyDead?: boolean;
+  error?: string;
+}
+
 export interface ExtendedRepositoryMonitoringAPI extends RepositoryMonitoringAPI {
   /** Fired after the monitor has removed a repository and its cached slices. */
   onRepositoryUnregistered: (
@@ -41,6 +62,18 @@ export interface ExtendedRepositoryMonitoringAPI extends RepositoryMonitoringAPI
   setWatcherImpl: (
     impl: 'parcel' | 'chokidar',
   ) => Promise<{ success: boolean; changed?: boolean; error?: string }>;
+  /**
+   * Identify the OS process behind the shared daemon (PID, liveness,
+   * command line). Works even when the daemon stopped responding, as long
+   * as its PID was seen once. Null when no PID is known.
+   */
+  getDaemonProcessInfo: () => Promise<DaemonProcessInfo | null>;
+  /**
+   * Force-kill the hung daemon process (SIGTERM, escalating to SIGKILL).
+   * Only ever targets the PID the main-process manager last shook hands
+   * with — never an arbitrary PID. Supervision respawns a fresh daemon.
+   */
+  killDaemonProcess: () => Promise<KillDaemonProcessResult>;
 }
 import type { SecretsAPI } from './SecretsAPI';
 import type { LinksAPI } from './LinksAPI';

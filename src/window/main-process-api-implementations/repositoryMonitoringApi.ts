@@ -287,6 +287,14 @@ export const repositoryMonitoringAPI: ExtendedRepositoryMonitoringAPI = {
     );
   },
 
+  getDaemonProcessInfo: async () => {
+    return ipcRenderer.invoke('repository-monitoring:get-daemon-process');
+  },
+
+  killDaemonProcess: async () => {
+    return ipcRenderer.invoke('repository-monitoring:kill-daemon-process');
+  },
+
   restartDaemon: async () => {
     return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.RESTART_DAEMON);
   },

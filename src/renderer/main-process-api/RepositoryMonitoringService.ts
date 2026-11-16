@@ -8,6 +8,10 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type { HomeRepositoryRefreshInterest } from '../../shared/homeRepositoryRefresh';
 import type {
+  DaemonProcessInfo,
+  KillDaemonProcessResult,
+} from '../../shared/main-process-api-interfaces';
+import type {
   RepositoryMonitoringResult,
   MonitoringStatus,
   GitStatus,
@@ -522,6 +526,43 @@ export class RepositoryMonitoringService {
       console.error('[RepositoryMonitoring] Error restarting daemon:', error);
       return {
         success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Identify the OS process behind the shared daemon (PID, liveness,
+   * command line). Null when no PID is known or the lookup fails.
+   */
+  static async getDaemonProcessInfo(): Promise<DaemonProcessInfo | null> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.getDaemonProcessInfo();
+    } catch (error) {
+      console.error(
+        '[RepositoryMonitoring] Error getting daemon process info:',
+        error,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Force-kill the hung daemon process (SIGTERM, escalating to SIGKILL).
+   * Only targets the PID the main process last shook hands with.
+   */
+  static async killDaemonProcess(): Promise<KillDaemonProcessResult> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.killDaemonProcess();
+    } catch (error) {
+      console.error(
+        '[RepositoryMonitoring] Error killing daemon process:',
+        error,
+      );
+      return {
+        success: false,
+        pid: null,
+        signal: null,
         error: error instanceof Error ? error.message : String(error),
       };
     }

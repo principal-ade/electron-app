@@ -487,6 +487,46 @@ export async function registerRepositoryMonitoringHandlers(): Promise<void> {
     }
   });
 
+  // Identify the OS process behind the shared daemon (PID, liveness,
+  // command line), even when it stopped responding to requests. Channel is
+  // app-local: the shared server package has no such event.
+  ipcMain.handle(
+    'repository-monitoring:get-daemon-process',
+    async () => {
+      try {
+        return await manager.getDaemonProcessInfo();
+      } catch (error) {
+        console.error(
+          '[RepositoryMonitoring] Error getting daemon process info:',
+          error,
+        );
+        return null;
+      }
+    },
+  );
+
+  // Force-kill the hung daemon process (SIGTERM, escalating to SIGKILL).
+  // Only ever targets the PID the manager last shook hands with.
+  ipcMain.handle(
+    'repository-monitoring:kill-daemon-process',
+    async () => {
+      try {
+        return await manager.killDaemonProcess();
+      } catch (error) {
+        console.error(
+          '[RepositoryMonitoring] Error killing daemon process:',
+          error,
+        );
+        return {
+          success: false,
+          pid: null,
+          signal: null,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
+
   // Start monitoring
   ipcMain.handle(RepositoryMonitoringAPIEvent.START_MONITORING, async () => {
     console.log('[RepositoryMonitoring] START_MONITORING request');

@@ -13,6 +13,8 @@
 
 import { app, BrowserWindow } from 'electron';
 import { EventEmitter } from 'events';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import * as fsPromises from 'fs/promises';
 import { createLogger, configureMainLogging, getLogFilePath } from './logger';
 import {
@@ -104,6 +106,70 @@ const DEFAULT_CONFIG: RepositoryMonitoringManagerConfig = {
 const LIFECYCLE_HISTORY_LIMIT = 100;
 const DEFAULT_LOG_TAIL_LINES = 500;
 
+/** OS-level identity of the shared daemon process. */
+export interface DaemonProcessInfo {
+  pid: number;
+  /** Whether a process with this PID currently exists (signal 0 probe). */
+  alive: boolean;
+  /** Full command line from `ps`; null when it could not be read. */
+  command: string | null;
+  /** Parent PID; null when unknown. */
+  ppid: number | null;
+}
+
+/** Outcome of {@link RepositoryMonitoringManager.killDaemonProcess}. */
+export interface KillDaemonProcessResult {
+  success: boolean;
+  /** The daemon PID that was targeted; null when no PID was known. */
+  pid: number | null;
+  /** Signal that actually ended the process; null when already dead. */
+  signal: 'SIGTERM' | 'SIGKILL' | null;
+  /** True when no process with the known PID existed. */
+  alreadyDead?: boolean;
+  error?: string;
+}
+
+const execFileAsync = promisify(execFile);
+
+/** Signal-0 liveness probe. EPERM means the process exists but is not ours. */
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException)?.code === 'EPERM';
+  }
+}
+
+async function waitForExit(pid: number, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!isPidAlive(pid)) return true;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return !isPidAlive(pid);
+}
+
+/** Read `ppid` + full command line for a PID. Null when unreadable. */
+async function describePid(
+  pid: number,
+): Promise<{ ppid: number | null; command: string } | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      'ps',
+      ['-p', String(pid), '-o', 'ppid=', '-o', 'command='],
+      { timeout: 3000 },
+    );
+    const line = stdout.trim();
+    if (!line) return null;
+    const match = line.match(/^(\d+)\s+(.*)$/);
+    if (!match) return { ppid: null, command: line };
+    return { ppid: Number(match[1]), command: match[2] };
+  } catch {
+    return null;
+  }
+}
+
 /** Wire events the daemon pushes that the manager re-emits and broadcasts. */
 const FORWARDED_EVENTS: readonly string[] = Object.values(
   MonitoringInternalEvent,
@@ -129,6 +195,9 @@ export class RepositoryMonitoringManager extends EventEmitter {
   private startedAt: number | null = null;
   private lastConnectedAt: number | null = null;
   private hello: DaemonHello | null = null;
+  /** Last daemon PID we shook hands with. Unlike `hello`, this survives
+   * disconnects so a hung process stays identifiable and killable. */
+  private lastDaemonPid: number | null = null;
   private lastError: LifecycleErrorInfo | null = null;
   private lastDisconnect: { at: number; reason: string } | null = null;
   private lifecycleHistory: LifecycleEvent[] = [];
@@ -180,6 +249,7 @@ export class RepositoryMonitoringManager extends EventEmitter {
   private bindClient(): void {
     this.client.on('connected', (hello: DaemonHello) => {
       this.hello = hello;
+      this.lastDaemonPid = hello.pid;
       this.isConnected = true;
       this.lastConnectedAt = Date.now();
       this.reconnectAttempts = 0;
@@ -672,6 +742,96 @@ export class RepositoryMonitoringManager extends EventEmitter {
       watcherImplFallbackReason: this.watcherImplFallbackReason,
       lifecycleHistory: [...this.lifecycleHistory],
       daemon: this.getDaemonInfo(),
+    };
+  }
+
+  /**
+   * PID of the daemon we last shook hands with, kept across disconnects.
+   * Null when no daemon has ever connected this session.
+   */
+  get lastKnownDaemonPid(): number | null {
+    return this.hello?.pid ?? this.lastDaemonPid;
+  }
+
+  /**
+   * Identify the OS process behind the shared daemon: PID, liveness and
+   * command line. Works even when the daemon stopped responding to
+   * requests, as long as we saw its PID once. Null when no PID is known.
+   */
+  async getDaemonProcessInfo(): Promise<DaemonProcessInfo | null> {
+    const pid = this.lastKnownDaemonPid;
+    if (pid == null) return null;
+    const detail = await describePid(pid);
+    return {
+      pid,
+      alive: isPidAlive(pid),
+      command: detail?.command ?? null,
+      ppid: detail?.ppid ?? null,
+    };
+  }
+
+  /**
+   * Force-kill the hung daemon process: SIGTERM, wait up to 3 s, escalate
+   * to SIGKILL, wait up to 2 s, then verify the PID is gone.
+   *
+   * Only ever targets the PID this manager last shook hands with — never
+   * an arbitrary PID. The client's supervision will reconnect (spawning a
+   * fresh daemon) on its own once the old process is gone.
+   */
+  async killDaemonProcess(): Promise<KillDaemonProcessResult> {
+    const pid = this.lastKnownDaemonPid;
+    if (pid == null) {
+      return {
+        success: false,
+        pid: null,
+        signal: null,
+        error: 'No daemon PID is known yet this session.',
+      };
+    }
+    if (pid <= 1) {
+      return {
+        success: false,
+        pid,
+        signal: null,
+        error: `Refusing to signal PID ${String(pid)}.`,
+      };
+    }
+    if (!isPidAlive(pid)) {
+      return { success: true, pid, signal: null, alreadyDead: true };
+    }
+    const attempt = async (
+      signal: 'SIGTERM' | 'SIGKILL',
+      waitMs: number,
+    ): Promise<boolean> => {
+      try {
+        process.kill(pid, signal);
+      } catch (error) {
+        // Gone between the liveness check and the signal: that's success.
+        return (error as NodeJS.ErrnoException)?.code === 'ESRCH';
+      }
+      return waitForExit(pid, waitMs);
+    };
+
+    if (await attempt('SIGTERM', 3000)) {
+      this.log('info', `Daemon process ${String(pid)} exited after SIGTERM`);
+      return { success: true, pid, signal: 'SIGTERM' };
+    }
+    this.log(
+      'warn',
+      `Daemon process ${String(pid)} ignored SIGTERM; escalating to SIGKILL`,
+    );
+    if (await attempt('SIGKILL', 2000)) {
+      this.log('info', `Daemon process ${String(pid)} exited after SIGKILL`);
+      return { success: true, pid, signal: 'SIGKILL' };
+    }
+    return {
+      success: false,
+      pid,
+      signal: null,
+      error:
+        `Process ${String(pid)} is still alive after SIGKILL. ` +
+        `It may be uninterruptible or owned by another user — ` +
+        `try \`sudo kill -KILL ${String(pid)}\` in a terminal.`,
     };
   }
 

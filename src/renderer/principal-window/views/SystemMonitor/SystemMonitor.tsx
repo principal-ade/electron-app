@@ -46,6 +46,34 @@ interface SystemMonitorProps {
   sidebarCollapsed?: boolean;
 }
 
+// How long the UI waits for the repo-monitor daemon before giving up on one
+// poll. The daemon client itself waits up to ~30s per request (plus spawn /
+// connect time), which reads as a permanently stuck "Loading monitoring
+// data..." screen when the daemon is dead. Failing fast here lets the monitor
+// render the disconnected state with its reconnect controls instead.
+const STATUS_FETCH_TIMEOUT_MS = 8000;
+// Absolute backstop: the loading gate below must always clear, even if an IPC
+// promise itself never settles (hangs without resolving or rejecting).
+const MAX_LOADING_MS = STATUS_FETCH_TIMEOUT_MS + 2000;
+
+/** Race a promise against a timeout so a hung daemon can't wedge the UI. */
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer !== undefined) clearTimeout(timer);
+  });
+}
+
 const MonitorNavButton: React.FC<{
   active: boolean;
   onClick: () => void;
@@ -121,6 +149,10 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [diagnostics, setDiagnostics] = useState<ServerDiagnostics | null>(
     null,
   );
+  // Last daemon PID ever seen (snapshot or lifecycle event). Unlike
+  // `diagnostics.daemonPid`, this survives disconnects so a hung process
+  // stays identifiable and killable.
+  const [lastDaemonPid, setLastDaemonPid] = useState<number | null>(null);
   // Used to derive an "elapsed in current phase" string that updates every
   // second without re-fetching diagnostics.
   const [nowTick, setNowTick] = useState<number>(Date.now());
@@ -155,18 +187,34 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
+    let cancelled = false;
+    // The 2s poll must never stack overlapping requests while the daemon is
+    // hung: each fetch can now take up to STATUS_FETCH_TIMEOUT_MS.
+    let inFlight = false;
 
     const fetchStatus = async () => {
+      if (inFlight) return;
+      inFlight = true;
       try {
-        const data = await RepositoryMonitoringService.getMonitoringStatus();
-        const serverStatus =
-          await RepositoryMonitoringService.getServerStatus();
+        const [data, serverStatus] = await Promise.all([
+          withTimeout(
+            RepositoryMonitoringService.getMonitoringStatus(),
+            STATUS_FETCH_TIMEOUT_MS,
+            'getMonitoringStatus',
+          ),
+          withTimeout(
+            RepositoryMonitoringService.getServerStatus(),
+            STATUS_FETCH_TIMEOUT_MS,
+            'getServerStatus',
+          ),
+        ]);
+        if (cancelled) return;
         setStatus(data);
-        setLoading(false);
         // Use the actual connection state instead of inferring from data
         setIsRunning(serverStatus?.connected ?? false);
       } catch (error) {
         console.error('Failed to fetch monitoring status:', error);
+        if (cancelled) return;
         // Use fallback data if service is not available
         setStatus({
           repositories: [],
@@ -175,22 +223,32 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
           history: [],
           daemon: null,
         });
-        setLoading(false);
         setIsRunning(false);
+      } finally {
+        inFlight = false;
+        if (!cancelled) setLoading(false);
       }
     };
 
     // Initial fetch
     fetchStatus();
 
+    // Safety net: never leave the loading gate up, even if an IPC promise
+    // itself never settles when the daemon is not responding.
+    const maxTimer = setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, MAX_LOADING_MS);
+
     // Set up polling every 2 seconds
     interval = setInterval(fetchStatus, 2000);
 
     // Cleanup on unmount
     return () => {
+      cancelled = true;
       if (interval) {
         clearInterval(interval);
       }
+      clearTimeout(maxTimer);
     };
   }, []);
 
@@ -203,15 +261,27 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   useEffect(() => {
     let cancelled = false;
     let interval: NodeJS.Timeout | null = null;
+    let inFlight = false;
 
     const fetchDiagnostics = async () => {
+      if (inFlight) return;
+      inFlight = true;
       try {
-        const snapshot = await RepositoryMonitoringService.getDiagnostics();
+        const snapshot = await withTimeout(
+          RepositoryMonitoringService.getDiagnostics(),
+          STATUS_FETCH_TIMEOUT_MS,
+          'getDiagnostics',
+        );
         if (!cancelled) {
           setDiagnostics(snapshot);
+          if (snapshot.daemonPid != null) {
+            setLastDaemonPid(snapshot.daemonPid);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch monitoring diagnostics:', error);
+      } finally {
+        inFlight = false;
       }
     };
 
@@ -231,6 +301,9 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   useEffect(() => {
     const unsubscribe = RepositoryMonitoringService.onLifecycleEvent(
       (event: LifecycleEvent) => {
+        if (event.daemonPid != null) {
+          setLastDaemonPid(event.daemonPid);
+        }
         setDiagnostics((prev) => {
           if (!prev) return prev;
           // Apply the transition to the local copy so the UI updates
@@ -490,10 +563,22 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
         await RepositoryMonitoringService.stopMonitoring();
       } else {
         await RepositoryMonitoringService.startMonitoring();
-        // Refresh resource snapshot a beat after connecting.
+        // Refresh resource snapshot a beat after connecting. Bounded so a
+        // dead daemon can't leave a dangling promise; failure is non-fatal.
         setTimeout(async () => {
-          const data = await RepositoryMonitoringService.getMonitoringStatus();
-          setStatus(data);
+          try {
+            const data = await withTimeout(
+              RepositoryMonitoringService.getMonitoringStatus(),
+              STATUS_FETCH_TIMEOUT_MS,
+              'getMonitoringStatus',
+            );
+            setStatus(data);
+          } catch (refreshError) {
+            console.error(
+              'Failed to refresh monitoring status after start:',
+              refreshError,
+            );
+          }
         }, 1000);
       }
     } catch (error) {
@@ -986,6 +1071,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               <RepositoryMonitoringDiagnostics
                 diagnostics={diagnostics}
                 nowTick={nowTick}
+                lastDaemonPid={lastDaemonPid}
               />
             </>
           )}

@@ -14,6 +14,7 @@ import {
   Loader2,
   RefreshCw,
   RotateCcw,
+  Skull,
 } from 'lucide-react';
 import type {
   CacheSlice,
@@ -23,6 +24,10 @@ import type {
   LifecyclePhase,
   RepoMonitorDiagnostics,
 } from '@principal-ai/repository-monitoring-server';
+import type {
+  DaemonProcessInfo,
+  KillDaemonProcessResult,
+} from '../../../../shared/main-process-api-interfaces';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { ShellService } from '../../../main-process-api/ShellService';
 import { getRemoteDriftStatus } from './remoteDriftStatus';
@@ -267,14 +272,357 @@ const SliceCell: React.FC<{
 };
 
 /**
+ * Identify and (as a last resort) kill the shared daemon's OS process.
+ * Works off the last-known PID, so it stays useful when the daemon stopped
+ * responding and the connection — along with the live PID — is gone.
+ */
+const PROCESS_POLL_MS = 5000;
+const PROCESS_FETCH_TIMEOUT_MS = 5000;
+
+const DaemonProcessPanel: React.FC<{
+  knownPid: number | null;
+  theme: ThemeShape;
+}> = ({ knownPid, theme }) => {
+  const [info, setInfo] = useState<DaemonProcessInfo | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [confirmArmed, setConfirmArmed] = useState(false);
+  const [killing, setKilling] = useState(false);
+  const [result, setResult] = useState<KillDaemonProcessResult | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setConfirmArmed(false);
+    setResult(null);
+    const load = async () => {
+      setChecking(true);
+      try {
+        const next = await Promise.race([
+          RepositoryMonitoringService.getDaemonProcessInfo(),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error('process lookup timed out')),
+              PROCESS_FETCH_TIMEOUT_MS,
+            ),
+          ),
+        ]);
+        if (!cancelled) setInfo(next);
+      } catch {
+        // Keep the last reading; the poll retries.
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    };
+    void load();
+    const id = setInterval(load, PROCESS_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [knownPid]);
+
+  const handleKill = async () => {
+    if (!confirmArmed) {
+      setConfirmArmed(true);
+      return;
+    }
+    setConfirmArmed(false);
+    setKilling(true);
+    setResult(null);
+    try {
+      const outcome = await RepositoryMonitoringService.killDaemonProcess();
+      setResult(outcome);
+    } catch (error) {
+      setResult({
+        success: false,
+        pid: knownPid,
+        signal: null,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setKilling(false);
+    }
+    try {
+      setInfo(await RepositoryMonitoringService.getDaemonProcessInfo());
+    } catch {
+      // Liveness refresh is best-effort; the poll retries.
+    }
+  };
+
+  const handleCopyKillCommand = async () => {
+    if (knownPid == null) return;
+    try {
+      await navigator.clipboard.writeText(
+        `kill -TERM ${knownPid}  # escalate with: kill -KILL ${knownPid}`,
+      );
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (error) {
+      console.error('Failed to copy kill command:', error);
+    }
+  };
+
+  const rowStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '110px 1fr',
+    columnGap: '12px',
+    rowGap: '2px',
+    fontSize: '11px',
+    color: theme.colors.textSecondary,
+  };
+
+  return (
+    <div
+      style={{
+        padding: '12px 20px',
+        borderBottom: `1px solid ${theme.colors.border}`,
+      }}
+    >
+      <div
+        style={{
+          fontSize: '13px',
+          fontWeight: 500,
+          color: theme.colors.text,
+          marginBottom: '2px',
+        }}
+      >
+        Daemon process
+      </div>
+      <div
+        style={{
+          fontSize: '11px',
+          color: theme.colors.textSecondary,
+          marginBottom: knownPid == null ? 0 : '8px',
+        }}
+      >
+        Identify the hung daemon in Activity Monitor or a terminal — or kill
+        it here. Kill only ever targets the last-known daemon PID
+        {knownPid != null ? ` (${knownPid})` : ''}; supervision spawns a fresh
+        daemon afterwards.
+      </div>
+      {knownPid == null ? (
+        <div
+          style={{ fontSize: '11px', color: theme.colors.textSecondary }}
+        >
+          No daemon PID seen yet this session — nothing to identify or kill.
+        </div>
+      ) : (
+        <>
+          <div style={rowStyle}>
+            <span>PID</span>
+            <span
+              style={{
+                color: theme.colors.text,
+                fontFamily: theme.fonts.monospace,
+              }}
+            >
+              {knownPid}
+            </span>
+            <span>State</span>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color:
+                  info == null
+                    ? theme.colors.textSecondary
+                    : info.alive
+                      ? theme.colors.success
+                      : theme.colors.textSecondary,
+              }}
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor:
+                    info == null
+                      ? theme.colors.textSecondary
+                      : info.alive
+                        ? theme.colors.success
+                        : theme.colors.error,
+                  animation:
+                    info?.alive || (checking && info == null)
+                      ? 'pulse 1s infinite'
+                      : 'none',
+                }}
+              />
+              {info == null
+                ? checking
+                  ? 'Checking…'
+                  : 'Unknown — lookup failed'
+                : info.alive
+                  ? 'Running'
+                  : 'Exited — a fresh daemon spawns on next connect'}
+            </span>
+            <span>Command</span>
+            <span
+              style={{
+                color: theme.colors.text,
+                fontFamily: theme.fonts.monospace,
+                wordBreak: 'break-all',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '6px',
+                minWidth: 0,
+              }}
+            >
+              <span
+                title={info?.command ?? undefined}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {info?.command ?? (checking ? '…' : '—')}
+              </span>
+              {info?.command && (
+                <button
+                  onClick={() =>
+                    void navigator.clipboard
+                      .writeText(info.command ?? '')
+                      .catch((error: unknown) =>
+                        console.error('Failed to copy command:', error),
+                      )
+                  }
+                  title="Copy full command line"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: theme.colors.textSecondary,
+                    padding: 0,
+                    flexShrink: 0,
+                  }}
+                >
+                  <ClipboardCopy size={12} />
+                </button>
+              )}
+            </span>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+              marginTop: '10px',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
+            <button
+              onClick={() => void handleCopyKillCommand()}
+              title="Copy a kill command for use in a terminal"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 500,
+                borderRadius: '6px',
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                cursor: 'pointer',
+              }}
+            >
+              {copied ? <CheckCircle size={12} /> : <ClipboardCopy size={12} />}
+              {copied ? 'Copied' : 'Copy kill command'}
+            </button>
+            <button
+              onClick={() => void handleKill()}
+              disabled={killing}
+              title={
+                confirmArmed
+                  ? `Click again to confirm killing PID ${knownPid}`
+                  : `Send SIGTERM to PID ${knownPid}, escalating to SIGKILL`
+              }
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: confirmArmed ? 600 : 500,
+                borderRadius: '6px',
+                border: `1px solid ${theme.colors.error}`,
+                backgroundColor: confirmArmed
+                  ? theme.colors.error
+                  : `${theme.colors.error}10`,
+                color: confirmArmed ? '#fff' : theme.colors.error,
+                cursor: killing ? 'not-allowed' : 'pointer',
+                opacity: killing ? 0.6 : 1,
+              }}
+            >
+              {killing ? (
+                <Loader2
+                  size={12}
+                  style={{ animation: 'spin 1s linear infinite' }}
+                />
+              ) : (
+                <Skull size={12} />
+              )}
+              {killing
+                ? 'Killing…'
+                : confirmArmed
+                  ? `Confirm kill ${knownPid}?`
+                  : 'Kill process'}
+            </button>
+            {confirmArmed && !killing && (
+              <button
+                onClick={() => setConfirmArmed(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: theme.colors.textSecondary,
+                  fontSize: '12px',
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+          {result && (
+            <div
+              style={{
+                marginTop: '8px',
+                fontSize: '12px',
+                color: result.success
+                  ? theme.colors.success
+                  : theme.colors.error,
+                fontFamily: theme.fonts.monospace,
+                wordBreak: 'break-word',
+              }}
+            >
+              {result.success
+                ? result.alreadyDead
+                  ? `PID ${result.pid} was already gone — nothing to kill.`
+                  : `PID ${result.pid} exited (${result.signal}). A fresh daemon spawns on reconnect.`
+                : (result.error ?? 'Kill failed.')}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+/**
  * Every repository the shared daemon knows about (registered by any client)
  * with the freshness of each cache slice. Polled while the section is
  * mounted; the data is daemon-wide, so repos other apps registered show too.
  */
-const DaemonRepoTable: React.FC<{ nowTick: number; theme: ThemeShape }> = ({
-  nowTick,
-  theme,
-}) => {
+const DaemonRepoTable: React.FC<{
+  nowTick: number;
+  theme: ThemeShape;
+  knownPid: number | null;
+}> = ({ nowTick, theme, knownPid }) => {
   const [snapshot, setSnapshot] = useState<RepoMonitorDiagnostics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rebuilding, setRebuilding] = useState<string | null>(null);
@@ -333,7 +681,11 @@ const DaemonRepoTable: React.FC<{ nowTick: number; theme: ThemeShape }> = ({
   if (!snapshot) return message('Checking the daemon…');
   if (snapshot.state === 'unreachable') {
     return message(
-      `Daemon unreachable at ${snapshot.socketPath}${snapshot.error ? `: ${snapshot.error}` : ''}`,
+      `Daemon unreachable at ${snapshot.socketPath}${snapshot.error ? `: ${snapshot.error}` : ''}${
+        knownPid != null
+          ? ` (last known pid ${knownPid} — see Daemon process below to identify or kill it)`
+          : ''
+      }`,
       theme.colors.error,
     );
   }
@@ -479,7 +831,9 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
   diagnostics: ServerDiagnostics | null;
   /** Wall-clock now, ticked by parent so phase elapsed updates each second. */
   nowTick: number;
-}> = ({ diagnostics, nowTick }) => {
+  /** Last daemon PID ever seen; survives disconnects (unlike diagnostics.daemonPid). */
+  lastDaemonPid: number | null;
+}> = ({ diagnostics, nowTick, lastDaemonPid }) => {
   const { theme } = useTheme();
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [reposExpanded, setReposExpanded] = useState(false);
@@ -806,6 +1160,11 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
             })()}
           </div>
 
+          <DaemonProcessPanel
+            knownPid={diagnostics.daemonPid ?? lastDaemonPid}
+            theme={theme}
+          />
+
           {/* Watcher impl switcher. Lets users A/B test Parcel vs Chokidar
               without restarting the app — useful when isolating which
               implementation is responsible for crashes or silent failures. */}
@@ -1095,7 +1454,11 @@ export const RepositoryMonitoringDiagnostics: React.FC<{
             onToggle={() => setReposExpanded((v) => !v)}
             theme={theme}
           >
-            <DaemonRepoTable nowTick={nowTick} theme={theme} />
+            <DaemonRepoTable
+              nowTick={nowTick}
+              theme={theme}
+              knownPid={diagnostics.daemonPid ?? lastDaemonPid}
+            />
           </Collapsible>
 
           <Collapsible

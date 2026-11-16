@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { SystemMonitor } from './SystemMonitor';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 
@@ -75,4 +75,31 @@ it('keeps daemon diagnostics without duplicate registered-directory controls', a
   expect(RepositoryMonitoringService.onGitStatusChanged).not.toHaveBeenCalled();
   expect(RepositoryMonitoringService.getFileTree).not.toHaveBeenCalled();
   expect(RepositoryMonitoringService.getPackages).not.toHaveBeenCalled();
+});
+
+it('clears the loading gate when the daemon never responds', async () => {
+  jest.useFakeTimers();
+  try {
+    // Simulate a dead daemon: IPC promises that never settle.
+    const neverSettles = () => new Promise(() => {});
+    (RepositoryMonitoringService.getMonitoringStatus as jest.Mock)
+      .mockReturnValueOnce(neverSettles());
+    (RepositoryMonitoringService.getServerStatus as jest.Mock)
+      .mockReturnValueOnce(neverSettles());
+
+    render(<SystemMonitor />);
+    expect(screen.getByText('Loading monitoring data...')).toBeTruthy();
+
+    // Advance past the fetch timeout + the absolute loading backstop,
+    // flushing the resulting promise continuations.
+    await act(async () => {
+      jest.advanceTimersByTime(15000);
+    });
+
+    expect(screen.queryByText('Loading monitoring data...')).toBeNull();
+    // Falls back to empty status so the monitor renders its disconnected UI.
+    expect(screen.getByText('Repository Monitoring')).toBeTruthy();
+  } finally {
+    jest.useRealTimers();
+  }
 });
