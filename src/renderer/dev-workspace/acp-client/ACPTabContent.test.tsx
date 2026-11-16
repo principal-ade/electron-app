@@ -17,6 +17,10 @@ import { AcpService } from '../../main-process-api/AcpService';
 import { SubsystemModelService } from '../../main-process-api/SubsystemModelService';
 import { TopicService } from '../../main-process-api/TopicService';
 import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
+import { useFileTree } from '@pierre/trees/react';
+import { parsePatchFiles } from '@pierre/diffs';
+import { FileDiff } from '@pierre/diffs/react';
+import { GitService } from '../../main-process-api/GitService';
 import { ACPTabContent } from './ACPTabContent';
 import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
 
@@ -108,6 +112,21 @@ jest.mock('@principal-ai/file-city-react', () => ({
   ArchitectureMapHighlightLayers: jest.fn(() => null),
 }));
 
+jest.mock(
+  '@pierre/trees/react',
+  () => ({
+    useFileTree: jest.fn(() => ({
+      model: {
+        resetPaths: jest.fn(),
+        setGitStatus: jest.fn(),
+        getItem: jest.fn(() => null),
+      },
+    })),
+    FileTree: jest.fn(() => null),
+  }),
+  { virtual: true },
+);
+
 jest.mock('../file-city-panel/buildCityDataFromContext', () => ({
   buildCityDataFromContext: jest.fn(),
 }));
@@ -117,6 +136,29 @@ jest.mock('../../main-process-api/RepositoryMonitoringService', () => ({
     getFileTree: jest.fn(),
   },
 }));
+
+jest.mock('../../main-process-api/GitService', () => ({
+  GitService: {
+    getWorkingTreeDiff: jest.fn(),
+  },
+}));
+
+jest.mock(
+  '@pierre/diffs',
+  () => ({
+    parsePatchFiles: jest.fn(() => []),
+  }),
+  { virtual: true },
+);
+
+jest.mock(
+  '@pierre/diffs/react',
+  () => ({
+    FileDiff: jest.fn(() => null),
+    File: jest.fn(() => null),
+  }),
+  { virtual: true },
+);
 
 jest.mock('../../main-process-api/TopicService', () => ({
   TopicService: {
@@ -174,6 +216,10 @@ const mockedBuildCityData = buildCityDataFromContext as jest.MockedFunction<
 >;
 const mockedUseRepositoryGitStatus =
   useRepositoryGitStatus as jest.MockedFunction<typeof useRepositoryGitStatus>;
+const mockedUseFileTree = useFileTree as jest.Mock;
+const mockedParsePatchFiles = parsePatchFiles as jest.Mock;
+const mockedFileDiff = FileDiff as jest.Mock;
+const mockedGitService = GitService as jest.Mocked<typeof GitService>;
 
 function makeTab(overrides: Partial<AcpTab> = {}): AcpTab {
   return {
@@ -1125,6 +1171,90 @@ describe('ACPTabContent', () => {
       sessionKey: 'acp-/repo',
       requestId: 'req-1',
       optionId: 'allow',
+    });
+  });
+
+  it('opens a working-tree diff over the chat when a highlighted file is selected', async () => {
+    mockedRepositoryMonitoring.getFileTree.mockResolvedValue({
+      allFiles: [{ path: '/repo/src/main.ts', relativePath: 'src/main.ts' }],
+      allDirectories: [],
+    } as never);
+    mockedGitService.getWorkingTreeDiff.mockResolvedValue(
+      [
+        'diff --git a/src/main.ts b/src/main.ts',
+        'index 111..222 100644',
+        '--- a/src/main.ts',
+        '+++ b/src/main.ts',
+        '@@ -1 +1 @@',
+        '-old',
+        '+new',
+        '',
+      ].join('\n'),
+    );
+    mockedParsePatchFiles.mockReturnValue([
+      { files: [{ name: 'src/main.ts' }] },
+    ]);
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Session ready');
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-tree-diff',
+            title: 'Edit a source file',
+            name: 'edit',
+            kind: 'edit',
+            status: 'completed',
+            locations: [{ path: '/repo/src/main.ts' }],
+          },
+        },
+      });
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'tool-processing',
+          result: {
+            sessionId: 'ses_1',
+            toolCallId: 'call-tree-diff',
+            outcome: 'highlighted',
+            highlightPaths: ['src/main.ts'],
+          },
+        },
+      });
+    });
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Tree' }));
+    await waitFor(() => {
+      expect(mockedUseFileTree).toHaveBeenCalledWith(
+        expect.objectContaining({
+          paths: ['/repo/src/main.ts'],
+        }),
+      );
+    });
+
+    const treeOptions = mockedUseFileTree.mock.calls.at(-1)?.[0] as {
+      onSelectionChange?: (selected: string[]) => void;
+    };
+    expect(treeOptions.onSelectionChange).toBeDefined();
+    act(() => {
+      treeOptions.onSelectionChange?.(['/repo/src/main.ts']);
+    });
+
+    expect(
+      await screen.findByRole('region', { name: 'File preview: src/main.ts' }),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockedGitService.getWorkingTreeDiff).toHaveBeenCalledWith('/repo');
+      expect(mockedFileDiff).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fileDiff: { name: 'src/main.ts' },
+        }),
+        undefined,
+      );
     });
   });
 });

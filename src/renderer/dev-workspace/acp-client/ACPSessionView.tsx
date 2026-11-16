@@ -26,6 +26,12 @@ import {
   type CityData,
   type HighlightLayer,
 } from '@principal-ai/file-city-react';
+import { useFileTree } from '@pierre/trees/react';
+import type { GitStatusEntry } from '@pierre/trees';
+import type {
+  FileTree as RepoFileTree,
+  GitStatusWithFiles,
+} from '@principal-ai/repository-abstraction';
 import { APP_BRANDING } from '../../../shared/config/appBranding';
 import {
   IndustryMarkdownSlide,
@@ -45,13 +51,18 @@ import type {
   AcpHighlightItem,
   AcpToolProcessingOutcome,
 } from '../../../shared/main-process-api-interfaces/AcpAPI';
+import { parsePatchFiles } from '@pierre/diffs';
+import { FileDiff, type FileDiffMetadata } from '@pierre/diffs/react';
 import { StreamdownMarkdown } from '../../components/StreamdownMarkdown';
+import { ThemedFileTree } from '../../components/shared/ThemedFileTree';
 import { TopicsIcon } from '../../components/TopicsIcon';
 import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
+import { GitService } from '../../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import { SubsystemModelService } from '../../main-process-api/SubsystemModelService';
 import { TopicService, type Topic } from '../../main-process-api/TopicService';
 import { useRepoWatch } from '../../panels/home-panel/useRepoWatch';
+import { PierreFileView } from '../../panels/PierreFileView';
 import { gitStatusToHighlightLayers } from '../../utils/gitStatusHighlightLayers';
 import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
 import { SubsystemModelTabContent } from '../../subsystem-models/SubsystemModelTabContent';
@@ -552,6 +563,8 @@ function ACPToolCallsPanel({
   activityView,
   selectedArtifact,
   onOpenArtifact,
+  onOpenFilePreview,
+  onCloseFilePreview,
 }: {
   calls: AcpChatMessage[];
   workspacePath: string;
@@ -560,9 +573,12 @@ function ACPToolCallsPanel({
   activityView: ACPActivityView;
   selectedArtifact: AcpArtifactRef | null;
   onOpenArtifact: (artifact: AcpArtifactRef) => void;
+  onOpenFilePreview: (relPath: string) => void;
+  onCloseFilePreview: () => void;
 }) {
   const { theme } = useTheme();
   const [principalMcpOnly, setPrincipalMcpOnly] = useState(false);
+  const [cityView, setCityView] = useState<'map' | 'tree'>('map');
   const [artifactTitles, setArtifactTitles] = useState<Record<string, string>>(
     {},
   );
@@ -817,6 +833,20 @@ function ACPToolCallsPanel({
 
     return layers;
   }, [theme.colors.primary, toolCalls]);
+  const { gitStatusWithFiles } = useRepositoryGitStatus(workspacePath);
+  const gitHighlightLayers = useMemo(
+    () =>
+      gitStatusWithFiles
+        ? gitStatusToHighlightLayers(gitStatusWithFiles, 'acp-git-status')
+        : [],
+    [gitStatusWithFiles],
+  );
+  const hasHighlightLayers = [...gitHighlightLayers, ...highlightLayers].some(
+    (layer) => (layer.items?.length ?? 0) > 0,
+  );
+  useEffect(() => {
+    if (!hasHighlightLayers) setCityView('map');
+  }, [hasHighlightLayers]);
   return (
     <aside className="acp-session__tool-panel" aria-label="ACP activity">
       <div className="acp-session__tool-panel-content">
@@ -1003,30 +1033,69 @@ function ACPToolCallsPanel({
           className="acp-session__tool-city-section"
           aria-label={workspaceName}
         >
-          <h3 className="acp-session__tool-city-heading">
-            {repository ? (
+          <div className="acp-session__tool-city-header">
+            <h3 className="acp-session__tool-city-heading">
+              {repository ? (
+                <span
+                  className="acp-client__owner-avatar acp-session__tool-city-avatar"
+                  aria-hidden="true"
+                >
+                  {repository.owner.slice(0, 2).toUpperCase()}
+                  {repository.avatarUrl ? (
+                    <img
+                      alt=""
+                      onError={(event) => {
+                        event.currentTarget.style.display = 'none';
+                      }}
+                      src={repository.avatarUrl}
+                    />
+                  ) : null}
+                </span>
+              ) : null}
+              {workspaceName}
+            </h3>
+            {hasHighlightLayers ? (
               <span
-                className="acp-client__owner-avatar acp-session__tool-city-avatar"
-                aria-hidden="true"
+                className="acp-session__city-view-toggle"
+                role="tablist"
+                aria-label="File map view"
               >
-                {repository.owner.slice(0, 2).toUpperCase()}
-                {repository.avatarUrl ? (
-                  <img
-                    alt=""
-                    onError={(event) => {
-                      event.currentTarget.style.display = 'none';
-                    }}
-                    src={repository.avatarUrl}
-                  />
-                ) : null}
+                <button
+                  className={`acp-session__city-view-toggle-button${cityView === 'map' ? ' is-active' : ''}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={cityView === 'map'}
+                  onClick={() => setCityView('map')}
+                >
+                  Map
+                </button>
+                <button
+                  className={`acp-session__city-view-toggle-button${cityView === 'tree' ? ' is-active' : ''}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={cityView === 'tree'}
+                  onClick={() => setCityView('tree')}
+                >
+                  Tree
+                </button>
               </span>
             ) : null}
-            {workspaceName}
-          </h3>
-          <ACPFileCityView
-            workspacePath={workspacePath}
-            highlightLayers={highlightLayers}
-          />
+          </div>
+          {cityView === 'tree' && hasHighlightLayers ? (
+            <ACPHighlightTreeView
+              workspacePath={workspacePath}
+              highlightLayers={highlightLayers}
+              gitStatusWithFiles={gitStatusWithFiles}
+              onOpenFilePreview={onOpenFilePreview}
+              onCloseFilePreview={onCloseFilePreview}
+            />
+          ) : (
+            <ACPFileCityView
+              workspacePath={workspacePath}
+              highlightLayers={highlightLayers}
+              gitHighlightLayers={gitHighlightLayers}
+            />
+          )}
         </section>
       </div>
     </aside>
@@ -1036,9 +1105,11 @@ function ACPToolCallsPanel({
 function ACPFileCityView({
   workspacePath,
   highlightLayers,
+  gitHighlightLayers,
 }: {
   workspacePath: string;
   highlightLayers: HighlightLayer[];
+  gitHighlightLayers: HighlightLayer[];
 }) {
   const { theme } = useTheme();
   useRepoWatch(workspacePath);
@@ -1046,13 +1117,6 @@ function ACPFileCityView({
   const [cityData, setCityData] = useState<CityData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const gitHighlightLayers = useMemo(
-    () =>
-      gitStatusWithFiles
-        ? gitStatusToHighlightLayers(gitStatusWithFiles, 'acp-git-status')
-        : [],
-    [gitStatusWithFiles],
-  );
   const visibleHighlightLayers = useMemo(
     () => [...gitHighlightLayers, ...highlightLayers],
     [gitHighlightLayers, highlightLayers],
@@ -1152,6 +1216,393 @@ function ACPFileCityView({
   );
 }
 
+function normalizeWorkspacePath(path: string): string {
+  return path.trim().replace(/^\.\//, '').replace(/\/+$/, '');
+}
+
+// Adapter: collapse the categorical buckets in `GitStatusWithFiles`
+// (repo-relative paths) into Pierre's flat `GitStatusEntry[]`, keyed by the
+// same tree-node `path` strings the FileTree renders. Mirrors the adapter in
+// the dev-workspace FilesPanel.
+function buildACPHighlightGitStatusEntries(
+  tree: RepoFileTree | null,
+  status: GitStatusWithFiles | null | undefined,
+): GitStatusEntry[] {
+  if (!tree || !status) return [];
+  // relativePath -> tree-node path, so git's relative buckets can be mapped
+  // onto the exact strings the tree keys on.
+  const relToPath = new Map<string, string>();
+  for (const f of tree.allFiles) relToPath.set(f.relativePath, f.path);
+
+  const map = new Map<string, GitStatusEntry['status']>();
+  const set = (rel: string, s: GitStatusEntry['status']) => {
+    const path = relToPath.get(rel);
+    if (path) map.set(path, s);
+  };
+  for (const p of status.untrackedFiles ?? []) set(p, 'untracked');
+  for (const p of status.createdFiles ?? []) set(p, 'added');
+  for (const p of status.stagedFiles ?? []) set(p, 'modified');
+  for (const p of status.modifiedFiles ?? []) set(p, 'modified');
+  for (const p of status.deletedFiles ?? []) set(p, 'deleted');
+  const entries: GitStatusEntry[] = [];
+  for (const [path, s] of map) entries.push({ path, status: s });
+  return entries;
+}
+
+function ACPHighlightTreeView({
+  workspacePath,
+  highlightLayers,
+  gitStatusWithFiles,
+  onOpenFilePreview,
+  onCloseFilePreview,
+}: {
+  workspacePath: string;
+  highlightLayers: HighlightLayer[];
+  gitStatusWithFiles: GitStatusWithFiles | null;
+  onOpenFilePreview: (relPath: string) => void;
+  onCloseFilePreview: () => void;
+}) {
+  const [fileTree, setFileTree] = useState<RepoFileTree | null>(null);
+  const [isResolvingTree, setIsResolvingTree] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFileTree(null);
+    setIsResolvingTree(true);
+    void (async () => {
+      try {
+        const next =
+          await RepositoryMonitoringService.getFileTree(workspacePath);
+        if (!cancelled) setFileTree(next);
+      } catch {
+        if (!cancelled) setFileTree(null);
+      } finally {
+        if (!cancelled) setIsResolvingTree(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspacePath]);
+
+  // Repo-relative paths the session highlighted: agent operation layers plus
+  // git working-tree buckets. Deleted files are excluded — they no longer
+  // exist in the tree. Anything here that matches no tree entry (e.g.
+  // non-path strings pulled from tool output) is dropped when resolving
+  // below, just like the map only renders buildings the file tree has.
+  const highlightedRelative = useMemo(() => {
+    const highlighted = new Set<string>();
+    for (const layer of highlightLayers) {
+      for (const item of layer.items ?? []) {
+        const rel = normalizeWorkspacePath(item.path);
+        if (rel) highlighted.add(rel);
+      }
+    }
+    if (gitStatusWithFiles) {
+      const buckets = [
+        gitStatusWithFiles.modifiedFiles,
+        gitStatusWithFiles.stagedFiles,
+        gitStatusWithFiles.createdFiles,
+        gitStatusWithFiles.untrackedFiles,
+      ];
+      for (const bucket of buckets) {
+        for (const rawPath of bucket ?? []) {
+          const rel = normalizeWorkspacePath(rawPath);
+          if (rel) highlighted.add(rel);
+        }
+      }
+    }
+    return highlighted;
+  }, [highlightLayers, gitStatusWithFiles]);
+
+  // Tree-node `path` strings for highlighted files, resolved by joining
+  // repo-relative highlight paths to tree nodes via relativePath (the
+  // FilesPanel idiom — works regardless of absolute or relative tree
+  // paths). Highlighted directories expand to the files under them.
+  // @pierre/trees' Builder rejects duplicate paths, so dedupe here.
+  const { highlightedTreePaths, treePathToRel } = useMemo(() => {
+    if (!fileTree)
+      return {
+        highlightedTreePaths: [],
+        treePathToRel: new Map<string, string>(),
+      };
+    const relToPath = new Map<string, string>();
+    for (const file of fileTree.allFiles) {
+      relToPath.set(normalizeWorkspacePath(file.relativePath), file.path);
+    }
+    const paths = new Set<string>();
+    const toRel = new Map<string, string>();
+    const add = (treePath: string, rel: string) => {
+      paths.add(treePath);
+      if (!toRel.has(treePath)) toRel.set(treePath, rel);
+    };
+    for (const rel of highlightedRelative) {
+      const direct = relToPath.get(rel);
+      if (direct) {
+        add(direct, rel);
+        continue;
+      }
+      const prefix = `${rel}/`;
+      for (const [fileRel, treePath] of relToPath) {
+        if (fileRel.startsWith(prefix)) add(treePath, fileRel);
+      }
+    }
+    return { highlightedTreePaths: [...paths].sort(), treePathToRel: toRel };
+  }, [fileTree, highlightedRelative]);
+
+  // useFileTree() captures onSelectionChange once, so the tree-path →
+  // repo-relative mapping it resolves through lives in a ref.
+  const treePathToRelRef = useRef<Map<string, string>>(new Map());
+  useEffect(() => {
+    treePathToRelRef.current = treePathToRel;
+  }, [treePathToRel]);
+
+  const gitStatusEntries = useMemo(
+    () => buildACPHighlightGitStatusEntries(fileTree, gitStatusWithFiles),
+    [fileTree, gitStatusWithFiles],
+  );
+
+  // Ancestor directories (tree-node ids) of every highlighted file, used to
+  // auto-open folders so the narrowed set is visible rather than buried
+  // under collapsed parents.
+  const ancestorDirPaths = useMemo(() => {
+    const dirs = new Set<string>();
+    for (const treePath of highlightedTreePaths) {
+      const segments = treePath.split('/');
+      for (let index = 1; index < segments.length; index += 1) {
+        const dir = segments.slice(0, index).join('/');
+        if (dir) dirs.add(dir);
+      }
+    }
+    return [...dirs];
+  }, [highlightedTreePaths]);
+
+  const { model } = useFileTree({
+    paths: highlightedTreePaths,
+    search: true,
+    initialExpandedPaths: [],
+    gitStatus: gitStatusEntries,
+    onSelectionChange: (selected) => {
+      // The model is built once, so resolve through a ref holding the
+      // current tree-path → repo-relative mapping. Directory rows resolve
+      // to nothing and are ignored — previews need a file.
+      const treePath = selected[0] ?? null;
+      if (!treePath) return;
+      const relPath = treePathToRelRef.current.get(treePath);
+      if (relPath) onOpenFilePreview(relPath);
+    },
+  });
+
+  const isFirstSync = useRef(true);
+  useEffect(() => {
+    if (isFirstSync.current) {
+      isFirstSync.current = false;
+      return;
+    }
+    model.resetPaths(highlightedTreePaths, { initialExpandedPaths: [] });
+  }, [model, highlightedTreePaths]);
+
+  useEffect(() => {
+    for (const dir of ancestorDirPaths) {
+      // getItem accepts a bare directory path; fall back to the trailing-slash
+      // canonical form defensively.
+      const item = model.getItem(dir) ?? model.getItem(`${dir}/`);
+      if (item && 'expand' in item && !item.isExpanded()) item.expand();
+    }
+  }, [model, ancestorDirPaths]);
+
+  // useFileTree() builds the model once and ignores later option changes, so
+  // the gitStatus captured at first render (empty, since both inputs load
+  // async) would stick forever. Push updates through the model's imperative
+  // setter whenever the resolved entries change.
+  useEffect(() => {
+    model.setGitStatus(gitStatusEntries);
+  }, [model, gitStatusEntries]);
+
+  // Re-clicking an already-selected file is silent — the tree only fires
+  // onSelectionChange when the selection *changes* — so a second click on
+  // the previewed file would never close its preview. Remember what was
+  // selected when the pointer went down, and if the click lands on that
+  // same file row, treat it as a toggle-off. (Same approach as FilesPanel.)
+  const modelRef = useRef<ReturnType<typeof useFileTree>['model'] | null>(null);
+  modelRef.current = model;
+  const selectedAtPointerDown = useRef<string | null>(null);
+  const handlePointerDownCapture = useCallback(() => {
+    selectedAtPointerDown.current =
+      modelRef.current?.getSelectedPaths()[0] ?? null;
+  }, []);
+  const handleClickCapture = useCallback(
+    (event: React.MouseEvent) => {
+      // Rows live in the FileTree web component's shadow DOM; click events
+      // are composed, so composedPath() exposes the row element and its
+      // `data-item-path` / `data-item-type` attributes (set by @pierre/trees).
+      const row = event.nativeEvent
+        .composedPath()
+        .find(
+          (element): element is HTMLElement =>
+            element instanceof HTMLElement &&
+            element.getAttribute('data-item-path') != null,
+        );
+      if (!row || row.getAttribute('data-item-type') !== 'file') return;
+      const treePath = row.getAttribute('data-item-path');
+      // Only the re-click-on-the-selected-row case; clicks that change the
+      // selection flow through onSelectionChange and never double-fire.
+      if (!treePath || treePath !== selectedAtPointerDown.current) return;
+      if (!treePathToRelRef.current.get(treePath)) return;
+      onCloseFilePreview();
+    },
+    [onCloseFilePreview],
+  );
+
+  if (isResolvingTree || !fileTree) {
+    return (
+      <div className="acp-session__file-city">
+        <div className="acp-session__tool-panel-empty" role="status">
+          <Building2 size={15} />
+          <span>Matching highlights against workspace files…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (highlightedTreePaths.length === 0) {
+    return (
+      <div className="acp-session__file-city">
+        <div className="acp-session__tool-panel-empty" role="status">
+          <Building2 size={15} />
+          <span>No highlighted files match the workspace file tree.</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="acp-session__file-city acp-session__highlight-tree-pierre"
+      onPointerDownCapture={handlePointerDownCapture}
+      onClickCapture={handleClickCapture}
+    >
+      <ThemedFileTree
+        model={model}
+        gitStatusColors
+        style={
+          {
+            '--trees-padding-inline-override': '0px',
+            '--trees-item-padding-x-override': '4px',
+          } as React.CSSProperties
+        }
+      />
+    </div>
+  );
+}
+
+function ACPFileDiffPreview({
+  workspacePath,
+  relPath,
+  onClose,
+}: {
+  workspacePath: string;
+  relPath: string;
+  onClose: () => void;
+}) {
+  const { theme } = useTheme();
+  const [diffText, setDiffText] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDiffText(null);
+    void GitService.getWorkingTreeDiff(workspacePath)
+      .then((text) => {
+        if (!cancelled) setDiffText(text ?? '');
+      })
+      .catch(() => {
+        if (!cancelled) setDiffText('');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspacePath]);
+
+  // Split the working-tree patch the way ReviewCommitPanel does (so one
+  // malformed file header can't drop every file) and take the chunk for
+  // this file. Anything without a matching chunk — untracked, unchanged,
+  // or read-only highlights — falls back to the current file content.
+  const fileDiff = useMemo<FileDiffMetadata | undefined>(() => {
+    if (!diffText) return undefined;
+    const chunks = diffText
+      .split(/(?=^diff --git )/m)
+      .filter((chunk) => chunk.trim().length > 0);
+    const target = chunks.find((chunk) => {
+      const plusTarget = /^\+{3}\s+(.+)$/m
+        .exec(chunk)?.[1]
+        ?.trim()
+        .replace(/^b\//, '');
+      if (plusTarget && normalizeWorkspacePath(plusTarget) === relPath) {
+        return true;
+      }
+      const gitTarget = /^diff --git\s+\S+\s+(\S+)\s*$/m
+        .exec(chunk)?.[1]
+        ?.trim()
+        .replace(/^b\//, '');
+      return !!gitTarget && normalizeWorkspacePath(gitTarget) === relPath;
+    });
+    if (!target) return undefined;
+    try {
+      return parsePatchFiles(target).flatMap((patch) => patch.files)[0];
+    } catch {
+      return undefined;
+    }
+  }, [diffText, relPath]);
+
+  const fileName = relPath.split('/').pop() || relPath;
+
+  return (
+    <div className="acp-session__file-preview">
+      <div className="acp-session__file-preview-head">
+        <code className="acp-session__file-preview-path">{relPath}</code>
+        <button
+          type="button"
+          aria-label="Close file preview"
+          title="Close file preview"
+          className="acp-session__file-preview-close"
+          onClick={onClose}
+        >
+          <X size={14} />
+        </button>
+      </div>
+      <div className="acp-session__file-preview-body">
+        {diffText === null ? (
+          <div className="acp-session__topic-preview-message" role="status">
+            <Loader2 className="acp-client__spinning" size={15} />
+            Loading diff…
+          </div>
+        ) : fileDiff ? (
+          <FileDiff
+            fileDiff={fileDiff}
+            options={{
+              diffStyle: 'unified',
+            }}
+            style={{
+              fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.monospace,
+            }}
+          />
+        ) : (
+          <>
+            <div className="acp-session__file-preview-note" role="status">
+              No working-tree diff for this file — showing its current content.
+            </div>
+            <PierreFileView
+              filePath={`${workspacePath}/${relPath}`}
+              fileName={fileName}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ACPSessionView({
   agent,
   workspacePath,
@@ -1167,6 +1618,10 @@ export function ACPSessionView({
   const [activityView, setActivityView] = useState<ACPActivityView>('tools');
   const [selectedArtifact, setSelectedArtifact] =
     useState<AcpArtifactRef | null>(null);
+  const [selectedPreviewFile, setSelectedPreviewFile] = useState<string | null>(
+    null,
+  );
+  const [filePreviewClosing, setFilePreviewClosing] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [topicPreviewClosing, setTopicPreviewClosing] = useState(false);
   const [selectedTopicReference, setSelectedTopicReference] =
@@ -1308,6 +1763,8 @@ export function ACPSessionView({
       setSelectedTopicReference(null);
       setSelectedModelReference(null);
       setTopicPreviewClosing(false);
+      setFilePreviewClosing(false);
+      setSelectedPreviewFile(null);
       setSelectedArtifact(artifact);
     },
     [selectedArtifact, topicPreviewClosing],
@@ -1317,6 +1774,34 @@ export function ACPSessionView({
       if (event.animationName !== 'acp-topic-preview-exit') return;
       setTopicPreviewClosing(false);
       setSelectedArtifact(null);
+    },
+    [],
+  );
+  /**
+   * A highlighted file focused in the file-tree preview opens over the chat,
+   * like an artifact. Opening a file clears any artifact preview; opening an
+   * artifact clears the file preview.
+   */
+  const openFilePreview = useCallback((relPath: string) => {
+    setSelectedTopicReference(null);
+    setSelectedModelReference(null);
+    setTopicPreviewClosing(false);
+    setSelectedArtifact(null);
+    setFilePreviewClosing(false);
+    setSelectedPreviewFile(relPath);
+  }, []);
+  const closeFilePreview = useCallback(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setSelectedPreviewFile(null);
+      return;
+    }
+    setFilePreviewClosing(true);
+  }, []);
+  const finishFilePreviewClose = useCallback(
+    (event: React.AnimationEvent<HTMLElement>) => {
+      if (event.animationName !== 'acp-topic-preview-exit') return;
+      setFilePreviewClosing(false);
+      setSelectedPreviewFile(null);
     },
     [],
   );
@@ -1520,6 +2005,48 @@ export function ACPSessionView({
     </section>
   ) : null;
 
+  const filePreview = selectedPreviewFile ? (
+    <section
+      className={`acp-session__topic-preview${filePreviewClosing ? ' is-closing' : ''}`}
+      style={
+        {
+          height: `${topicPreviewHeight}%`,
+          '--acp-topic-preview-height': `${topicPreviewHeight}%`,
+        } as React.CSSProperties
+      }
+      role="region"
+      aria-label={`File preview: ${selectedPreviewFile}`}
+      onAnimationEnd={finishFilePreviewClose}
+    >
+      <div className="acp-session__topic-preview-content acp-session__topic-preview-content--file">
+        <ACPFileDiffPreview
+          key={selectedPreviewFile}
+          workspacePath={workspacePath}
+          relPath={selectedPreviewFile}
+          onClose={closeFilePreview}
+        />
+      </div>
+      <div
+        className="acp-session__topic-preview-resize"
+        role="separator"
+        aria-label="Resize preview"
+        aria-orientation="horizontal"
+        aria-valuemin={20}
+        aria-valuemax={80}
+        aria-valuenow={Math.round(topicPreviewHeight)}
+        tabIndex={0}
+        onKeyDown={handleTopicPreviewResizeKeyDown}
+        onPointerDown={startTopicPreviewResize}
+        onPointerMove={moveTopicPreviewResize}
+        onPointerUp={stopTopicPreviewResize}
+        onPointerCancel={stopTopicPreviewResize}
+        onLostPointerCapture={stopTopicPreviewResize}
+      >
+        <span />
+      </div>
+    </section>
+  ) : null;
+
   return (
     <main
       className="acp-session"
@@ -1561,6 +2088,7 @@ export function ACPSessionView({
         <div className="acp-session__main">
           <div className="acp-session__chat-viewport" ref={chatViewportRef}>
             {artifactPreview}
+            {filePreview}
             <div
               className="acp-session__messages"
               role="log"
@@ -1806,6 +2334,8 @@ export function ACPSessionView({
           activityView={activityView}
           selectedArtifact={selectedArtifact}
           onOpenArtifact={openArtifactPreview}
+          onOpenFilePreview={openFilePreview}
+          onCloseFilePreview={closeFilePreview}
         />
       </div>
     </main>
