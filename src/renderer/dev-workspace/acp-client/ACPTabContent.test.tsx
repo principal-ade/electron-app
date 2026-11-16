@@ -779,6 +779,26 @@ describe('ACPTabContent', () => {
     expect(screen.getAllByText('Agent topic')).toHaveLength(1);
   });
 
+  it('restores artifacts main replays when a saved session is reconnected', async () => {
+    mockedTopicService.getTopic.mockResolvedValue(null as never);
+    mockedSubsystemModelService.get.mockResolvedValue(null as never);
+    mocked.loadSession.mockResolvedValue({
+      sessionId: 'ses_saved',
+      artifacts: [
+        { kind: 'subsystem-model', id: 'model-7', title: 'Restored model' },
+        { kind: 'topic', id: 'topic-7', title: 'Restored topic' },
+      ],
+    });
+    render(<ACPTabContent tab={makeTab({ sessionId: 'ses_saved' })} />);
+    await screen.findByText('Session ready');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
+
+    expect(await screen.findByText('Restored model')).toBeInTheDocument();
+    expect(screen.getByText('Restored topic')).toBeInTheDocument();
+    expect(screen.getByText('Subsystem model')).toBeInTheDocument();
+  });
+
   it('shows the ACP-local File City below tool calls in the same scroll view', async () => {
     const dirtyStatus: GitStatusWithFiles = {
       repoPath: '/repo',

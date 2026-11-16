@@ -116,6 +116,12 @@ export interface AcpLoadSessionRequest extends AcpNewSessionRequest {
 
 export interface AcpNewSessionResult {
   sessionId: string;
+  /**
+   * Artifacts the agent previously associated with this session. Present when a
+   * saved session is restored so the renderer can rebuild its Artifacts list
+   * after a reload; live associations arrive as `artifact` session events.
+   */
+  artifacts?: AcpArtifactAssociation[];
 }
 
 export interface AcpPromptRequest {

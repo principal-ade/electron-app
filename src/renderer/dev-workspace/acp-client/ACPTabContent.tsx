@@ -275,6 +275,25 @@ function applyUpdate(
   }
 }
 
+// Merge artifact associations by kind + id, newer values winning per field. Used
+// both for live `artifact` events and for the list main replays when a session
+// is restored after a renderer reload.
+function mergeArtifacts(
+  previous: AcpArtifactAssociation[],
+  incoming: AcpArtifactAssociation[],
+): AcpArtifactAssociation[] {
+  if (incoming.length === 0) return previous;
+  const byKey = new Map(
+    previous.map((item) => [`${item.kind}:${item.id}`, item]),
+  );
+  for (const item of incoming) {
+    const key = `${item.kind}:${item.id}`;
+    const existing = byKey.get(key);
+    byKey.set(key, existing ? { ...existing, ...item } : item);
+  }
+  return [...byKey.values()];
+}
+
 function ACPStartupView({
   tab,
   state,
@@ -486,16 +505,9 @@ export function ACPTabContent({
           );
           span.setStatus({ code: SpanStatusCode.OK });
           span.end();
-          setAssociatedArtifacts((previous) => {
-            const key = `${event.artifact.kind}:${event.artifact.id}`;
-            const index = previous.findIndex(
-              (item) => `${item.kind}:${item.id}` === key,
-            );
-            if (index === -1) return [...previous, event.artifact];
-            const next = [...previous];
-            next[index] = { ...previous[index], ...event.artifact };
-            return next;
-          });
+          setAssociatedArtifacts((previous) =>
+            mergeArtifacts(previous, [event.artifact]),
+          );
           return;
         }
 
@@ -588,6 +600,11 @@ export function ACPTabContent({
             : await AcpService.newSession(tab.id);
         if (generation !== generationRef.current) return false;
         setSessionId(result.sessionId);
+        // Restoring a saved session replays the conversation, but not the
+        // artifacts the agent associated with it, so seed them from main.
+        setAssociatedArtifacts((previous) =>
+          mergeArtifacts(previous, result.artifacts ?? []),
+        );
         onSessionIdChange?.(result.sessionId);
         setViewState('ready');
         return true;

@@ -137,6 +137,14 @@ async function withAcpSpan<T>(
 
 class AcpService {
   private readonly entries = new Map<string, AcpConnectionEntry>();
+  // Associations outlive a single connection entry so a reloaded renderer can
+  // rebuild its Artifacts list when it restores the session. Keyed by ACP
+  // session ID, then by `kind:id` for dedupe. In-memory only, like the rest of
+  // the ACP session state.
+  private readonly sessionArtifacts = new Map<
+    string,
+    Map<string, AcpArtifactAssociation>
+  >();
 
   constructor() {
     getEventServerManager().on(
@@ -349,7 +357,10 @@ class AcpService {
       );
       if (entry.sessionId) {
         span.setAttribute('acp.session.reused', true);
-        return { sessionId: entry.sessionId };
+        return {
+          sessionId: entry.sessionId,
+          artifacts: this.getArtifactsForSession(entry.sessionId),
+        };
       }
 
       const response = await entry.connection.agent.request(
@@ -408,7 +419,10 @@ class AcpService {
             'This ACP connection already has a different session loaded.',
           );
         }
-        return { sessionId: entry.sessionId };
+        return {
+          sessionId: entry.sessionId,
+          artifacts: this.getArtifactsForSession(entry.sessionId),
+        };
       }
       if (!entry.supportsLoadSession) {
         throw new Error(
@@ -434,7 +448,14 @@ class AcpService {
       log.info(
         `[ACP] Restored session ${request.sessionId} in ${entry.directory}`,
       );
-      return { sessionId: request.sessionId };
+      span.setAttribute(
+        'acp.artifact.restored_count',
+        this.getArtifactsForSession(request.sessionId).length,
+      );
+      return {
+        sessionId: request.sessionId,
+        artifacts: this.getArtifactsForSession(request.sessionId),
+      };
     });
   }
 
@@ -537,10 +558,16 @@ class AcpService {
     });
   }
 
+  /** Artifacts previously associated with a session, oldest first. */
+  getArtifactsForSession(sessionId: string): AcpArtifactAssociation[] {
+    return [...(this.sessionArtifacts.get(sessionId)?.values() ?? [])];
+  }
+
   /**
    * Record an artifact the agent associated with its session. The association
-   * is forwarded to the owning renderer tab, which lists it under Artifacts.
-   * Returns false when no single active session matches.
+   * is remembered for the session's lifetime and forwarded to the owning
+   * renderer tab, which lists it under Artifacts. Returns false when no single
+   * active session matches.
    */
   associateArtifact(
     sessionId: string,
@@ -573,6 +600,14 @@ class AcpService {
         'principal.repository.telemetry_id',
         repositoryTelemetryId(entry.directory),
       );
+      const key = `${artifact.kind}:${artifact.id}`;
+      let recorded = this.sessionArtifacts.get(sessionId);
+      if (!recorded) {
+        recorded = new Map();
+        this.sessionArtifacts.set(sessionId, recorded);
+      }
+      recorded.set(key, artifact);
+      span.setAttribute('acp.artifact.total', recorded.size);
       this.emit(entry, { type: 'artifact', artifact });
       span.setAttribute('acp.artifact.associated', true);
       span.setStatus({ code: SpanStatusCode.OK });
