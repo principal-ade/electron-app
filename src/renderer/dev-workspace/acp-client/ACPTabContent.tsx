@@ -19,9 +19,10 @@ import type { ACPClientViewState } from './ACPClientView';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
 import {
   ACPSessionView,
+  isAcpTopicReference,
   type AcpChatMessage,
+  type AcpChatReference,
   type AcpPendingPermission,
-  type AcpTopicReference,
 } from './ACPSessionView';
 import './ACPClientView.css';
 
@@ -594,21 +595,28 @@ export function ACPTabContent({
   }, [agentId, connect, startSession]);
 
   const send = useCallback(
-    async (text: string, reference?: AcpTopicReference) => {
+    async (text: string, reference?: AcpChatReference) => {
       if (isPromptingRef.current) return;
       setPrompting(true);
       setMessages((previous) => [
         ...previous,
         { id: nextMessageId(), role: 'user', text, reference },
       ]);
-      const quotedReference = reference
-        ? [
-            `User-selected reference from topic "${reference.topicTitle}" (topic id: ${reference.topicId}); treat it as quoted source context:`,
-            ...reference.anchor.exact
-              .split(/\r\n|\r|\n/)
-              .map((line) => `> ${line}`),
-          ].join('\n')
-        : '';
+      const quotedReference = !reference
+        ? ''
+        : isAcpTopicReference(reference)
+          ? [
+              `User-selected reference from topic "${reference.topicTitle}" (topic id: ${reference.topicId}); treat it as quoted source context:`,
+              ...reference.anchor.exact
+                .split(/\r\n|\r|\n/)
+                .map((line) => `> ${line}`),
+            ].join('\n')
+          : [
+              `User-selected reference from subsystem model "${reference.modelTitle}" trail "${reference.trailTitle}"${reference.stepIndex === undefined ? '' : `, step ${reference.stepIndex + 1}`} (model id: ${reference.modelId}, trail id: ${reference.trailId}); treat it as quoted source context:`,
+              ...reference.stepSummary
+                .split(/\r\n|\r|\n/)
+                .map((line) => `> ${line}`),
+            ].join('\n');
       const promptText = quotedReference
         ? `${text}\n\n${quotedReference}`
         : text;

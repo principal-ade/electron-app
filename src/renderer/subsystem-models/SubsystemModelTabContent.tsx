@@ -3,11 +3,15 @@ import { useTheme } from '@principal-ade/industry-theme';
 import type { SubsystemModelHydrated } from '@principal-ai/subsystems-core';
 import { SubsystemModelService } from '../main-process-api/SubsystemModelService';
 import { useFileWatch } from '../hooks/useFileWatch';
-import { SubsystemModelGraph } from './SubsystemModelGraph';
+import {
+  SubsystemModelGraph,
+  type SubsystemTrailSelection,
+} from './SubsystemModelGraph';
 
-export const SubsystemModelTabContent: React.FC<{ modelId: string }> = ({
-  modelId,
-}) => {
+export const SubsystemModelTabContent: React.FC<{
+  modelId: string;
+  onTrailSelect?: (selection: SubsystemTrailSelection | null) => void;
+}> = ({ modelId, onTrailSelect }) => {
   const { theme } = useTheme();
   const [model, setModel] = useState<SubsystemModelHydrated | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,5 +98,5 @@ export const SubsystemModelTabContent: React.FC<{ modelId: string }> = ({
     );
   }
 
-  return <SubsystemModelGraph model={model} />;
+  return <SubsystemModelGraph model={model} onTrailSelect={onTrailSelect} />;
 };

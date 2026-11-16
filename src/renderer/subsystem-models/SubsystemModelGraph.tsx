@@ -34,9 +34,15 @@ function joinRepositoryPath(root: string, relativePath: string): string {
   return `${normalizedRoot}${separator}${relativePath.replace(/\//g, separator)}`;
 }
 
+export interface SubsystemTrailSelection {
+  trailId: string;
+  stepIndices?: number[];
+}
+
 export const SubsystemModelGraph: React.FC<{
   model: SubsystemModelHydrated;
-}> = ({ model }) => {
+  onTrailSelect?: (selection: SubsystemTrailSelection | null) => void;
+}> = ({ model, onTrailSelect }) => {
   const [layoutDirection, setLayoutDirection] = useState<
     'horizontal' | 'vertical' | null
   >(null);
@@ -175,6 +181,7 @@ export const SubsystemModelGraph: React.FC<{
           notes={model.notes}
           defaultLayoutDirection={layoutDirection}
           persistKey={model.id ?? model.title}
+          onTrailSelect={onTrailSelect}
           renderFileViewer={renderFileViewer}
           renderTrailViewer={renderTrailViewer}
         />

@@ -36,6 +36,10 @@ import type {
   ToolCallLocation,
 } from '@agentclientprotocol/sdk';
 import type {
+  SubsystemTrail,
+  SubsystemTrailStep,
+} from '@principal-ai/subsystems-core';
+import type {
   AcpAgentDefinition,
   AcpFileOperation,
   AcpHighlightItem,
@@ -51,6 +55,7 @@ import { useRepoWatch } from '../../panels/home-panel/useRepoWatch';
 import { gitStatusToHighlightLayers } from '../../utils/gitStatusHighlightLayers';
 import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
 import { SubsystemModelTabContent } from '../../subsystem-models/SubsystemModelTabContent';
+import type { SubsystemTrailSelection } from '../../subsystem-models/SubsystemModelGraph';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
 import { getAcpThemeStyle } from './acpTheme';
 import { getTracer } from '../../telemetry';
@@ -63,7 +68,7 @@ export type AcpChatMessage =
       role: 'user' | 'agent' | 'thought';
       text: string;
       protocolMessageId?: string;
-      reference?: AcpTopicReference;
+      reference?: AcpChatReference;
     }
   | {
       id: string;
@@ -89,6 +94,28 @@ export interface AcpTopicReference {
   anchor: AnnotationSelection['anchor'];
 }
 
+/**
+ * A trail (or one of its steps) the user focused in a subsystem model preview,
+ * attached as quoted context for the next prompt. Mirrors AcpTopicReference.
+ */
+export interface AcpModelReference {
+  modelId: string;
+  modelTitle: string;
+  trailId: string;
+  trailTitle: string;
+  /** Focused step index; undefined means the whole trail. */
+  stepIndex?: number;
+  stepSummary: string;
+}
+
+export type AcpChatReference = AcpTopicReference | AcpModelReference;
+
+export function isAcpTopicReference(
+  reference: AcpChatReference,
+): reference is AcpTopicReference {
+  return 'anchor' in reference;
+}
+
 export interface AcpPendingPermission {
   requestId: string;
   request: RequestPermissionRequest;
@@ -105,7 +132,7 @@ export interface ACPSessionViewProps {
   messages: AcpChatMessage[];
   permissions: AcpPendingPermission[];
   isPrompting: boolean;
-  onSend: (text: string, reference?: AcpTopicReference) => void;
+  onSend: (text: string, reference?: AcpChatReference) => void;
   onStop: () => void;
   onRespondPermission: (requestId: string, optionId: string | null) => void;
 }
@@ -464,6 +491,46 @@ function associationTitlesFromCalls(
 
 function artifactKindLabel(kind: AcpArtifactKind): string {
   return kind === 'topic' ? 'Topic' : 'Subsystem model';
+}
+
+/** One-line location for a trail step: file + optional line range. */
+function modelStepSite(step: SubsystemTrailStep): string {
+  const span = step.span ? `:${step.span.startLine}-${step.span.endLine}` : '';
+  return `${step.file}${span}`;
+}
+
+/** Quoted summary for a single focused trail step. */
+function describeModelStep(
+  trail: SubsystemTrail,
+  step: SubsystemTrailStep,
+  stepIndex: number,
+): string {
+  const lines = [
+    `Step ${stepIndex + 1} of ${trail.steps.length}: ${step.from} → ${step.to} (${step.mechanism})`,
+    `Site: ${modelStepSite(step)} — ${step.symbol}`,
+  ];
+  if (step.annotation) lines.push(`Note: ${step.annotation}`);
+  return lines.join('\n');
+}
+
+const MAX_TRAIL_SUMMARY_STEPS = 10;
+
+/** Quoted summary for a whole focused trail, capped so prompts stay small. */
+function describeModelTrail(trail: SubsystemTrail): string {
+  const lines = [`Trail "${trail.title}" (${trail.steps.length} steps):`];
+  for (const [index, step] of trail.steps
+    .slice(0, MAX_TRAIL_SUMMARY_STEPS)
+    .entries()) {
+    lines.push(
+      `${index + 1}. ${step.from} → ${step.to} (${step.mechanism}) @ ${modelStepSite(step)}`,
+    );
+  }
+  if (trail.steps.length > MAX_TRAIL_SUMMARY_STEPS) {
+    lines.push(
+      `…and ${trail.steps.length - MAX_TRAIL_SUMMARY_STEPS} more steps`,
+    );
+  }
+  return lines.join('\n');
 }
 
 function artifactTitle(
@@ -1104,6 +1171,8 @@ export function ACPSessionView({
   const [topicPreviewClosing, setTopicPreviewClosing] = useState(false);
   const [selectedTopicReference, setSelectedTopicReference] =
     useState<AcpTopicReference | null>(null);
+  const [selectedModelReference, setSelectedModelReference] =
+    useState<AcpModelReference | null>(null);
   const [topicPreviewLoading, setTopicPreviewLoading] = useState(false);
   const [topicPreviewError, setTopicPreviewError] = useState(false);
   const [topicPreviewHeight, setTopicPreviewHeight] = useState(75);
@@ -1213,8 +1282,10 @@ export function ACPSessionView({
     const text = draft.trim();
     if (!text || isPrompting) return;
     setDraft('');
-    const reference = selectedTopicReference ?? undefined;
+    const reference =
+      selectedTopicReference ?? selectedModelReference ?? undefined;
     setSelectedTopicReference(null);
+    setSelectedModelReference(null);
     onSend(text, reference);
   };
   const openArtifactPreview = useCallback(
@@ -1235,6 +1306,7 @@ export function ACPSessionView({
         return;
       }
       setSelectedTopicReference(null);
+      setSelectedModelReference(null);
       setTopicPreviewClosing(false);
       setSelectedArtifact(artifact);
     },
@@ -1259,6 +1331,54 @@ export function ACPSessionView({
       });
     },
     [selectedTopic, selectedTopicId],
+  );
+  /**
+   * A trail (or step) focused in the subsystem model preview becomes the
+   * pending chat reference, like a text selection in a topic preview. Clearing
+   * the focus keeps the last attached reference; switching artifacts, removing
+   * the chip, or sending clears it.
+   */
+  const handleModelTrailSelect = useCallback(
+    (selection: SubsystemTrailSelection | null) => {
+      const modelId =
+        selectedArtifact?.kind === 'subsystem-model'
+          ? selectedArtifact.id
+          : null;
+      if (!modelId || !selection) return;
+      const stepIndex = selection.stepIndices?.[0];
+      void SubsystemModelService.get(modelId)
+        .then((model) => {
+          if (!model) return;
+          if (
+            selectedArtifact?.kind !== 'subsystem-model' ||
+            selectedArtifact.id !== modelId
+          ) {
+            return;
+          }
+          const trail = model.trails?.find(
+            (candidate) => candidate.id === selection.trailId,
+          );
+          if (!trail) return;
+          const step =
+            stepIndex === undefined ? undefined : trail.steps[stepIndex];
+          setSelectedModelReference({
+            modelId,
+            modelTitle: model.title,
+            trailId: trail.id,
+            trailTitle: trail.title,
+            stepIndex: step === undefined ? undefined : stepIndex,
+            stepSummary:
+              step === undefined || stepIndex === undefined
+                ? describeModelTrail(trail)
+                : describeModelStep(trail, step, stepIndex),
+          });
+        })
+        .catch(() => {
+          // A model that cannot be read cannot be referenced; leave the
+          // composer without a reference rather than attaching a guess.
+        });
+    },
+    [selectedArtifact],
   );
   const selectedTopicAnnotations = useMemo(
     () =>
@@ -1338,7 +1458,10 @@ export function ACPSessionView({
         }`}
       >
         {selectedArtifact.kind === 'subsystem-model' ? (
-          <SubsystemModelTabContent modelId={selectedArtifact.id} />
+          <SubsystemModelTabContent
+            modelId={selectedArtifact.id}
+            onTrailSelect={handleModelTrailSelect}
+          />
         ) : topicPreviewLoading && !selectedTopic ? (
           <div className="acp-session__topic-preview-message" role="status">
             <Loader2 className="acp-client__spinning" size={15} />
@@ -1469,15 +1592,27 @@ export function ACPSessionView({
                         <div className="acp-session__bubble acp-session__bubble--user">
                           {message.text}
                           {message.reference ? (
-                            <div className="acp-session__message-reference">
-                              <TopicsIcon size={13} strokeWidth={1.5} />
-                              <span>
-                                Reference · {message.reference.topicTitle}
-                              </span>
-                              <blockquote>
-                                {message.reference.anchor.exact}
-                              </blockquote>
-                            </div>
+                            isAcpTopicReference(message.reference) ? (
+                              <div className="acp-session__message-reference">
+                                <TopicsIcon size={13} strokeWidth={1.5} />
+                                <span>
+                                  Reference · {message.reference.topicTitle}
+                                </span>
+                                <blockquote>
+                                  {message.reference.anchor.exact}
+                                </blockquote>
+                              </div>
+                            ) : (
+                              <div className="acp-session__message-reference">
+                                <Network size={13} strokeWidth={1.5} />
+                                <span>
+                                  Reference · {message.reference.trailTitle}
+                                </span>
+                                <blockquote>
+                                  {message.reference.stepSummary}
+                                </blockquote>
+                              </div>
+                            )
                           ) : null}
                         </div>
                       </div>
@@ -1598,6 +1733,25 @@ export function ACPSessionView({
                   type="button"
                   aria-label="Remove topic reference"
                   onClick={() => setSelectedTopicReference(null)}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : selectedModelReference ? (
+              <div className="acp-session__reference-chip">
+                <Network size={15} strokeWidth={1.5} />
+                <span>
+                  <strong>
+                    Reference · {selectedModelReference.trailTitle}
+                  </strong>
+                  <small>
+                    {selectedModelReference.stepSummary.split('\n')[0]}
+                  </small>
+                </span>
+                <button
+                  type="button"
+                  aria-label="Remove model reference"
+                  onClick={() => setSelectedModelReference(null)}
                 >
                   <X size={14} />
                 </button>

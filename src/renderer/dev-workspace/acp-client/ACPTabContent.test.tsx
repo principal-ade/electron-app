@@ -133,14 +133,32 @@ jest.mock('../../main-process-api/SubsystemModelService', () => ({
 }));
 
 jest.mock('../../subsystem-models/SubsystemModelTabContent', () => ({
-  SubsystemModelTabContent: ({ modelId }: { modelId: string }) =>
-    jest
-      .requireActual<typeof React>('react')
-      .createElement(
-        'div',
-        { 'data-testid': 'subsystem-model-preview' },
-        modelId,
+  SubsystemModelTabContent: ({
+    modelId,
+    onTrailSelect,
+  }: {
+    modelId: string;
+    onTrailSelect?: (
+      selection: {
+        trailId: string;
+        stepIndices?: number[];
+      } | null,
+    ) => void;
+  }) =>
+    jest.requireActual<typeof React>('react').createElement(
+      'div',
+      { 'data-testid': 'subsystem-model-preview' },
+      modelId,
+      jest.requireActual<typeof React>('react').createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: () =>
+            onTrailSelect?.({ trailId: 'trail-1', stepIndices: [2] }),
+        },
+        'Select trail step',
       ),
+    ),
 }));
 
 const mocked = AcpService as jest.Mocked<typeof AcpService>;
@@ -726,6 +744,119 @@ describe('ACPTabContent', () => {
       screen.queryByRole('region', {
         name: 'Subsystem model preview: Bridge Subsystem',
       }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('asks about a subsystem model trail step selected in the preview', async () => {
+    mockedSubsystemModelService.get.mockResolvedValue({
+      id: 'model-1',
+      title: 'Bridge Subsystem',
+      components: [],
+      trails: [
+        {
+          id: 'trail-1',
+          title: 'Create and audit',
+          steps: [
+            {
+              from: 'cli',
+              to: 'store',
+              mechanism: 'calls',
+              file: 'src/a.ts',
+              purl: 'pkg:github/o/r#src/a.ts',
+              symbol: 'create',
+              span: { startLine: 10, endLine: 14, contentHash: 'x' },
+            },
+            {
+              from: 'store',
+              to: 'audit',
+              mechanism: 'feeds',
+              file: 'src/b.ts',
+              purl: 'pkg:github/o/r#src/b.ts',
+              symbol: 'save',
+            },
+            {
+              from: 'audit',
+              to: 'report',
+              mechanism: 'calls',
+              file: 'src/c.ts',
+              purl: 'pkg:github/o/r#src/c.ts',
+              symbol: 'verify',
+              span: { startLine: 30, endLine: 36, contentHash: 'y' },
+              annotation: 'Check the seam site.',
+            },
+          ],
+        },
+      ],
+    } as never);
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Session ready');
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-model-read',
+            title: 'Read a subsystem model',
+            name: 'http_request',
+            status: 'completed',
+            rawInput: {
+              method: 'GET',
+              path: '/api/subsystem-models/model-1',
+            },
+          },
+        },
+      });
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open Subsystem model Bridge Subsystem in chat',
+      }),
+    );
+    await screen.findByRole('region', {
+      name: 'Subsystem model preview: Bridge Subsystem',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select trail step' }));
+
+    expect(
+      await screen.findByText('Reference · Create and audit'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Step 3 of 3: audit → report (calls)'),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Message the agent'), {
+      target: { value: 'Why does this step call report?' },
+    });
+    fireEvent.keyDown(screen.getByLabelText('Message the agent'), {
+      key: 'Enter',
+    });
+
+    await waitFor(() =>
+      expect(mocked.prompt).toHaveBeenCalledWith(
+        'acp-/repo',
+        expect.stringContaining(
+          'User-selected reference from subsystem model "Bridge Subsystem" trail "Create and audit", step 3',
+        ),
+      ),
+    );
+    await waitFor(() =>
+      expect(mocked.prompt).toHaveBeenCalledWith(
+        'acp-/repo',
+        expect.stringContaining('Site: src/c.ts:30-36 — verify'),
+      ),
+    );
+    expect(
+      screen.getByText('Why does this step call report?'),
+    ).toBeInTheDocument();
+    // The sent message keeps the reference, but the composer chip is cleared.
+    expect(
+      screen.queryByRole('button', { name: 'Remove model reference' }),
     ).not.toBeInTheDocument();
   });
 
