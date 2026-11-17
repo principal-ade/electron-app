@@ -1524,7 +1524,7 @@ describe('ACPTabContent', () => {
       });
     });
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Tree' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'FileTree' }));
     await waitFor(() => {
       expect(mockedUseFileTree).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1532,6 +1532,22 @@ describe('ACPTabContent', () => {
         }),
       );
     });
+
+    // The tree layers over the tool activity instead of replacing it: the
+    // file city and its git legend stay mounted below the overlay.
+    const treeOverlay = document.querySelector(
+      '.acp-session__tool-activity-stage > .acp-session__file-tree-overlay',
+    );
+    expect(treeOverlay).not.toBeNull();
+    expect(
+      document.querySelector(
+        '.acp-session__tool-city-section .acp-session__file-city .acp-session__git-legend',
+      ),
+    ).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'FileTree' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
 
     const treeOptions = mockedUseFileTree.mock.calls.at(-1)?.[0] as {
       onSelectionChange?: (selected: string[]) => void;
@@ -1553,5 +1569,17 @@ describe('ACPTabContent', () => {
         undefined,
       );
     });
+
+    // Toggling FileTree off plays the slide-down before unmounting.
+    fireEvent.click(screen.getByRole('button', { name: 'FileTree' }));
+    expect(treeOverlay).toHaveClass('is-closing');
+    const animationEnd = new Event('animationend', { bubbles: true });
+    Object.defineProperty(animationEnd, 'animationName', {
+      value: 'acp-file-tree-sink',
+    });
+    act(() => treeOverlay?.dispatchEvent(animationEnd));
+    expect(
+      document.querySelector('.acp-session__file-tree-overlay'),
+    ).not.toBeInTheDocument();
   });
 });

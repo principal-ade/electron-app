@@ -669,7 +669,8 @@ function ACPToolCallsPanel({
 }) {
   const { theme } = useTheme();
   const [principalMcpOnly, setPrincipalMcpOnly] = useState(false);
-  const [cityView, setCityView] = useState<'map' | 'tree'>('map');
+  const [showFileTree, setShowFileTree] = useState(false);
+  const [fileTreeClosing, setFileTreeClosing] = useState(false);
   const [artifactTitles, setArtifactTitles] = useState<Record<string, string>>(
     {},
   );
@@ -954,192 +955,236 @@ function ACPToolCallsPanel({
     (layer) => (layer.items?.length ?? 0) > 0,
   );
   useEffect(() => {
-    if (!hasHighlightLayers) setCityView('map');
+    if (!hasHighlightLayers) {
+      setShowFileTree(false);
+      setFileTreeClosing(false);
+    }
   }, [hasHighlightLayers]);
+  // The tree slides up over the activity list, so the toggle plays a matching
+  // slide-down before unmounting. `finishFileTreeClose` runs off the exit
+  // animation's own end event, like the topic/file previews above.
+  const toggleFileTree = useCallback(() => {
+    if (showFileTree) {
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        setShowFileTree(false);
+        return;
+      }
+      setFileTreeClosing(true);
+      return;
+    }
+    setFileTreeClosing(false);
+    setShowFileTree(true);
+  }, [showFileTree]);
+  const finishFileTreeClose = useCallback(
+    (event: React.AnimationEvent<HTMLElement>) => {
+      if (event.animationName !== 'acp-file-tree-sink') return;
+      setFileTreeClosing(false);
+      setShowFileTree(false);
+    },
+    [],
+  );
   return (
     <aside className="acp-session__tool-panel" aria-label="ACP activity">
       <div className="acp-session__tool-panel-content">
-        {activityView === 'tools' ? (
-          <>
-            <div className="acp-session__tool-filter-row">
-              <button
-                className={`acp-session__tool-filter${principalMcpOnly ? ' is-active' : ''}`}
-                type="button"
-                aria-pressed={principalMcpOnly}
-                aria-label="Filter Principal MCP calls"
-                title="Show only calls made to the Principal MCP bridge"
-                onClick={() => setPrincipalMcpOnly((current) => !current)}
-              >
-                Principal MCP
-              </button>
-            </div>
-            <div className="acp-session__tool-activity">
-              {visibleToolCalls.length === 0 ? (
+        <div className="acp-session__tool-activity-stage">
+          {activityView === 'tools' ? (
+            <>
+              <div className="acp-session__tool-filter-row">
+                <button
+                  className={`acp-session__tool-filter${principalMcpOnly ? ' is-active' : ''}`}
+                  type="button"
+                  aria-pressed={principalMcpOnly}
+                  aria-label="Filter Principal MCP calls"
+                  title="Show only calls made to the Principal MCP bridge"
+                  onClick={() => setPrincipalMcpOnly((current) => !current)}
+                >
+                  Principal MCP
+                </button>
+              </div>
+              <div className="acp-session__tool-activity">
+                {visibleToolCalls.length === 0 ? (
+                  <div
+                    className="acp-session__tool-panel-empty acp-session__tool-panel-empty--activity"
+                    role="status"
+                  >
+                    <span>
+                      {principalMcpOnly
+                        ? 'No Principal MCP bridge calls in this session.'
+                        : 'Tool calls will appear here as the agent works.'}
+                    </span>
+                  </div>
+                ) : (
+                  <ol className="acp-session__tool-list" aria-live="polite">
+                    {visibleToolCalls.map((call) => {
+                      const input = toolInputSummary(call.rawInput);
+                      const output = toolInputSummary(call.rawOutput);
+                      return (
+                        <li className="acp-session__tool-card" key={call.id}>
+                          <details className="acp-session__tool-disclosure">
+                            <summary className="acp-session__tool-card-summary">
+                              <div className="acp-session__tool-card-heading">
+                                <span
+                                  className={`acp-session__tool-icon acp-session__tool-icon--${call.status ?? 'pending'}`}
+                                  aria-hidden="true"
+                                >
+                                  {toolStatusIcon(call.status)}
+                                </span>
+                                <span className="acp-session__tool-card-title">
+                                  {call.title}
+                                </span>
+                                <ChevronRight
+                                  className="acp-session__tool-disclosure-icon"
+                                  size={13}
+                                  aria-hidden="true"
+                                />
+                              </div>
+                              <div className="acp-session__tool-card-meta">
+                                {call.name ? <code>{call.name}</code> : null}
+                                {call.kind ? <span>{call.kind}</span> : null}
+                                <span className="acp-session__tool-card-status">
+                                  {toolStatusLabel(call.status)}
+                                  {call.status === 'in_progress' ? (
+                                    <Loader2
+                                      className="acp-client__spinning"
+                                      size={11}
+                                      aria-hidden="true"
+                                    />
+                                  ) : null}
+                                </span>
+                                <span
+                                  className={`acp-session__tool-processing acp-session__tool-processing--${call.processing ?? 'pending'}`}
+                                  title="Result of sending this tool call through the file-highlighting pipeline"
+                                >
+                                  {toolProcessingLabel(call.processing)}
+                                </span>
+                              </div>
+                            </summary>
+                            <div className="acp-session__tool-card-body">
+                              {call.locations && call.locations.length > 0 ? (
+                                <ul className="acp-session__tool-locations">
+                                  {call.locations.map((location) => (
+                                    <li
+                                      key={`${location.path}:${location.line ?? ''}`}
+                                    >
+                                      <code>{location.path}</code>
+                                      {location.line ? (
+                                        <span>:{location.line}</span>
+                                      ) : null}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : null}
+                              {call.detail ? (
+                                <pre className="acp-session__tool-detail">
+                                  {call.detail}
+                                </pre>
+                              ) : null}
+                              {input ? (
+                                <details className="acp-session__tool-input">
+                                  <summary>Input</summary>
+                                  <pre>{input}</pre>
+                                </details>
+                              ) : null}
+                              {output ? (
+                                <details className="acp-session__tool-input">
+                                  <summary>Output</summary>
+                                  <pre>{output}</pre>
+                                </details>
+                              ) : null}
+                            </div>
+                          </details>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+                {activeToolCount > 0 ? (
+                  <div className="acp-session__tool-panel-footer" role="status">
+                    <Loader2 className="acp-client__spinning" size={12} />
+                    {activeToolCount} active
+                  </div>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <div className="acp-session__artifact-activity">
+              {artifacts.length === 0 ? (
                 <div
                   className="acp-session__tool-panel-empty acp-session__tool-panel-empty--activity"
                   role="status"
                 >
                   <span>
-                    {principalMcpOnly
-                      ? 'No Principal MCP bridge calls in this session.'
-                      : 'Tool calls will appear here as the agent works.'}
+                    Topics, subsystem models, and drawings the agent works with
+                    through Principal MCP will appear here.
                   </span>
                 </div>
               ) : (
-                <ol className="acp-session__tool-list" aria-live="polite">
-                  {visibleToolCalls.map((call) => {
-                    const input = toolInputSummary(call.rawInput);
-                    const output = toolInputSummary(call.rawOutput);
+                <ol className="acp-session__artifact-list">
+                  {artifacts.map(({ kind, id, openCount }) => {
+                    const isSelected =
+                      selectedArtifact?.kind === kind &&
+                      selectedArtifact.id === id;
+                    const title = artifactTitle(kind, id, {
+                      ...associatedTitles,
+                      ...artifactTitles,
+                    });
                     return (
-                      <li className="acp-session__tool-card" key={call.id}>
-                        <details className="acp-session__tool-disclosure">
-                          <summary className="acp-session__tool-card-summary">
-                            <div className="acp-session__tool-card-heading">
-                              <span
-                                className={`acp-session__tool-icon acp-session__tool-icon--${call.status ?? 'pending'}`}
-                                aria-hidden="true"
-                              >
-                                {toolStatusIcon(call.status)}
-                              </span>
-                              <span className="acp-session__tool-card-title">
-                                {call.title}
-                              </span>
-                              <ChevronRight
-                                className="acp-session__tool-disclosure-icon"
-                                size={13}
-                                aria-hidden="true"
-                              />
-                            </div>
-                            <div className="acp-session__tool-card-meta">
-                              {call.name ? <code>{call.name}</code> : null}
-                              {call.kind ? <span>{call.kind}</span> : null}
-                              <span className="acp-session__tool-card-status">
-                                {toolStatusLabel(call.status)}
-                                {call.status === 'in_progress' ? (
-                                  <Loader2
-                                    className="acp-client__spinning"
-                                    size={11}
-                                    aria-hidden="true"
-                                  />
-                                ) : null}
-                              </span>
-                              <span
-                                className={`acp-session__tool-processing acp-session__tool-processing--${call.processing ?? 'pending'}`}
-                                title="Result of sending this tool call through the file-highlighting pipeline"
-                              >
-                                {toolProcessingLabel(call.processing)}
-                              </span>
-                            </div>
-                          </summary>
-                          <div className="acp-session__tool-card-body">
-                            {call.locations && call.locations.length > 0 ? (
-                              <ul className="acp-session__tool-locations">
-                                {call.locations.map((location) => (
-                                  <li
-                                    key={`${location.path}:${location.line ?? ''}`}
-                                  >
-                                    <code>{location.path}</code>
-                                    {location.line ? (
-                                      <span>:{location.line}</span>
-                                    ) : null}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : null}
-                            {call.detail ? (
-                              <pre className="acp-session__tool-detail">
-                                {call.detail}
-                              </pre>
-                            ) : null}
-                            {input ? (
-                              <details className="acp-session__tool-input">
-                                <summary>Input</summary>
-                                <pre>{input}</pre>
-                              </details>
-                            ) : null}
-                            {output ? (
-                              <details className="acp-session__tool-input">
-                                <summary>Output</summary>
-                                <pre>{output}</pre>
-                              </details>
-                            ) : null}
-                          </div>
-                        </details>
+                      <li
+                        className="acp-session__artifact-card"
+                        key={artifactKey(kind, id)}
+                      >
+                        <button
+                          className={`acp-session__artifact-open${isSelected ? ' is-selected' : ''}`}
+                          type="button"
+                          onClick={() => onOpenArtifact({ kind, id, title })}
+                          aria-pressed={isSelected}
+                          aria-label={
+                            isSelected
+                              ? `Close ${artifactKindLabel(kind)} ${title} preview`
+                              : `Open ${artifactKindLabel(kind)} ${title} in chat`
+                          }
+                        >
+                          {kind === 'topic' ? (
+                            <TopicsIcon size={16} strokeWidth={1.5} />
+                          ) : kind === 'drawing' ? (
+                            <PenTool size={16} strokeWidth={1.5} />
+                          ) : (
+                            <Network size={16} strokeWidth={1.5} />
+                          )}
+                          <span>
+                            <strong>{title}</strong>
+                            <small>
+                              {artifactKindLabel(kind)}
+                              {openCount > 1
+                                ? ` · opened ${openCount} times`
+                                : ''}
+                            </small>
+                          </span>
+                        </button>
                       </li>
                     );
                   })}
                 </ol>
               )}
-              {activeToolCount > 0 ? (
-                <div className="acp-session__tool-panel-footer" role="status">
-                  <Loader2 className="acp-client__spinning" size={12} />
-                  {activeToolCount} active
-                </div>
-              ) : null}
             </div>
-          </>
-        ) : (
-          <div className="acp-session__artifact-activity">
-            {artifacts.length === 0 ? (
-              <div
-                className="acp-session__tool-panel-empty acp-session__tool-panel-empty--activity"
-                role="status"
-              >
-                <span>
-                  Topics, subsystem models, and drawings the agent works with
-                  through Principal MCP will appear here.
-                </span>
-              </div>
-            ) : (
-              <ol className="acp-session__artifact-list">
-                {artifacts.map(({ kind, id, openCount }) => {
-                  const isSelected =
-                    selectedArtifact?.kind === kind &&
-                    selectedArtifact.id === id;
-                  const title = artifactTitle(kind, id, {
-                    ...associatedTitles,
-                    ...artifactTitles,
-                  });
-                  return (
-                    <li
-                      className="acp-session__artifact-card"
-                      key={artifactKey(kind, id)}
-                    >
-                      <button
-                        className={`acp-session__artifact-open${isSelected ? ' is-selected' : ''}`}
-                        type="button"
-                        onClick={() => onOpenArtifact({ kind, id, title })}
-                        aria-pressed={isSelected}
-                        aria-label={
-                          isSelected
-                            ? `Close ${artifactKindLabel(kind)} ${title} preview`
-                            : `Open ${artifactKindLabel(kind)} ${title} in chat`
-                        }
-                      >
-                        {kind === 'topic' ? (
-                          <TopicsIcon size={16} strokeWidth={1.5} />
-                        ) : kind === 'drawing' ? (
-                          <PenTool size={16} strokeWidth={1.5} />
-                        ) : (
-                          <Network size={16} strokeWidth={1.5} />
-                        )}
-                        <span>
-                          <strong>{title}</strong>
-                          <small>
-                            {artifactKindLabel(kind)}
-                            {openCount > 1
-                              ? ` · opened ${openCount} times`
-                              : ''}
-                          </small>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-          </div>
-        )}
+          )}
+          {/* The tree drops up over the tool/artifact activity instead of
+              replacing it, so the layer can animate in from the city. */}
+          {showFileTree && hasHighlightLayers ? (
+            <div
+              className={`acp-session__file-tree-overlay${fileTreeClosing ? ' is-closing' : ''}`}
+              onAnimationEnd={finishFileTreeClose}
+            >
+              <ACPHighlightTreeView
+                workspacePath={workspacePath}
+                highlightLayers={highlightLayers}
+                gitStatusWithFiles={gitStatusWithFiles}
+                onOpenFilePreview={onOpenFilePreview}
+                onCloseFilePreview={onCloseFilePreview}
+              />
+            </div>
+          ) : null}
+        </div>
         <section
           className="acp-session__tool-city-section"
           aria-label={workspaceName}
@@ -1166,47 +1211,23 @@ function ACPToolCallsPanel({
               {workspaceName}
             </h3>
             {hasHighlightLayers ? (
-              <span
-                className="acp-session__city-view-toggle"
-                role="tablist"
-                aria-label="File map view"
+              <button
+                className={`acp-session__file-tree-toggle${showFileTree && !fileTreeClosing ? ' is-active' : ''}`}
+                type="button"
+                aria-pressed={showFileTree}
+                aria-label="FileTree"
+                title="Show the highlighted files as a tree above the city"
+                onClick={toggleFileTree}
               >
-                <button
-                  className={`acp-session__city-view-toggle-button${cityView === 'map' ? ' is-active' : ''}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={cityView === 'map'}
-                  onClick={() => setCityView('map')}
-                >
-                  Map
-                </button>
-                <button
-                  className={`acp-session__city-view-toggle-button${cityView === 'tree' ? ' is-active' : ''}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={cityView === 'tree'}
-                  onClick={() => setCityView('tree')}
-                >
-                  Tree
-                </button>
-              </span>
+                FileTree
+              </button>
             ) : null}
           </div>
-          {cityView === 'tree' && hasHighlightLayers ? (
-            <ACPHighlightTreeView
-              workspacePath={workspacePath}
-              highlightLayers={highlightLayers}
-              gitStatusWithFiles={gitStatusWithFiles}
-              onOpenFilePreview={onOpenFilePreview}
-              onCloseFilePreview={onCloseFilePreview}
-            />
-          ) : (
-            <ACPFileCityView
-              workspacePath={workspacePath}
-              highlightLayers={highlightLayers}
-              gitHighlightLayers={gitHighlightLayers}
-            />
-          )}
+          <ACPFileCityView
+            workspacePath={workspacePath}
+            highlightLayers={highlightLayers}
+            gitHighlightLayers={gitHighlightLayers}
+          />
         </section>
       </div>
     </aside>

@@ -1191,6 +1191,69 @@
   font-size: var(--acp-font-size-0);
 }
 
+.acp-session__tool-activity-stage {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.acp-session__file-tree-overlay {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  background: var(--acp-surface);
+  animation: acp-file-tree-rise 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.acp-session__file-tree-overlay > .acp-session__file-city {
+  min-height: 0;
+  flex: 1 1 auto;
+  height: auto;
+  border: 0;
+}
+
+.acp-session__file-tree-overlay.is-closing {
+  pointer-events: none;
+  animation: acp-file-tree-sink 220ms cubic-bezier(0.4, 0, 0.7, 0.2) forwards;
+}
+
+@keyframes acp-file-tree-rise {
+  from {
+    transform: translateY(100%);
+    opacity: 0.4;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes acp-file-tree-sink {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(100%);
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acp-session__file-tree-overlay {
+    animation: none;
+  }
+}
+
 .acp-session__file-city {
   position: relative;
   display: flex;
@@ -1284,29 +1347,31 @@
   font-weight: 650;
 }
 
-.acp-session__city-view-toggle {
+.acp-session__file-tree-toggle {
   display: inline-flex;
+  min-height: 24px;
   flex: 0 0 auto;
-  gap: 2px;
-  padding: 2px;
+  align-items: center;
+  padding: 2px 9px;
   border: 1px solid var(--acp-border);
   border-radius: 6px;
-  background: var(--acp-surface-soft);
-}
-
-.acp-session__city-view-toggle-button {
-  min-height: 22px;
-  padding: 2px 8px;
-  border: 1px solid transparent;
-  border-radius: 4px;
   color: var(--acp-muted) !important;
-  background: transparent;
+  background: var(--acp-surface-soft);
   cursor: pointer;
   font-size: var(--acp-font-size-0) !important;
   font-weight: 500;
+  transition:
+    border-color 130ms ease,
+    background 130ms ease,
+    color 130ms ease;
 }
 
-.acp-session__city-view-toggle-button.is-active {
+.acp-session__file-tree-toggle:hover {
+  border-color: var(--acp-accent);
+  color: var(--acp-accent) !important;
+}
+
+.acp-session__file-tree-toggle.is-active {
   border-color: var(--acp-accent);
   color: var(--acp-text-on-primary) !important;
   background: var(--acp-accent);
