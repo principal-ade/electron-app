@@ -213,3 +213,38 @@ test('sets and serves display-name overrides for externally detected processes',
   );
   expect(registry.setLabel('detected:5174', '  ').success).toBe(false);
 });
+
+test('sets, resolves, and clears runtime connection overrides for detected processes', () => {
+  const registry = new ProcessRegistry();
+  const connection = { type: 'bruno' as const, collectionPath: 'openbot/api' };
+
+  expect(registry.setConnection('detected:4200', connection)).toEqual({
+    success: true,
+  });
+  expect(registry.getDetectedConnection('detected:4200')).toEqual(connection);
+  expect(registry.getDetectedConnectionForServer(92095, 4200)).toEqual(
+    connection,
+  );
+  expect(registry.setConnection('detected:0', connection).success).toBe(false);
+
+  expect(registry.setConnection('detected:4200', undefined)).toEqual({
+    success: true,
+  });
+  expect(registry.getDetectedConnection('detected:4200')).toBeUndefined();
+});
+
+test('a managed process entry carries its start connection', async () => {
+  (spawn as jest.Mock).mockReturnValue(child());
+  const registry = new ProcessRegistry();
+  const connection = { type: 'browser' as const, path: '/' };
+
+  const result = await registry.start({
+    command: 'npm',
+    args: ['run', 'dev'],
+    cwd: '/repo',
+    connection,
+  });
+
+  expect(result.success).toBe(true);
+  expect(result.process?.connection).toEqual(connection);
+});

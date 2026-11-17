@@ -27,6 +27,7 @@ import {
   type ProcessLaunchPersistence,
 } from './ProcessLaunchStore';
 import {
+  ProcessConnection,
   ProcessEntry,
   ProcessKind,
   ProcessRepo,
@@ -40,6 +41,11 @@ import {
 const KILL_ESCALATION_MS = 5000;
 /** Max captured output chunks per process (ring buffer). */
 const MAX_LOG_CHUNKS = 500;
+
+/** Detected-process ids are `detected:<pid-or-port>`. */
+function isDetectedId(id: string): boolean {
+  return /^detected:\d+$/.test(id) && Number(id.slice('detected:'.length)) > 0;
+}
 
 /** Is `child` the same as, or inside, `parent`? (both absolute) */
 function pathInside(child: string, parent: string): boolean {
@@ -82,6 +88,8 @@ export class ProcessRegistry extends EventEmitter {
   private entries = new Map<string, ProcessEntry>();
   /** Display-name overrides for localhost processes discovered outside the app. */
   private detectedLabels = new Map<string, string>();
+  /** Runtime-only open-action overrides for externally detected processes. */
+  private detectedConnections = new Map<string, ProcessConnection>();
   private children = new Map<string, ChildProcess>();
   /** The original start request per id, so restart can re-run it. */
   private descriptors = new Map<string, ProcessStartRequest>();
@@ -106,6 +114,7 @@ export class ProcessRegistry extends EventEmitter {
           origin: 'managed',
           status: 'stopped',
           pinned: true,
+          connection: request.connection,
           startedAt: 0,
           runCount: 0,
         });
@@ -174,7 +183,7 @@ export class ProcessRegistry extends EventEmitter {
 
     // Detected processes are owned by another program, so only their display
     // name is mutable here. Their IDs are `detected:<pid-or-port>`.
-    if (/^detected:\d+$/.test(id) && Number(id.slice('detected:'.length)) > 0) {
+    if (isDetectedId(id)) {
       this.detectedLabels.set(id, normalizedLabel);
       this.emitChanged();
       return { success: true };
@@ -225,6 +234,101 @@ export class ProcessRegistry extends EventEmitter {
   /** Custom display name for a detected localhost process, if one was set. */
   getDetectedLabel(id: string): string | undefined {
     return this.detectedLabels.get(id);
+  }
+
+  /**
+   * Update how clicking a process opens its target. Detected overrides are
+   * runtime-only (like their labels); managed connections ride along with the
+   * launch descriptor and are persisted when the process is pinned.
+   */
+  setConnection(
+    id: string,
+    connection: ProcessConnection | undefined,
+  ): ProcessControlResult {
+    if (isDetectedId(id)) {
+      if (connection) this.detectedConnections.set(id, connection);
+      else this.detectedConnections.delete(id);
+      this.emitChanged();
+      return { success: true };
+    }
+
+    const entry = this.entries.get(id);
+    const descriptor = this.descriptors.get(id);
+    if (!entry || entry.origin !== 'managed' || !descriptor) {
+      return { success: false, error: 'unknown managed process id' };
+    }
+
+    const updatedDescriptor: ProcessStartRequest = { ...descriptor };
+    if (connection) updatedDescriptor.connection = connection;
+    else delete updatedDescriptor.connection;
+
+    if (entry.pinned) {
+      if (this.persistenceError) {
+        return { success: false, error: this.persistenceError };
+      }
+      try {
+        if (!this.launchStore) {
+          throw new Error('Process launch storage is unavailable.');
+        }
+        const launches = [...this.entries.values()]
+          .filter((candidate) => candidate.pinned)
+          .map((candidate) => {
+            const request =
+              candidate.id === id
+                ? updatedDescriptor
+                : this.descriptors.get(candidate.id);
+            if (!request) {
+              throw new Error('Missing process launch configuration.');
+            }
+            return { id: candidate.id, request };
+          });
+        this.launchStore.save(launches);
+      } catch {
+        return {
+          success: false,
+          error: 'Could not securely save the process connection.',
+        };
+      }
+    }
+
+    this.descriptors.set(id, updatedDescriptor);
+    if (connection) entry.connection = connection;
+    else delete entry.connection;
+    this.emitChanged();
+    return { success: true };
+  }
+
+  /** Runtime open-action override for a detected localhost process. */
+  getDetectedConnection(id: string): ProcessConnection | undefined {
+    return this.detectedConnections.get(id);
+  }
+
+  /**
+   * Prefer a port-scoped override over a pid-scoped one. Several services can
+   * share one PID (Docker publishing 4200 and 5432, for example), and those
+   * services need different labels and different open actions.
+   */
+  private detectedOverride<T>(
+    values: Map<string, T>,
+    pid?: number,
+    port?: number,
+  ): T | undefined {
+    if (port != null) {
+      const scoped = values.get(`detected:${port}`);
+      if (scoped !== undefined) return scoped;
+    }
+    return values.get(`detected:${pid ?? port}`);
+  }
+
+  getDetectedLabelForServer(pid?: number, port?: number): string | undefined {
+    return this.detectedOverride(this.detectedLabels, pid, port);
+  }
+
+  getDetectedConnectionForServer(
+    pid?: number,
+    port?: number,
+  ): ProcessConnection | undefined {
+    return this.detectedOverride(this.detectedConnections, pid, port);
   }
 
   /**
@@ -304,6 +408,7 @@ export class ProcessRegistry extends EventEmitter {
       status: 'starting',
       origin: 'managed',
       source,
+      connection: request.connection,
       startedAt: Date.now(),
       runCount: 1,
     };

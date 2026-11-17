@@ -20,7 +20,8 @@ const execAsync = promisify(exec);
 const activeWatchers = new Map<string, NodeJS.Timeout>();
 
 /**
- * Detect running servers, enriched with registry display-name overrides.
+ * Detect running servers, enriched with registry display-name and open-action
+ * overrides.
  * The raw port/process scan lives in `processes/detectServers` so the
  * Principal MCP bridge can reuse it without going through IPC.
  */
@@ -30,8 +31,12 @@ async function detectRunningServers(
   const result = await scanPorts(options);
   const registry = getProcessRegistry();
   for (const server of result.servers) {
-    server.displayName = registry.getDetectedLabel(
-      `detected:${server.pid ?? server.port}`,
+    server.displayName =
+      registry.getDetectedLabelForServer?.(server.pid, server.port) ??
+      registry.getDetectedLabel(`detected:${server.pid ?? server.port}`);
+    server.connection = registry.getDetectedConnectionForServer?.(
+      server.pid,
+      server.port,
     );
   }
   return result;

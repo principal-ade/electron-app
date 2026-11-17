@@ -47,11 +47,15 @@ const entry: ProcessEntry = {
   port: 5173,
 };
 const openBrowser = jest.fn();
+const openHttpRequest = jest.fn(() => 'http-request-1');
 
 beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(useWorkspaceTabs).mockReturnValue({
     openLocalhostBrowser: openBrowser,
+    openHttpRequest,
+    savedRequests: [],
+    catalogRequests: [],
   } as unknown as ReturnType<typeof useWorkspaceTabs>);
   jest
     .mocked(ProcessRegistryService.setPinned)
@@ -85,6 +89,76 @@ test('clicking the process label opens its linked browser once', () => {
   fireEvent.click(screen.getByText('Dev server'));
   expect(openBrowser).toHaveBeenCalledTimes(1);
   expect(openBrowser).toHaveBeenCalledWith(5173, '/', 'Dev server', 'server-1');
+});
+
+test('a browser connection opens its configured path', () => {
+  const process = {
+    ...entry,
+    connection: { type: 'browser' as const, path: '/stories' },
+  };
+  render(<HomeProcessRow entry={process} />);
+  fireEvent.click(screen.getByText('Dev server'));
+  expect(openBrowser).toHaveBeenCalledWith(
+    5173,
+    '/stories',
+    'Dev server',
+    'server-1',
+  );
+});
+
+test('a bruno connection opens its linked saved request', () => {
+  const request = {
+    id: 'openbot-health',
+    title: 'Health',
+    request: { http: { method: 'GET', url: 'http://localhost:3001/health' } },
+    environment: {},
+  };
+  jest.mocked(useWorkspaceTabs).mockReturnValue({
+    openLocalhostBrowser: openBrowser,
+    openHttpRequest,
+    savedRequests: [request],
+    catalogRequests: [],
+  } as unknown as ReturnType<typeof useWorkspaceTabs>);
+  render(
+    <HomeProcessRow
+      entry={{
+        ...entry,
+        connection: { type: 'bruno', requestId: 'openbot-health' },
+      }}
+    />,
+  );
+
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Open Dev server in Bruno' }),
+  );
+
+  expect(openHttpRequest).toHaveBeenCalledWith(request);
+  expect(openBrowser).not.toHaveBeenCalled();
+});
+
+test('a sql connection shows an honest placeholder instead of opening a browser', () => {
+  render(
+    <HomeProcessRow
+      entry={{
+        ...entry,
+        connection: { type: 'sql', database: 'openbot' },
+      }}
+    />,
+  );
+
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'Show Dev server connection details',
+    }),
+  );
+
+  expect(screen.getByText(/No SQL viewer is available yet/).textContent).toContain(
+    'port 5173',
+  );
+  expect(screen.getByText(/No SQL viewer is available yet/).textContent).toContain(
+    'database openbot',
+  );
+  expect(openBrowser).not.toHaveBeenCalled();
 });
 
 test('drags a shell-quoted working directory into the terminal without opening the browser', () => {

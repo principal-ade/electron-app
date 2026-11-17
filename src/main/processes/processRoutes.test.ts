@@ -53,6 +53,69 @@ test.each(['process-1', 'detected:5173'])('PATCH renames process %s', (id) => {
   expect(res.json).toHaveBeenCalledWith({ success: true });
 });
 
+test('PATCH sets a connection without a label', () => {
+  const setLabel = jest.fn();
+  const setConnection = jest.fn(() => ({ success: true }));
+  const handler = patchHandler({
+    setLabel,
+    setConnection,
+  } as unknown as ProcessRegistry);
+  const res = response();
+  const connection = { type: 'bruno', collectionPath: 'openbot/api' };
+
+  handler(
+    {
+      params: { id: 'detected:4200' },
+      body: { connection },
+    } as unknown as Request,
+    res as unknown as Response,
+  );
+
+  expect(setConnection).toHaveBeenCalledWith('detected:4200', connection);
+  expect(setLabel).not.toHaveBeenCalled();
+  expect(res.status).toHaveBeenCalledWith(200);
+});
+
+test('PATCH clears a connection with null', () => {
+  const setConnection = jest.fn(() => ({ success: true }));
+  const handler = patchHandler({
+    setConnection,
+  } as unknown as ProcessRegistry);
+  const res = response();
+
+  handler(
+    {
+      params: { id: 'detected:4200' },
+      body: { connection: null },
+    } as unknown as Request,
+    res as unknown as Response,
+  );
+
+  expect(setConnection).toHaveBeenCalledWith('detected:4200', undefined);
+  expect(res.status).toHaveBeenCalledWith(200);
+});
+
+test.each([
+  { connection: { type: 'bogus' } },
+  { connection: 'browser' },
+  { connection: { type: 'browser', path: 42 } },
+  { connection: { type: 'bruno', requestId: 'bad id' } },
+])('PATCH rejects a malformed connection: %p', (body) => {
+  const setConnection = jest.fn();
+  const handler = patchHandler({
+    setConnection,
+  } as unknown as ProcessRegistry);
+  const res = response();
+
+  handler(
+    { params: { id: 'detected:4200' }, body } as unknown as Request,
+    res as unknown as Response,
+  );
+
+  expect(setConnection).not.toHaveBeenCalled();
+  expect(res.status).toHaveBeenCalledWith(400);
+});
+
 test.each([undefined, null, {}, { label: '' }, { label: '  ' }, { label: 1 }])(
   'PATCH rejects an invalid display name: %p',
   (body) => {
@@ -199,6 +262,71 @@ test('GET /api/processes/detected applies display-name overrides and repo attrib
     repo: { name: 'app' },
   });
   expect(body.servers[0]).toMatchObject({ displayName: 'Custom name' });
+});
+
+test('GET /api/processes/detected applies port-scoped overrides for a shared PID', async () => {
+  mockScan.mockResolvedValue({
+    servers: [
+      {
+        port: 4200,
+        protocol: 'http',
+        responsive: true,
+        label: 'Data',
+        pid: 92095,
+        cwd: '/repo/agent-bot',
+        command: 'com.docke',
+      },
+      {
+        port: 5432,
+        protocol: 'http',
+        responsive: true,
+        label: 'Data',
+        pid: 92095,
+        cwd: '/repo/agent-bot',
+        command: 'com.docke',
+      },
+    ],
+    scannedPorts: [4200, 5432],
+    scanDuration: 5,
+  });
+  const registry = {
+    list: () => [],
+    getDetectedLabel: (id: string) =>
+      id === 'detected:92095' ? 'Docker services' : undefined,
+    getDetectedLabelForServer: (_pid: number | undefined, port?: number) =>
+      port === 4200
+        ? 'OpenBot agent-bot (4200)'
+        : port === 5432
+          ? 'OpenBot PostgreSQL (5432)'
+          : undefined,
+    getDetectedConnectionForServer: (
+      _pid: number | undefined,
+      port?: number,
+    ) =>
+      port === 4200
+        ? { type: 'bruno', collectionPath: 'openbot/api' }
+        : port === 5432
+          ? { type: 'sql', database: 'openbot' }
+          : undefined,
+    resolveRepo: jest.fn(async () => undefined),
+  } as unknown as ProcessRegistry;
+  const handler = detectedHandler(registry);
+  const res = response();
+
+  await handler(
+    { query: {} } as unknown as Request,
+    res as unknown as Response,
+  );
+
+  const body = res.json.mock.calls[0][0];
+  expect(body.processes[0]).toMatchObject({
+    label: 'OpenBot agent-bot (4200)',
+    connection: { type: 'bruno', collectionPath: 'openbot/api' },
+  });
+  expect(body.processes[1]).toMatchObject({
+    label: 'OpenBot PostgreSQL (5432)',
+    connection: { type: 'sql', database: 'openbot' },
+  });
 });
 
 test.each([

@@ -5,6 +5,8 @@
  * Used by localhost-panels to display available development servers.
  */
 
+import type { ProcessConnection } from './ProcessRegistryAPI';
+
 export interface RunningServer {
   port: number;
   label?: string;
@@ -22,6 +24,8 @@ export interface RunningServer {
   command?: string;
   /** User-assigned display name for an externally detected process. */
   displayName?: string;
+  /** How clicking this server should open it, from the process registry. */
+  connection?: ProcessConnection;
 }
 
 export interface DetectServersOptions {

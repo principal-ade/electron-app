@@ -739,7 +739,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           'List the managed process registry, not externally detected servers.',
         response: '{ success: true, processes: ProcessEntry[] }',
         notes: [
-          'Entries include id, label, command, cwd, kind, status, origin, and optional repo, pid, port, timing, exit/error, and runCount information. Use durable id, not PID. For externally detected localhost servers, use GET /api/processes/detected.',
+          'Entries include id, label, command, cwd, kind, status, origin, and optional repo, pid, port, connection, timing, exit/error, and runCount information. Use durable id, not PID. For externally detected localhost servers, use GET /api/processes/detected.',
         ],
       },
       {
@@ -760,7 +760,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           '500': 'localhost scan failed.',
         },
         notes: [
-          'Servers already owned by a managed process (matched by pid or port) are dropped, matching the Processes panel merge. Detected entries use ids like `detected:<pid-or-port>` with origin `detected`, status `running`, and source `external`. Use PATCH /api/processes/:id to rename one.',
+          'Servers already owned by a managed process (matched by pid or port) are dropped, matching the Processes panel merge. Detected entries use ids like `detected:<pid-or-port>` with origin `detected`, status `running`, and source `external`. Use PATCH /api/processes/:id to rename one or set its connection. A port-scoped override (`detected:<port>`) wins over a pid-scoped one, so services sharing a PID can differ.',
         ],
         example: { ports: '3000,5173', timeout: '500' },
       },
@@ -776,6 +776,8 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           env: 'Record<string, string> (optional): environment overrides.',
           label: 'string (optional): display label.',
           kind: '"dev-server" | "watcher" | "task" | "agent" | "script" (optional).',
+          connection:
+            '{ type: "browser", path?: string } | { type: "bruno", requestId?: string, collectionPath?: string } | { type: "sql", database?: string } (optional): how clicking the process opens its target.',
         },
         response: '201 { success: true, process }',
         errors: {
@@ -798,19 +800,27 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         method: 'PATCH',
         path: '/api/processes/:id',
         summary:
-          'Set the display name for a managed process or an externally detected localhost process.',
-        body: { label: 'string (required): non-empty display name.' },
+          'Set the display name and/or open-action connection for a managed or externally detected process.',
+        body: {
+          label: 'string (optional): non-empty display name.',
+          connection:
+            'ProcessConnection | null (optional): how clicking opens the process; null clears an override. At least one of label or connection is required.',
+        },
         response: '{ success: true }',
         errors: {
-          '400': 'body.label is missing, empty, or whitespace-only.',
+          '400': 'No valid label or connection, or a malformed connection.',
           '404': 'Unknown managed process id or invalid detected-process id.',
           '500':
-            'Could not securely save the display name for a pinned process.',
+            'Could not securely save the display name or connection for a pinned process.',
         },
         notes: [
-          'For a managed process, the label appears in Home and pinned processes save it with their launch configuration. For an external process, use its detected id (`detected:<pid-or-port>`); the custom name applies while Principal is running and that process remains detectable.',
+          'For a managed process, values appear in Home and pinned processes save them with their launch configuration. For an external process, use its detected id (`detected:<pid-or-port>` or a port-scoped `detected:<port>`); overrides are runtime-only and apply while Principal is running and the process remains detectable.',
+          'Connections carry no credentials. `browser` opens `http://localhost:<port><path>`; `bruno` opens a remembered HTTP request by `requestId` (a `collectionPath` is metadata only until a workspace opener exists); `sql` shows connection details because no DB viewer exists yet.',
         ],
-        example: { label: 'Frontend dev server' },
+        example: {
+          label: 'OpenBot server',
+          connection: { type: 'bruno', collectionPath: 'openbot/api' },
+        },
       },
       {
         method: 'GET',

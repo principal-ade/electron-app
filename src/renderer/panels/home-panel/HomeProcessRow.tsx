@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   Bookmark,
@@ -16,6 +16,10 @@ import { ProcessRegistryService } from '../../main-process-api/ProcessRegistrySe
 import { LocalhostDetectionService } from '../../main-process-api/LocalhostDetectionService';
 import { ConfirmDialog } from '../../repo-explorer/components/ConfirmDialog';
 import { useWorkspaceTabs } from '../../principal-window/PortalTabsContext';
+import {
+  requestDefinition,
+  type CatalogRequest,
+} from '../../../shared/requests/preparedRequest';
 import { shellQuote } from '../../utils/shellQuote';
 import type { HomeProcessTab } from './homeTabEntries';
 
@@ -28,9 +32,15 @@ export const HomeProcessRow: React.FC<{
   onProcessKilled?: () => void | Promise<void>;
 }> = ({ entry, depth = 0, openTab, onActivateTab, onProcessKilled }) => {
   const { theme } = useTheme();
-  const { openLocalhostBrowser } = useWorkspaceTabs();
+  const {
+    openLocalhostBrowser,
+    openHttpRequest = () => '',
+    savedRequests = [],
+    catalogRequests = [],
+  } = useWorkspaceTabs();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [hovered, setHovered] = useState(false);
   const [killTarget, setKillTarget] = useState<ProcessEntry | null>(null);
   const acting = useRef(false);
@@ -42,20 +52,87 @@ export const HomeProcessRow: React.FC<{
   const canFocus = openTab != null && onActivateTab != null;
   const canKill =
     managed || (Number.isSafeInteger(entry.pid) && (entry.pid ?? 0) > 0);
-  const canOpen = canFocus || (!stopped && entry.port != null);
+  const canOpen =
+    canFocus || (!stopped && (entry.port != null || entry.connection != null));
   const dragText = entry.cwd.trim() ? shellQuote(entry.cwd) : undefined;
-  const openBrowser = () => {
+
+  useEffect(() => {
+    setNotice(null);
+  }, [entry.id, entry.connection?.type]);
+
+  const actionLabel =
+    entry.connection?.type === 'bruno'
+      ? `Open ${entry.label} in Bruno`
+      : entry.connection?.type === 'sql'
+        ? `Show ${entry.label} connection details`
+        : `Open ${entry.label} in browser`;
+
+  const openConnection = () => {
+    if (!canOpen) return;
     if (openTab && onActivateTab) {
       onActivateTab(openTab.id);
       return;
     }
-    if (!canOpen || entry.port == null) return;
-    openLocalhostBrowser(
-      entry.port,
-      '/',
-      entry.label,
-      managed ? entry.id : undefined,
-    );
+    setNotice(null);
+    const connection = entry.connection;
+
+    if (!connection) {
+      if (entry.port == null) return;
+      openLocalhostBrowser(
+        entry.port,
+        '/',
+        entry.label,
+        managed ? entry.id : undefined,
+      );
+      return;
+    }
+
+    switch (connection.type) {
+      case 'browser': {
+        if (entry.port == null) return;
+        openLocalhostBrowser(
+          entry.port,
+          connection.path ?? '/',
+          entry.label,
+          managed ? entry.id : undefined,
+        );
+        return;
+      }
+      case 'bruno': {
+        const found = connection.requestId
+          ? (savedRequests.find((request) => request.id === connection.requestId) ??
+            catalogRequests.find(
+              (request) => request.id === connection.requestId,
+            ))
+          : undefined;
+        if (found) {
+          openHttpRequest(
+            typeof (found as CatalogRequest).pinned === 'boolean'
+              ? requestDefinition(found as CatalogRequest)
+              : found,
+          );
+          return;
+        }
+        setNotice(
+          connection.collectionPath
+            ? `REST API — no saved request is linked yet. Bruno collection: ${connection.collectionPath}`
+            : 'REST API — no saved Bruno request is linked to this process yet.',
+        );
+        return;
+      }
+      case 'sql': {
+        const details = [
+          entry.port != null ? `port ${entry.port}` : undefined,
+          connection.database ? `database ${connection.database}` : undefined,
+        ]
+          .filter(Boolean)
+          .join(', ');
+        setNotice(
+          `No SQL viewer is available yet.${details ? ` PostgreSQL at ${details}.` : ''}`,
+        );
+        return;
+      }
+    }
   };
 
   const act = async (action: () => Promise<ProcessControlResult>) => {
@@ -150,19 +227,19 @@ export const HomeProcessRow: React.FC<{
       <div
         role={canOpen ? 'button' : undefined}
         tabIndex={canOpen ? 0 : undefined}
-        aria-label={canOpen ? `Open ${entry.label} in browser` : undefined}
+        aria-label={canOpen ? actionLabel : undefined}
         draggable={dragText !== undefined}
         onDragStart={(event) => {
           if (!dragText || !event.dataTransfer) return;
           event.dataTransfer.effectAllowed = 'copy';
           event.dataTransfer.setData('text/plain', dragText);
         }}
-        onClick={openBrowser}
+        onClick={openConnection}
         onKeyDown={(event) => {
           if (!canOpen || event.target !== event.currentTarget) return;
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            openBrowser();
+            openConnection();
           }
         }}
         onMouseEnter={() => setHovered(true)}
@@ -281,6 +358,18 @@ export const HomeProcessRow: React.FC<{
           </button>
         )}
       </div>
+      {notice && (
+        <div
+          role="status"
+          style={{
+            padding: '4px 10px 6px',
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textSecondary,
+          }}
+        >
+          {notice}
+        </div>
+      )}
       {killTarget && (
         <ConfirmDialog
           title="Kill process"

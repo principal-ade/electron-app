@@ -16,6 +16,9 @@ import path from 'path';
 import type { Application, Request, Response } from 'express';
 import type { ProcessRegistry } from './ProcessRegistry';
 import {
+  parseProcessConnection,
+  ProcessConnection,
+  ProcessControlResult,
   ProcessEntry,
   ProcessKind,
 } from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
@@ -128,6 +131,16 @@ export function registerProcessRoutes(
         .filter((port): port is number => typeof port === 'number'),
     );
 
+    // Port-scoped overrides win over pid-scoped ones so two services sharing a
+    // PID can be named and opened differently.
+    const detectedLabel = (s: RunningServer): string | undefined =>
+      registry.getDetectedLabelForServer?.(s.pid, s.port) ??
+      registry.getDetectedLabel(`detected:${s.pid ?? s.port}`);
+    const detectedConnection = (
+      s: RunningServer,
+    ): ProcessConnection | undefined =>
+      registry.getDetectedConnectionForServer?.(s.pid, s.port);
+
     const servers: RunningServer[] = scan.servers
       .filter((s) => {
         if (s.pid != null && managedPids.has(s.pid)) return false;
@@ -136,9 +149,8 @@ export function registerProcessRoutes(
       })
       .map((s) => ({
         ...s,
-        displayName:
-          registry.getDetectedLabel(`detected:${s.pid ?? s.port}`) ??
-          s.displayName,
+        displayName: detectedLabel(s) ?? s.displayName,
+        connection: detectedConnection(s),
       }));
 
     const processes: ProcessEntry[] = await Promise.all(
@@ -157,6 +169,7 @@ export function registerProcessRoutes(
         origin: 'detected' as const,
         pid: s.pid,
         port: s.port,
+        connection: s.connection,
         source: 'external',
         startedAt: Date.now(),
       })),
@@ -207,6 +220,22 @@ export function registerProcessRoutes(
             ),
           )
         : undefined;
+    const connection =
+      body && Object.prototype.hasOwnProperty.call(body, 'connection')
+        ? parseProcessConnection(body.connection)
+        : undefined;
+
+    if (
+      body &&
+      Object.prototype.hasOwnProperty.call(body, 'connection') &&
+      !connection
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'body.connection is not a valid process connection',
+      });
+      return;
+    }
 
     if (!command) {
       res
@@ -239,7 +268,7 @@ export function registerProcessRoutes(
     }
 
     const result = await registry.start(
-      { command, args, cwd, env, label, kind },
+      { command, args, cwd, env, label, kind, connection },
       'agent',
     );
     res.status(result.success ? 201 : 400).json({
@@ -249,18 +278,47 @@ export function registerProcessRoutes(
     });
   });
 
-  // Update the display name shown for a managed process in Home.
+  // Update a process's display name and/or its open-action metadata.
   app.patch('/api/processes/:id', (req: Request, res: Response) => {
     const body = asObject(req.body);
-    const label = body && typeof body.label === 'string' ? body.label : '';
-    if (!label.trim()) {
+    const label = body?.label;
+    const hasLabel = label !== undefined;
+    const hasConnection =
+      body !== null &&
+      Object.prototype.hasOwnProperty.call(body, 'connection');
+    const rawConnection =
+      hasConnection && body ? body.connection : undefined;
+    const parsedConnection =
+      hasConnection && rawConnection !== null
+        ? parseProcessConnection(rawConnection)
+        : undefined;
+
+    if (
+      (hasLabel &&
+        (typeof label !== 'string' || label.trim().length === 0)) ||
+      (!hasLabel && !hasConnection)
+    ) {
       res.status(400).json({
         success: false,
-        error: 'body.label must be a non-empty string',
+        error:
+          'body.label must be a non-empty string, or body.connection must be provided',
       });
       return;
     }
-    const result = registry.setLabel(String(req.params.id), label);
+    if (hasConnection && rawConnection !== null && !parsedConnection) {
+      res.status(400).json({
+        success: false,
+        error: 'body.connection is not a valid process connection',
+      });
+      return;
+    }
+
+    const id = String(req.params.id);
+    let result: ProcessControlResult = { success: true };
+    if (hasLabel) result = registry.setLabel(id, label as string);
+    if (result.success && hasConnection) {
+      result = registry.setConnection(id, parsedConnection ?? undefined);
+    }
     const status = result.success
       ? 200
       : result.error === 'unknown managed process id'

@@ -101,6 +101,7 @@ function detectedEntries(
       origin: 'detected' as const,
       pid: s.pid,
       port: s.port,
+      connection: s.connection,
       source: 'external',
       startedAt: Date.now(),
     }));

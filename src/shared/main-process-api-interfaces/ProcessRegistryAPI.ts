@@ -18,6 +18,83 @@ export type ProcessStatus =
 export type ProcessKind =
   'dev-server' | 'watcher' | 'task' | 'agent' | 'script';
 
+/**
+ * How a process should be opened when a user clicks it in Home. This is
+ * interaction metadata, not a claim that the target is currently reachable.
+ * It carries no credentials — secrets stay in the app's secure stores.
+ */
+export type ProcessConnection =
+  | {
+      type: 'browser';
+      /** Path under `http://localhost:<port>`; defaults to '/'. */
+      path?: string;
+    }
+  | {
+      type: 'bruno';
+      /** Id of a remembered HTTP request to open as an editable tab. */
+      requestId?: string;
+      /** Metadata only: a Bruno collection this API belongs to. */
+      collectionPath?: string;
+    }
+  | {
+      type: 'sql';
+      /** Database name, when known. Connection details stay on the entry. */
+      database?: string;
+    };
+
+const SAVED_REQUEST_ID = /^[a-zA-Z0-9-]{1,100}$/;
+
+/** Validate a bridge-supplied connection without trusting its shape. */
+export function parseProcessConnection(
+  value: unknown,
+): ProcessConnection | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+  const raw = value as Record<string, unknown>;
+  switch (raw.type) {
+    case 'browser':
+      if (raw.path !== undefined && typeof raw.path !== 'string') {
+        return undefined;
+      }
+      return {
+        type: 'browser',
+        ...(raw.path !== undefined ? { path: raw.path } : {}),
+      };
+    case 'bruno':
+      if (
+        raw.requestId !== undefined &&
+        (typeof raw.requestId !== 'string' ||
+          !SAVED_REQUEST_ID.test(raw.requestId))
+      ) {
+        return undefined;
+      }
+      if (
+        raw.collectionPath !== undefined &&
+        typeof raw.collectionPath !== 'string'
+      ) {
+        return undefined;
+      }
+      return {
+        type: 'bruno',
+        ...(raw.requestId !== undefined ? { requestId: raw.requestId } : {}),
+        ...(raw.collectionPath !== undefined
+          ? { collectionPath: raw.collectionPath }
+          : {}),
+      };
+    case 'sql':
+      if (raw.database !== undefined && typeof raw.database !== 'string') {
+        return undefined;
+      }
+      return {
+        type: 'sql',
+        ...(raw.database !== undefined ? { database: raw.database } : {}),
+      };
+    default:
+      return undefined;
+  }
+}
+
 /** A process's cwd resolved to a known git repository (best-effort). */
 export interface ProcessRepo {
   /** Repository display name (e.g. "electron-app"). */
@@ -53,6 +130,8 @@ export interface ProcessEntry {
   pid?: number;
   /** Active port, when known (detected servers). */
   port?: number;
+  /** How clicking this process should open its target, when known. */
+  connection?: ProcessConnection;
   /** What started this process (e.g. 'agent', 'user', 'external'). */
   source?: string;
   /** When the current run started. */
@@ -81,6 +160,7 @@ export interface ProcessStartRequest {
   env?: Record<string, string>;
   label?: string;
   kind?: ProcessKind;
+  connection?: ProcessConnection;
 }
 
 export interface ProcessControlResult {
