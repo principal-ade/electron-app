@@ -316,6 +316,12 @@ describe('ACPTabContent', () => {
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
     expect(screen.queryByText('Choose an agent')).not.toBeInTheDocument();
     expect(screen.queryByText('Claude Code')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Connect OpenCode' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Preparing an OpenCode session/),
+    ).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(mocked.connect).toHaveBeenCalledWith({
@@ -329,7 +335,13 @@ describe('ACPTabContent', () => {
         sessionKey: 'acp-/repo',
       }),
     );
-    expect(await screen.findByText('Session ready')).toBeInTheDocument();
+    expect(await screen.findByText('Pick model')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Ask OpenCode to explore/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('img', { name: 'Loading' }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows a model picker before the first message and switches models', async () => {
@@ -409,7 +421,7 @@ describe('ACPTabContent', () => {
       />,
     );
 
-    expect(await screen.findByText('Session ready')).toBeInTheDocument();
+    expect(await screen.findByText('Pick model')).toBeInTheDocument();
     expect(mocked.connect).toHaveBeenCalledWith({
       sessionKey: 'acp-/repo',
       directory: '/repo',
@@ -436,7 +448,7 @@ describe('ACPTabContent', () => {
         })}
       />,
     );
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
 
     const identity = document.querySelector('.acp-session__identity');
     expect(identity).toHaveTextContent('New session');
@@ -461,7 +473,7 @@ describe('ACPTabContent', () => {
         onSessionTitleChange={onSessionTitleChange}
       />,
     );
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
 
     act(() => {
       emit?.({
@@ -602,7 +614,7 @@ describe('ACPTabContent', () => {
 
   it('lists ACP tool calls in the activity panel and updates their status', async () => {
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
     fireEvent.click(screen.getByRole('tab', { name: 'Tools' }));
 
     act(() => {
@@ -680,7 +692,7 @@ describe('ACPTabContent', () => {
 
   it('filters activity to calls made through the Principal MCP bridge', async () => {
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
     fireEvent.click(screen.getByRole('tab', { name: 'Tools' }));
 
     act(() => {
@@ -733,7 +745,7 @@ describe('ACPTabContent', () => {
 
   it('shows topics opened through Principal MCP in the Artifacts view', async () => {
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
 
     act(() => {
       emit?.({
@@ -845,7 +857,7 @@ describe('ACPTabContent', () => {
 
   it('shows subsystem models read through Principal MCP in the Artifacts view', async () => {
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
 
     act(() => {
       emit?.({
@@ -918,7 +930,7 @@ describe('ACPTabContent', () => {
         : null,
     );
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
     fireEvent.click(screen.getByRole('tab', { name: 'Tools' }));
 
     act(() => {
@@ -1017,7 +1029,7 @@ describe('ACPTabContent', () => {
         : null,
     );
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
 
     act(() => {
       emit?.({
@@ -1131,7 +1143,7 @@ describe('ACPTabContent', () => {
       ],
     } as never);
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
 
     act(() => {
       emit?.({
@@ -1206,7 +1218,7 @@ describe('ACPTabContent', () => {
     mockedTopicService.getTopic.mockResolvedValue(null as never);
     mockedSubsystemModelService.get.mockResolvedValue(null as never);
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
 
     const associateCall = (
       toolCallId: string,
@@ -1291,7 +1303,7 @@ describe('ACPTabContent', () => {
       sessionId: 'ses_saved',
     });
     render(<ACPTabContent tab={makeTab({ sessionId: 'ses_saved' })} />);
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
 
     // session/load replays tool calls including their inputs, so association
     // calls reappear here and the Artifacts list is derived from them.
@@ -1360,7 +1372,7 @@ describe('ACPTabContent', () => {
     const { container } = render(
       <ACPTabContent tab={makeTab({ autoStart: true })} />,
     );
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
     fireEvent.click(screen.getByRole('tab', { name: 'Tools' }));
 
     act(() => {
@@ -1441,7 +1453,7 @@ describe('ACPTabContent', () => {
 
   it('answers permission requests with the chosen option', async () => {
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
 
     act(() => {
       emit?.({
@@ -1492,7 +1504,7 @@ describe('ACPTabContent', () => {
       { files: [{ name: 'src/main.ts' }] },
     ]);
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
-    await screen.findByText('Session ready');
+    await screen.findByText('Pick model');
 
     act(() => {
       emit?.({

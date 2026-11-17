@@ -121,3 +121,49 @@ export const ToolCallActivity: Story = {
     onRespondPermission: () => {},
   },
 };
+
+/** Empty session with the searchable model picker shown before the first message. */
+export const ModelPicker: Story = {
+  args: {
+    agent: getAcpAgent('opencode'),
+    workspacePath: '~/Developer/principal-ade/electron-app',
+    repository: { owner: 'principal-ai', name: 'electron-app' },
+    messages: [],
+    permissions: [],
+    isPrompting: false,
+    modelSelection: {
+      currentValue: 'opencode-go/deepseek-v4.1-flash',
+      options: [
+        {
+          value: 'opencode-go/deepseek-v4.1-flash',
+          name: 'DeepSeek V4.1 Flash',
+          provider: 'opencode-go',
+        },
+        {
+          value: 'opencode-go/deepseek-v4-pro',
+          name: 'DeepSeek V4 Pro',
+          provider: 'opencode-go',
+        },
+        {
+          value: 'opencode-go/claude-haiku-5-5',
+          name: 'Claude Haiku 5.5',
+          provider: 'opencode-go',
+        },
+        {
+          value: 'openrouter/anthropic/claude-sonnet-4-5',
+          name: 'Claude Sonnet 4.5',
+          provider: 'openrouter',
+        },
+        {
+          value: 'ollama/gemma3:4b',
+          name: 'gemma3:4b',
+          provider: 'ollama',
+        },
+      ],
+    },
+    onModelChange: () => {},
+    onSend: () => {},
+    onStop: () => {},
+    onRespondPermission: () => {},
+  },
+};

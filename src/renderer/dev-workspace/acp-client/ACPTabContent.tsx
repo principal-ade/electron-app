@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Sparkles, XCircle } from 'lucide-react';
+import { useTheme } from '@principal-ade/industry-theme';
+import { FileCityLogoAnimated } from '@principal-ai/logo-component';
+import { XCircle } from 'lucide-react';
 import type {
   ContentBlock,
   SessionUpdate,
@@ -19,6 +21,7 @@ import type { AcpTab } from '../../events/portalTabs';
 import { AcpService } from '../../main-process-api/AcpService';
 import type { ACPClientViewState } from './ACPClientView';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
+import { getAcpThemeStyle } from './acpTheme';
 import {
   ACPSessionView,
   isAcpModelReference,
@@ -274,7 +277,7 @@ function applyUpdate(
   }
 }
 
-function ACPStartupView({
+export function ACPStartupView({
   tab,
   state,
   error,
@@ -295,37 +298,39 @@ function ACPStartupView({
   onStartFreshSession: () => void;
   onRetry: () => void;
 }) {
+  const { theme } = useTheme();
   const workspaceLabel = tab.repository
     ? `${tab.repository.owner} / ${tab.repository.name}`
     : tab.directory;
   const isDisconnected = state === 'setup' && hasAttemptedConnection;
-  const canInitialize = state === 'setup' && !hasAttemptedConnection;
-  const canStartSession = state === 'ready' && !isStartingSession;
   const isError = Boolean(error);
   const isStarting =
     state === 'initializing' ||
     isStartingSession ||
     (tab.autoStart && state === 'setup' && !hasAttemptedConnection);
-  const status = isError
-    ? 'Connection failed'
+  const canInitialize =
+    state === 'setup' && !hasAttemptedConnection && !isStarting;
+  const canStartSession = state === 'ready' && !isStartingSession;
+  const detail = error
+    ? error
     : isDisconnected
-      ? 'Disconnected'
+      ? 'Reconnect to continue in this workspace.'
       : isStarting
-        ? 'Connecting'
+        ? undefined
         : canStartSession
-          ? 'Connected'
-          : 'Not connected';
+          ? `Ready to start a session in ${workspaceLabel}.`
+          : tab.sessionId
+            ? `Reconnect to your saved session in ${workspaceLabel}.`
+            : `Connect OpenCode to start a session in ${workspaceLabel}.`;
 
   return (
-    <main className="acp-session" aria-label="ACP agent session">
+    <main
+      className="acp-session"
+      aria-label="ACP agent session"
+      style={getAcpThemeStyle(theme)}
+    >
       <header className="acp-session__topbar">
         <ACPWorkspaceIdentity sessionTitle={tab.sessionTitle} />
-        <span
-          className={`acp-client__connection acp-client__connection--${isError ? 'error' : state}`}
-        >
-          <span className="acp-client__connection-dot" />
-          {status}
-        </span>
       </header>
       <div className="acp-session__messages">
         <div
@@ -336,10 +341,16 @@ function ACPStartupView({
           {isError ? (
             <XCircle size={18} />
           ) : isStarting ? (
-            <Loader2 className="acp-client__spinning" size={18} />
-          ) : (
-            <Sparkles size={18} />
-          )}
+            <FileCityLogoAnimated
+              accent={theme.colors.accent}
+              background="transparent"
+              color={theme.colors.text}
+              height={96}
+              mark="P"
+              primary={theme.colors.primary}
+              width={96}
+            />
+          ) : null}
           <strong>
             {isError
               ? 'Could not start OpenCode'
@@ -353,22 +364,11 @@ function ACPStartupView({
                       ? 'Reconnect to your OpenCode session'
                       : 'Start an OpenCode session'}
           </strong>
-          <span>
-            {error ??
-              (isDisconnected
-                ? 'Reconnect to continue in this workspace.'
-                : isStarting
-                  ? `Preparing an OpenCode session in ${workspaceLabel}.`
-                  : canStartSession
-                    ? `Ready to start a session in ${workspaceLabel}.`
-                    : tab.sessionId
-                      ? `Reconnect to your saved session in ${workspaceLabel}.`
-                      : `Connect OpenCode to start a session in ${workspaceLabel}.`)}
-          </span>
+          {detail ? <span>{detail}</span> : null}
           {isError || isDisconnected ? (
             <>
               <button
-                className="acp-session__ghost-button"
+                className="acp-session__ghost-button acp-session__ghost-button--primary"
                 onClick={onRetry}
                 type="button"
               >
@@ -386,7 +386,7 @@ function ACPStartupView({
             </>
           ) : canInitialize ? (
             <button
-              className="acp-session__ghost-button"
+              className="acp-session__ghost-button acp-session__ghost-button--primary"
               onClick={() => onInitialize(DEFAULT_ACP_AGENT)}
               type="button"
             >
@@ -394,7 +394,7 @@ function ACPStartupView({
             </button>
           ) : canStartSession ? (
             <button
-              className="acp-session__ghost-button"
+              className="acp-session__ghost-button acp-session__ghost-button--primary"
               onClick={onStartSession}
               type="button"
             >

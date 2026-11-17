@@ -12,7 +12,6 @@ import {
   Building2,
   CheckCircle2,
   ChevronRight,
-  Cpu,
   Loader2,
   Network,
   PenTool,
@@ -2263,23 +2262,17 @@ export function ACPSessionView({
             >
               {messages.filter((message) => message.role !== 'tool').length ===
               0 ? (
-                <div className="acp-session__empty">
-                  <Sparkles size={18} />
+                <div className="acp-session__empty acp-session__empty--ready">
                   <strong>
-                    {hasToolCalls ? 'Agent is working' : 'Session ready'}
+                    {hasToolCalls ? 'Agent is working' : 'Pick model'}
                   </strong>
-                  <span>
-                    {hasToolCalls
-                      ? 'Live tool activity is listed in the panel.'
-                      : `Ask ${agent.name} to explore, explain, or change something in this workspace.`}
-                  </span>
+                  {hasToolCalls ? (
+                    <span>Live tool activity is listed in the panel.</span>
+                  ) : null}
                   {!hasToolCalls &&
                   modelSelection &&
                   modelSelection.options.length > 0 ? (
                     <div className="acp-session__model-picker">
-                      <span className="acp-session__model-picker-label">
-                        <Cpu size={13} aria-hidden="true" /> Model
-                      </span>
                       <ACPModelPicker
                         disabled={isPrompting}
                         error={modelError}

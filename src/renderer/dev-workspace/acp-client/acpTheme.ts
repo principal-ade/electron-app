@@ -10,9 +10,20 @@ export function getAcpThemeStyle(theme: Theme): React.CSSProperties {
       `${size * fontScale}px`,
     ]),
   );
+  const themeRadii = Object.fromEntries(
+    theme.radii.map((radius, index) => [
+      `--acp-radius-${index}`,
+      `${radius}px`,
+    ]),
+  );
+  const themeShadows = Object.fromEntries(
+    theme.shadows.map((shadow, index) => [`--acp-shadow-${index}`, shadow]),
+  );
 
   return {
     ...themeFontSizes,
+    ...themeRadii,
+    ...themeShadows,
     '--acp-bg': colors.background,
     '--acp-surface': colors.surface,
     '--acp-surface-soft': colors.backgroundSecondary,
