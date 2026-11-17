@@ -68,7 +68,11 @@ import { PierreFileView } from '../../panels/PierreFileView';
 import { gitStatusToHighlightLayers } from '../../utils/gitStatusHighlightLayers';
 import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
 import { SubsystemModelTabContent } from '../../subsystem-models/SubsystemModelTabContent';
-import { ACPDrawingPreview } from './ACPDrawingPreview';
+import {
+  ACPDrawingPreview,
+  type DrawingElementSelection,
+  type DrawingSelectedElement,
+} from './ACPDrawingPreview';
 import type { SubsystemTrailSelection } from '../../subsystem-models/SubsystemModelGraph';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
 import { getAcpThemeStyle } from './acpTheme';
@@ -122,12 +126,30 @@ export interface AcpModelReference {
   stepSummary: string;
 }
 
-export type AcpChatReference = AcpTopicReference | AcpModelReference;
+/**
+ * Drawing pieces the user clicked in a drawing preview, attached as quoted
+ * context for the next prompt. Mirrors AcpTopicReference.
+ */
+export interface AcpDrawingReference {
+  drawingId: string;
+  drawingName: string;
+  elementIds: string[];
+  elementSummary: string;
+}
+
+export type AcpChatReference =
+  AcpTopicReference | AcpModelReference | AcpDrawingReference;
 
 export function isAcpTopicReference(
   reference: AcpChatReference,
 ): reference is AcpTopicReference {
   return 'anchor' in reference;
+}
+
+export function isAcpModelReference(
+  reference: AcpChatReference,
+): reference is AcpModelReference {
+  return 'trailId' in reference;
 }
 
 export interface AcpPendingPermission {
@@ -143,6 +165,7 @@ export interface ACPSessionViewProps {
     name: string;
     avatarUrl?: string;
   };
+  sessionTitle?: string | null;
   messages: AcpChatMessage[];
   permissions: AcpPendingPermission[];
   isPrompting: boolean;
@@ -571,6 +594,24 @@ function describeModelStep(
 }
 
 const MAX_TRAIL_SUMMARY_STEPS = 10;
+
+const MAX_DRAWING_SUMMARY_ELEMENTS = 10;
+
+/** Quoted summary for drawing pieces the user clicked. */
+function describeDrawingElements(elements: DrawingSelectedElement[]): string {
+  const lines = elements
+    .slice(0, MAX_DRAWING_SUMMARY_ELEMENTS)
+    .map(
+      (element, index) =>
+        `Element ${index + 1}: ${element.type}${element.text ? ` "${element.text}"` : ''} (id: ${element.id})`,
+    );
+  if (elements.length > MAX_DRAWING_SUMMARY_ELEMENTS) {
+    lines.push(
+      `…and ${elements.length - MAX_DRAWING_SUMMARY_ELEMENTS} more elements`,
+    );
+  }
+  return lines.join('\n');
+}
 
 /** Quoted summary for a whole focused trail, capped so prompts stay small. */
 function describeModelTrail(trail: SubsystemTrail): string {
@@ -1670,6 +1711,7 @@ export function ACPSessionView({
   agent,
   workspacePath,
   repository,
+  sessionTitle,
   messages,
   permissions,
   isPrompting,
@@ -1678,7 +1720,7 @@ export function ACPSessionView({
   onRespondPermission,
 }: ACPSessionViewProps) {
   const { theme } = useTheme();
-  const [activityView, setActivityView] = useState<ACPActivityView>('tools');
+  const [activityView, setActivityView] = useState<ACPActivityView>('artifacts');
   const [selectedArtifact, setSelectedArtifact] =
     useState<AcpArtifactRef | null>(null);
   const [selectedPreviewFile, setSelectedPreviewFile] = useState<string | null>(
@@ -1691,6 +1733,8 @@ export function ACPSessionView({
     useState<AcpTopicReference | null>(null);
   const [selectedModelReference, setSelectedModelReference] =
     useState<AcpModelReference | null>(null);
+  const [selectedDrawingReference, setSelectedDrawingReference] =
+    useState<AcpDrawingReference | null>(null);
   const [topicPreviewLoading, setTopicPreviewLoading] = useState(false);
   const [topicPreviewError, setTopicPreviewError] = useState(false);
   const [topicPreviewHeight, setTopicPreviewHeight] = useState(75);
@@ -1729,7 +1773,7 @@ export function ACPSessionView({
       const deltaPercent =
         ((event.clientY - resize.startY) / resize.viewportHeight) * 100;
       setTopicPreviewHeight(
-        Math.max(20, Math.min(80, resize.startHeight + deltaPercent)),
+        Math.max(20, Math.min(100, resize.startHeight + deltaPercent)),
       );
     },
     [],
@@ -1745,14 +1789,14 @@ export function ACPSessionView({
         event.preventDefault();
         const delta = event.key === 'ArrowDown' ? 5 : -5;
         setTopicPreviewHeight((height) =>
-          Math.max(20, Math.min(80, height + delta)),
+          Math.max(20, Math.min(100, height + delta)),
         );
       } else if (event.key === 'Home') {
         event.preventDefault();
         setTopicPreviewHeight(20);
       } else if (event.key === 'End') {
         event.preventDefault();
-        setTopicPreviewHeight(80);
+        setTopicPreviewHeight(100);
       }
     },
     [],
@@ -1801,9 +1845,13 @@ export function ACPSessionView({
     if (!text || isPrompting) return;
     setDraft('');
     const reference =
-      selectedTopicReference ?? selectedModelReference ?? undefined;
+      selectedTopicReference ??
+      selectedModelReference ??
+      selectedDrawingReference ??
+      undefined;
     setSelectedTopicReference(null);
     setSelectedModelReference(null);
+    setSelectedDrawingReference(null);
     onSend(text, reference);
   };
   const openArtifactPreview = useCallback(
@@ -1825,6 +1873,7 @@ export function ACPSessionView({
       }
       setSelectedTopicReference(null);
       setSelectedModelReference(null);
+      setSelectedDrawingReference(null);
       setTopicPreviewClosing(false);
       setFilePreviewClosing(false);
       setSelectedPreviewFile(null);
@@ -1928,6 +1977,27 @@ export function ACPSessionView({
     },
     [selectedArtifact],
   );
+  /**
+   * Drawing pieces clicked in the drawing preview become the pending chat
+   * reference, like a focused model trail. Clearing the canvas selection
+   * keeps the last attached reference; switching artifacts, removing the
+   * chip, or sending clears it.
+   */
+  const handleDrawingElementSelect = useCallback(
+    (selection: DrawingElementSelection | null) => {
+      const drawing =
+        selectedArtifact?.kind === 'drawing' ? selectedArtifact : null;
+      if (!drawing || !selection || selection.elements.length === 0) return;
+      const elementIds = selection.elements.map((element) => element.id);
+      setSelectedDrawingReference({
+        drawingId: drawing.id,
+        drawingName: drawing.title,
+        elementIds,
+        elementSummary: describeDrawingElements(selection.elements),
+      });
+    },
+    [selectedArtifact],
+  );
   const selectedTopicAnnotations = useMemo(
     () =>
       selectedTopicReference?.topicId === selectedTopicId
@@ -2011,7 +2081,10 @@ export function ACPSessionView({
             onTrailSelect={handleModelTrailSelect}
           />
         ) : selectedArtifact.kind === 'drawing' ? (
-          <ACPDrawingPreview drawingId={selectedArtifact.id} />
+          <ACPDrawingPreview
+            drawingId={selectedArtifact.id}
+            onElementSelect={handleDrawingElementSelect}
+          />
         ) : topicPreviewLoading && !selectedTopic ? (
           <div className="acp-session__topic-preview-message" role="status">
             <Loader2 className="acp-client__spinning" size={15} />
@@ -2055,7 +2128,7 @@ export function ACPSessionView({
         aria-label="Resize preview"
         aria-orientation="horizontal"
         aria-valuemin={20}
-        aria-valuemax={80}
+        aria-valuemax={100}
         aria-valuenow={Math.round(topicPreviewHeight)}
         tabIndex={0}
         onKeyDown={handleTopicPreviewResizeKeyDown}
@@ -2097,7 +2170,7 @@ export function ACPSessionView({
         aria-label="Resize preview"
         aria-orientation="horizontal"
         aria-valuemin={20}
-        aria-valuemax={80}
+        aria-valuemax={100}
         aria-valuenow={Math.round(topicPreviewHeight)}
         tabIndex={0}
         onKeyDown={handleTopicPreviewResizeKeyDown}
@@ -2119,24 +2192,12 @@ export function ACPSessionView({
       style={getAcpThemeStyle(theme)}
     >
       <header className="acp-session__topbar">
-        <ACPWorkspaceIdentity
-          workspacePath={workspacePath}
-          repository={repository}
-        />
+        <ACPWorkspaceIdentity sessionTitle={sessionTitle} />
         <div
           className="acp-session__activity-switch"
           role="tablist"
           aria-label="Activity view"
         >
-          <button
-            className={activityView === 'tools' ? 'is-active' : ''}
-            type="button"
-            role="tab"
-            aria-selected={activityView === 'tools'}
-            onClick={() => setActivityView('tools')}
-          >
-            Tools
-          </button>
           <button
             className={activityView === 'artifacts' ? 'is-active' : ''}
             type="button"
@@ -2145,6 +2206,15 @@ export function ACPSessionView({
             onClick={() => setActivityView('artifacts')}
           >
             Artifacts
+          </button>
+          <button
+            className={activityView === 'tools' ? 'is-active' : ''}
+            type="button"
+            role="tab"
+            aria-selected={activityView === 'tools'}
+            onClick={() => setActivityView('tools')}
+          >
+            Tools
           </button>
         </div>
       </header>
@@ -2195,7 +2265,7 @@ export function ACPSessionView({
                                   {message.reference.anchor.exact}
                                 </blockquote>
                               </div>
-                            ) : (
+                            ) : isAcpModelReference(message.reference) ? (
                               <div className="acp-session__message-reference">
                                 <Network size={13} strokeWidth={1.5} />
                                 <span>
@@ -2203,6 +2273,16 @@ export function ACPSessionView({
                                 </span>
                                 <blockquote>
                                   {message.reference.stepSummary}
+                                </blockquote>
+                              </div>
+                            ) : (
+                              <div className="acp-session__message-reference">
+                                <PenTool size={13} strokeWidth={1.5} />
+                                <span>
+                                  Reference · {message.reference.drawingName}
+                                </span>
+                                <blockquote>
+                                  {message.reference.elementSummary}
                                 </blockquote>
                               </div>
                             )
@@ -2345,6 +2425,25 @@ export function ACPSessionView({
                   type="button"
                   aria-label="Remove model reference"
                   onClick={() => setSelectedModelReference(null)}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : selectedDrawingReference ? (
+              <div className="acp-session__reference-chip">
+                <PenTool size={15} strokeWidth={1.5} />
+                <span>
+                  <strong>
+                    Reference · {selectedDrawingReference.drawingName}
+                  </strong>
+                  <small>
+                    {selectedDrawingReference.elementSummary.split('\n')[0]}
+                  </small>
+                </span>
+                <button
+                  type="button"
+                  aria-label="Remove drawing reference"
+                  onClick={() => setSelectedDrawingReference(null)}
                 >
                   <X size={14} />
                 </button>

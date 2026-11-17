@@ -180,10 +180,36 @@ jest.mock('../../drawings-view/drawingsStorage', () => ({
 }));
 
 jest.mock('./ACPDrawingPreview', () => ({
-  ACPDrawingPreview: ({ drawingId }: { drawingId: string }) =>
-    jest
-      .requireActual<typeof React>('react')
-      .createElement('div', { 'data-testid': 'drawing-preview' }, drawingId),
+  ACPDrawingPreview: ({
+    drawingId,
+    onElementSelect,
+  }: {
+    drawingId: string;
+    onElementSelect?: (
+      selection: {
+        elements: { id: string; type: string; text?: string }[];
+      } | null,
+    ) => void;
+  }) =>
+    jest.requireActual<typeof React>('react').createElement(
+      'div',
+      { 'data-testid': 'drawing-preview' },
+      drawingId,
+      jest.requireActual<typeof React>('react').createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: () =>
+            onElementSelect?.({
+              elements: [
+                { id: 'el-1', type: 'text', text: 'Buy milk' },
+                { id: 'el-2', type: 'rectangle', text: 'Groceries' },
+              ],
+            }),
+        },
+        'Select drawing elements',
+      ),
+    ),
 }));
 
 jest.mock('../../subsystem-models/SubsystemModelTabContent', () => ({
@@ -331,7 +357,7 @@ describe('ACPTabContent', () => {
     expect(onSessionIdChange).toHaveBeenCalledWith('ses_saved');
   });
 
-  it('shows repository identity without an OpenCode badge in the header', async () => {
+  it('shows the session title with an OpenCode badge in the header', async () => {
     render(
       <ACPTabContent
         tab={makeTab({
@@ -346,18 +372,16 @@ describe('ACPTabContent', () => {
     );
     await screen.findByText('Session ready');
 
-    const repoName = screen.getAllByText('subsystem-modeling')[0];
-    const identity = repoName.closest('.acp-session__identity');
-    expect(identity).toHaveTextContent('subsystem-modeling');
-    expect(identity).not.toHaveTextContent('OpenCode');
+    const identity = document.querySelector('.acp-session__identity');
+    expect(identity).toHaveTextContent('New session');
+    expect(identity?.querySelector('img')).not.toBeInTheDocument();
+    expect(
+      identity?.querySelector('.acp-session__identity-logo'),
+    ).not.toBeNull();
     expect(screen.queryByText('Connected')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Disconnect' }),
     ).not.toBeInTheDocument();
-    expect(identity?.querySelector('img')).toHaveAttribute(
-      'src',
-      'https://github.com/principal-ai.png',
-    );
     expect(
       document.querySelector('.acp-session__tool-city-avatar img'),
     ).toHaveAttribute('src', 'https://github.com/principal-ai.png');
@@ -513,6 +537,7 @@ describe('ACPTabContent', () => {
   it('lists ACP tool calls in the activity panel and updates their status', async () => {
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
     await screen.findByText('Session ready');
+    fireEvent.click(screen.getByRole('tab', { name: 'Tools' }));
 
     act(() => {
       emit?.({
@@ -590,6 +615,7 @@ describe('ACPTabContent', () => {
   it('filters activity to calls made through the Principal MCP bridge', async () => {
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
     await screen.findByText('Session ready');
+    fireEvent.click(screen.getByRole('tab', { name: 'Tools' }));
 
     act(() => {
       emit?.({
@@ -663,6 +689,7 @@ describe('ACPTabContent', () => {
       });
     });
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Tools' }));
     fireEvent.click(
       screen.getByRole('button', { name: 'Filter Principal MCP calls' }),
     );
@@ -701,6 +728,12 @@ describe('ACPTabContent', () => {
       { key: 'ArrowDown' },
     );
     expect(topicPreview).toHaveStyle({ height: '80%' });
+    // The chat collapses all the way down: End pins the preview at full height.
+    fireEvent.keyDown(
+      screen.getByRole('separator', { name: 'Resize preview' }),
+      { key: 'End' },
+    );
+    expect(topicPreview).toHaveStyle({ height: '100%' });
     expect(topicPreview.parentElement).toHaveClass(
       'acp-session__chat-viewport',
     );
@@ -820,6 +853,7 @@ describe('ACPTabContent', () => {
     );
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
     await screen.findByText('Session ready');
+    fireEvent.click(screen.getByRole('tab', { name: 'Tools' }));
 
     act(() => {
       emit?.({
@@ -903,6 +937,89 @@ describe('ACPTabContent', () => {
       screen.queryByRole('region', {
         name: 'Drawing preview: Launch plan',
       }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('asks about drawing pieces selected in the preview', async () => {
+    mockedGetDrawingSummary.mockImplementation(async (id: string) =>
+      id === 'groceries'
+        ? {
+            id,
+            name: 'Grocery run',
+            path: '/home/.alexandria/drawings/groceries.excalidraw',
+          }
+        : null,
+    );
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Session ready');
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-drawing-read',
+            title: 'Read the grocery run',
+            name: 'shell',
+            status: 'completed',
+            rawInput: {
+              command: 'cat ~/.alexandria/drawings/groceries.excalidraw',
+            },
+          },
+        },
+      });
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
+
+    // Wait for the drawing name lookup before opening the preview.
+    expect(await screen.findByText('Grocery run')).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open Drawing Grocery run in chat',
+      }),
+    );
+    await screen.findByRole('region', {
+      name: 'Drawing preview: Grocery run',
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Select drawing elements' }),
+    );
+
+    expect(
+      await screen.findByText('Reference · Grocery run'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Element 1: text "Buy milk" (id: el-1)'),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Message the agent'), {
+      target: { value: 'What does this list say?' },
+    });
+    fireEvent.keyDown(screen.getByLabelText('Message the agent'), {
+      key: 'Enter',
+    });
+
+    await waitFor(() =>
+      expect(mocked.prompt).toHaveBeenCalledWith(
+        'acp-/repo',
+        expect.stringContaining(
+          'User-selected reference from drawing "Grocery run" (drawing id: groceries, 2 elements)',
+        ),
+      ),
+    );
+    await waitFor(() =>
+      expect(mocked.prompt).toHaveBeenCalledWith(
+        'acp-/repo',
+        expect.stringContaining('Element 2: rectangle "Groceries" (id: el-2)'),
+      ),
+    );
+    expect(screen.getByText('What does this list say?')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Remove drawing reference' }),
     ).not.toBeInTheDocument();
   });
 
@@ -1178,6 +1295,7 @@ describe('ACPTabContent', () => {
       <ACPTabContent tab={makeTab({ autoStart: true })} />,
     );
     await screen.findByText('Session ready');
+    fireEvent.click(screen.getByRole('tab', { name: 'Tools' }));
 
     act(() => {
       emit?.({

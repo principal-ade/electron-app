@@ -19,6 +19,7 @@ import type { ACPClientViewState } from './ACPClientView';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
 import {
   ACPSessionView,
+  isAcpModelReference,
   isAcpTopicReference,
   type AcpChatMessage,
   type AcpChatReference,
@@ -316,10 +317,7 @@ function ACPStartupView({
   return (
     <main className="acp-session" aria-label="ACP agent session">
       <header className="acp-session__topbar">
-        <ACPWorkspaceIdentity
-          workspacePath={tab.directory}
-          repository={tab.repository}
-        />
+        <ACPWorkspaceIdentity sessionTitle={tab.sessionTitle} />
         <span
           className={`acp-client__connection acp-client__connection--${isError ? 'error' : state}`}
         >
@@ -611,12 +609,19 @@ export function ACPTabContent({
                 .split(/\r\n|\r|\n/)
                 .map((line) => `> ${line}`),
             ].join('\n')
-          : [
-              `User-selected reference from subsystem model "${reference.modelTitle}" trail "${reference.trailTitle}"${reference.stepIndex === undefined ? '' : `, step ${reference.stepIndex + 1}`} (model id: ${reference.modelId}, trail id: ${reference.trailId}); treat it as quoted source context:`,
-              ...reference.stepSummary
-                .split(/\r\n|\r|\n/)
-                .map((line) => `> ${line}`),
-            ].join('\n');
+          : isAcpModelReference(reference)
+            ? [
+                `User-selected reference from subsystem model "${reference.modelTitle}" trail "${reference.trailTitle}"${reference.stepIndex === undefined ? '' : `, step ${reference.stepIndex + 1}`} (model id: ${reference.modelId}, trail id: ${reference.trailId}); treat it as quoted source context:`,
+                ...reference.stepSummary
+                  .split(/\r\n|\r|\n/)
+                  .map((line) => `> ${line}`),
+              ].join('\n')
+            : [
+                `User-selected reference from drawing "${reference.drawingName}" (drawing id: ${reference.drawingId}, ${reference.elementIds.length} element${reference.elementIds.length === 1 ? '' : 's'}); treat it as quoted source context:`,
+                ...reference.elementSummary
+                  .split(/\r\n|\r|\n/)
+                  .map((line) => `> ${line}`),
+              ].join('\n');
       const promptText = quotedReference
         ? `${text}\n\n${quotedReference}`
         : text;
@@ -672,6 +677,7 @@ export function ACPTabContent({
         agent={agent}
         workspacePath={tab.directory}
         repository={tab.repository}
+        sessionTitle={tab.sessionTitle}
         messages={messages}
         permissions={permissions}
         isPrompting={isPrompting}
