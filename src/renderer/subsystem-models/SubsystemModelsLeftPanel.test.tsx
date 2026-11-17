@@ -56,6 +56,14 @@ test.each([null, `subsystem-model-${model.id}`])(
       'text/plain',
       `Use subsystem model "${model.title}" (id: ${model.id}) as context — fetch via:\ncurl -s ${getPrincipalBridgeUrl()}/api/subsystem-models/${model.id}`,
     );
+    expect(dataTransfer.setData).toHaveBeenCalledWith(
+      'application/x-principal-acp-artifact',
+      JSON.stringify({
+        kind: 'subsystem-model',
+        id: model.id,
+        title: model.title,
+      }),
+    );
     expect(emit).not.toHaveBeenCalled();
     fireEvent.click(row);
     expect(emit).toHaveBeenCalledWith(

@@ -7,6 +7,7 @@ import { SubsystemModelService } from '../main-process-api/SubsystemModelService
 import { emitSubsystemModelOpen } from '../events/portalIntents';
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
 import { agentContextDragText } from '../utils/agentContextDragText';
+import { setAcpArtifactDragData } from '../utils/acpArtifactDrag';
 
 interface SubsystemModelsLeftPanelProps {
   events: PanelEventEmitter;
@@ -117,6 +118,11 @@ export const SubsystemModelsLeftPanel: React.FC<
               'text/plain',
               agentContextDragText('subsystem model', model.id, model.title),
             );
+            setAcpArtifactDragData(event.dataTransfer, {
+              kind: 'subsystem-model',
+              id: model.id,
+              title: model.title,
+            });
           }}
           onClick={() =>
             emitSubsystemModelOpen(events, 'subsystem-models-left-panel', {

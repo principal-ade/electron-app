@@ -24,6 +24,7 @@ import { useDelayedLoading } from '../hooks/useDelayedLoading';
 import { emitTopicOpen } from '../events/portalIntents';
 import { useTopicsTabs } from '../principal-window/contexts/TopicsTabsContext';
 import { getPrincipalBridgeUrl } from '../../shared/config/appBranding';
+import { setAcpArtifactDragData } from '../utils/acpArtifactDrag';
 import {
   repoDisplayLabel,
   repoDisplayNameFromPurl,
@@ -146,6 +147,11 @@ export const TopicsLeftPanel: React.FC<{ events: PanelEventEmitter }> = ({
         const payload = `Use topic "${title}" (id: ${topic.id}) as context — fetch via:\ncurl -s ${getPrincipalBridgeUrl()}/api/topics/${topic.id}`;
         e.dataTransfer.effectAllowed = 'copy';
         e.dataTransfer.setData('text/plain', payload);
+        setAcpArtifactDragData(e.dataTransfer, {
+          kind: 'topic',
+          id: topic.id,
+          title,
+        });
       };
       return (
         <button

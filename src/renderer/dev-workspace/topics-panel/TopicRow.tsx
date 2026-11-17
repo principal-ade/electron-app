@@ -3,6 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { GitFork } from 'lucide-react';
 import type { DraftTopic as Topic } from '@principal-ai/subsystems-core/node';
 import { getPrincipalBridgeUrl } from '../../../shared/config/appBranding';
+import { setAcpArtifactDragData } from '../../utils/acpArtifactDrag';
 import {
   repoDisplayLabel,
   repoDisplayNameFromPurl,
@@ -78,6 +79,11 @@ export const TopicRow: React.FC<TopicRowProps> = ({
     const payload = `Use topic "${title}" (id: ${topic.id}) as context — fetch via:\ncurl -s ${getPrincipalBridgeUrl()}/api/topics/${topic.id}`;
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('text/plain', payload);
+    setAcpArtifactDragData(e.dataTransfer, {
+      kind: 'topic',
+      id: topic.id,
+      title,
+    });
   };
 
   return (

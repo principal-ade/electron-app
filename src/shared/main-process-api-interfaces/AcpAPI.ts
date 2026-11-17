@@ -18,6 +18,7 @@ export enum AcpAPIEvent {
   NEW_SESSION = 'acp:new-session',
   LOAD_SESSION = 'acp:load-session',
   SET_MODEL = 'acp:set-model',
+  SET_SESSION_ARTIFACTS = 'acp:set-session-artifacts',
   PROMPT = 'acp:prompt',
   CANCEL = 'acp:cancel',
   RESPOND_PERMISSION = 'acp:respond-permission',
@@ -171,6 +172,11 @@ export interface AcpNewSessionResult {
   sessionId: string;
   /** Present when the agent advertises a model config option. */
   model?: AcpModelSelection;
+  /**
+   * Artifacts the user attached to this ACP session. Associations are scoped to
+   * the agent session id, so reopening the same session restores them.
+   */
+  artifacts?: AcpArtifactAssociation[];
 }
 
 export interface AcpSetModelRequest {
@@ -182,9 +188,28 @@ export interface AcpSetModelResult {
   model: AcpModelSelection;
 }
 
+/**
+ * Replace the artifacts associated with a live ACP session. Associations are
+ * persisted per agent+session id, so a later `session/load` restores them.
+ */
+export interface AcpSetSessionArtifactsRequest {
+  sessionKey: string;
+  artifacts: AcpArtifactAssociation[];
+}
+
+export interface AcpSetSessionArtifactsResult {
+  artifacts: AcpArtifactAssociation[];
+}
+
 export interface AcpPromptRequest {
   sessionKey: string;
   text: string;
+  /**
+   * Artifacts the user attached to this message for one turn. Persistent
+   * session artifacts are resolved by the main process; these are staged in
+   * the composer and cleared after the prompt is sent.
+   */
+  stagedArtifacts?: AcpArtifactAssociation[];
 }
 
 export interface AcpPromptResult {
@@ -278,10 +303,10 @@ export interface AcpActiveSessionSummary {
 export type AcpArtifactKind = 'topic' | 'subsystem-model' | 'drawing';
 
 /**
- * An artifact the agent explicitly associated with its session (e.g. a
- * subsystem model it is searching). The ACP tab derives the Artifacts list from
- * the replayed conversation, resolving a display title from the id and falling
- * back to {@link title} when the id cannot be looked up.
+ * An artifact associated with an ACP session, either by the agent (a tool call
+ * to the bridge route) or by the user (dragged from a side panel). User
+ * associations are persisted per agent session id and re-sent as context on
+ * every prompt.
  */
 export interface AcpArtifactAssociation {
   kind: AcpArtifactKind;
@@ -309,6 +334,9 @@ export interface AcpAPI {
   newSession(request: AcpNewSessionRequest): Promise<AcpNewSessionResult>;
   loadSession(request: AcpLoadSessionRequest): Promise<AcpNewSessionResult>;
   setModel(request: AcpSetModelRequest): Promise<AcpSetModelResult>;
+  setSessionArtifacts(
+    request: AcpSetSessionArtifactsRequest,
+  ): Promise<AcpSetSessionArtifactsResult>;
   prompt(request: AcpPromptRequest): Promise<AcpPromptResult>;
   cancel(request: AcpCancelRequest): Promise<void>;
   respondPermission(request: AcpRespondPermissionRequest): Promise<void>;

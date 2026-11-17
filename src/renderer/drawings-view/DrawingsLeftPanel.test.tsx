@@ -49,6 +49,14 @@ test.each([
     'text/plain',
     `Use drawing "Architecture" as context — read the local Excalidraw file:\ncat ${quoted}`,
   );
+  expect(dataTransfer.setData).toHaveBeenCalledWith(
+    'application/x-principal-acp-artifact',
+    JSON.stringify({
+      kind: 'drawing',
+      id: item.id,
+      title: item.name,
+    }),
+  );
   expect(emit).not.toHaveBeenCalled();
   fireEvent.click(row);
   expect(emit).toHaveBeenCalledWith(

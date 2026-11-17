@@ -14,7 +14,10 @@ import type {
   AcpRespondPermissionRequest,
   AcpSetModelRequest,
   AcpSetModelResult,
+  AcpSetSessionArtifactsRequest,
+  AcpSetSessionArtifactsResult,
   AcpSessionEventEnvelope,
+  AcpArtifactAssociation,
 } from '../../shared/main-process-api-interfaces/AcpAPI';
 
 const getApi = (): AcpAPI => {
@@ -44,8 +47,24 @@ export class AcpService {
     return getApi().setModel(request);
   }
 
-  static prompt(sessionKey: string, text: string): Promise<AcpPromptResult> {
-    return getApi().prompt({ sessionKey, text });
+  static setSessionArtifacts(
+    request: AcpSetSessionArtifactsRequest,
+  ): Promise<AcpSetSessionArtifactsResult> {
+    return getApi().setSessionArtifacts(request);
+  }
+
+  static prompt(
+    sessionKey: string,
+    text: string,
+    stagedArtifacts?: AcpArtifactAssociation[],
+  ): Promise<AcpPromptResult> {
+    return getApi().prompt({
+      sessionKey,
+      text,
+      ...(stagedArtifacts && stagedArtifacts.length > 0
+        ? { stagedArtifacts }
+        : {}),
+    });
   }
 
   static cancel(sessionKey: string): Promise<void> {

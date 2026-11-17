@@ -11,6 +11,7 @@ import {
   type AcpPromptRequest,
   type AcpRespondPermissionRequest,
   type AcpSetModelRequest,
+  type AcpSetSessionArtifactsRequest,
   type AcpSessionEventEnvelope,
 } from '../../shared/main-process-api-interfaces/AcpAPI';
 
@@ -26,6 +27,9 @@ export const acpAPI: AcpAPI = {
 
   setModel: (request: AcpSetModelRequest) =>
     ipcRenderer.invoke(AcpAPIEvent.SET_MODEL, request),
+
+  setSessionArtifacts: (request: AcpSetSessionArtifactsRequest) =>
+    ipcRenderer.invoke(AcpAPIEvent.SET_SESSION_ARTIFACTS, request),
 
   prompt: (request: AcpPromptRequest) =>
     ipcRenderer.invoke(AcpAPIEvent.PROMPT, request),

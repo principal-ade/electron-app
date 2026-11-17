@@ -16,11 +16,17 @@ import {
   type AcpModelSelection,
   type AcpToolProcessingResult,
   type AcpAgentId,
+  type AcpArtifactAssociation,
 } from '../../../shared/main-process-api-interfaces/AcpAPI';
 import type { AcpTab } from '../../events/portalTabs';
 import { AcpService } from '../../main-process-api/AcpService';
+import {
+  acpArtifactKey,
+  dedupeAcpArtifacts,
+} from '../../utils/acpArtifactDrag';
 import type { ACPClientViewState } from './ACPClientView';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
+import { useAcpArtifactDrop } from './useAcpArtifactDrop';
 import { getAcpThemeStyle } from './acpTheme';
 import {
   ACPSessionView,
@@ -283,22 +289,27 @@ export function ACPStartupView({
   error,
   hasAttemptedConnection,
   isStartingSession,
+  pendingArtifactCount = 0,
   onInitialize,
   onStartSession,
   onStartFreshSession,
   onRetry,
+  onAssociateArtifact = () => {},
 }: {
   tab: AcpTab;
   state: ACPClientViewState;
   error?: string;
   hasAttemptedConnection: boolean;
   isStartingSession: boolean;
+  pendingArtifactCount?: number;
   onInitialize: (agent: AcpAgentId) => void;
   onStartSession: () => void;
   onStartFreshSession: () => void;
   onRetry: () => void;
+  onAssociateArtifact?: (artifact: AcpArtifactAssociation) => void;
 }) {
   const { theme } = useTheme();
+  const { isDragOver, dragHandlers } = useAcpArtifactDrop(onAssociateArtifact);
   const workspaceLabel = tab.repository
     ? `${tab.repository.owner} / ${tab.repository.name}`
     : tab.directory;
@@ -325,10 +336,16 @@ export function ACPStartupView({
 
   return (
     <main
-      className="acp-session"
+      className={`acp-session${isDragOver ? ' is-artifact-drop-active' : ''}`}
       aria-label="ACP agent session"
       style={getAcpThemeStyle(theme)}
+      {...dragHandlers}
     >
+      {isDragOver ? (
+        <div className="acp-session__drop-overlay" role="status">
+          Drop to queue for this session
+        </div>
+      ) : null}
       <header className="acp-session__topbar">
         <ACPWorkspaceIdentity sessionTitle={tab.sessionTitle} />
       </header>
@@ -365,6 +382,13 @@ export function ACPStartupView({
                       : 'Start an OpenCode session'}
           </strong>
           {detail ? <span>{detail}</span> : null}
+          {pendingArtifactCount > 0 ? (
+            <span>
+              {pendingArtifactCount} artifact
+              {pendingArtifactCount === 1 ? '' : 's'} will be associated when
+              the session starts.
+            </span>
+          ) : null}
           {isError || isDisconnected ? (
             <>
               <button
@@ -422,6 +446,10 @@ export function ACPTabContent({
   const [messages, setMessages] = useState<AcpChatMessage[]>([]);
   const [permissions, setPermissions] = useState<AcpPendingPermission[]>([]);
   const [isPrompting, setIsPrompting] = useState(false);
+  const [artifacts, setArtifacts] = useState<AcpArtifactAssociation[]>([]);
+  const [pendingArtifacts, setPendingArtifacts] = useState<
+    AcpArtifactAssociation[]
+  >([]);
   const [modelSelection, setModelSelection] = useState<
     AcpModelSelection | undefined
   >();
@@ -432,11 +460,42 @@ export function ACPTabContent({
   const autoStartedRef = useRef(false);
   const manualStopRef = useRef(false);
   const isPromptingRef = useRef(false);
+  const artifactsRef = useRef<AcpArtifactAssociation[]>([]);
+  const pendingArtifactsRef = useRef<AcpArtifactAssociation[]>([]);
+  const sessionIdRef = useRef<string | null>(null);
+  const artifactMutationRef = useRef(0);
 
   const nextMessageId = useCallback(
     () => `acp-message-${++messageIdRef.current}`,
     [],
   );
+
+  const applyArtifacts = useCallback((next: AcpArtifactAssociation[]) => {
+    artifactsRef.current = next;
+    setArtifacts(next);
+  }, []);
+
+  const applyPendingArtifacts = useCallback(
+    (next: AcpArtifactAssociation[]) => {
+      pendingArtifactsRef.current = next;
+      setPendingArtifacts(next);
+    },
+    [],
+  );
+
+  const addNotice = useCallback(
+    (text: string, level: 'info' | 'error' = 'error') => {
+      setMessages((previous) => [
+        ...previous,
+        { id: nextMessageId(), role: 'notice', text, level },
+      ]);
+    },
+    [nextMessageId],
+  );
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
 
   const agent = getAcpAgent(agentId);
 
@@ -497,6 +556,7 @@ export function ACPTabContent({
         setPrompting(false);
         setPermissions([]);
         setSessionId(null);
+        sessionIdRef.current = null;
         setError(event.reason ?? 'The ACP connection closed.');
         setViewState('error');
       });
@@ -528,6 +588,7 @@ export function ACPTabContent({
       setError(undefined);
       setViewState('initializing');
       setSessionId(null);
+      sessionIdRef.current = null;
       setMessages([]);
       setPermissions([]);
       setPrompting(false);
@@ -574,10 +635,38 @@ export function ACPTabContent({
                   : {}),
               });
         if (generation !== generationRef.current) return false;
+        const pending = pendingArtifactsRef.current;
+        const merged = dedupeAcpArtifacts([
+          ...(result.artifacts ?? []),
+          ...pending,
+        ]);
+        sessionIdRef.current = result.sessionId;
         setSessionId(result.sessionId);
+        const revision = ++artifactMutationRef.current;
+        applyArtifacts(merged);
         setModelSelection(result.model);
         onSessionIdChange?.(result.sessionId);
         setViewState('ready');
+
+        if (pending.length > 0) {
+          applyPendingArtifacts([]);
+          try {
+            const saved = await AcpService.setSessionArtifacts({
+              sessionKey: tab.id,
+              artifacts: merged,
+            });
+            if (
+              generation === generationRef.current &&
+              artifactMutationRef.current === revision
+            ) {
+              applyArtifacts(saved.artifacts);
+            }
+          } catch (artifactError) {
+            if (generation === generationRef.current) {
+              addNotice(formatError(artifactError));
+            }
+          }
+        }
         return true;
       } catch (sessionError) {
         if (generation !== generationRef.current) return false;
@@ -590,7 +679,15 @@ export function ACPTabContent({
         }
       }
     },
-    [modelSelection?.currentValue, onSessionIdChange, tab.id, tab.sessionId],
+    [
+      addNotice,
+      applyArtifacts,
+      applyPendingArtifacts,
+      modelSelection?.currentValue,
+      onSessionIdChange,
+      tab.id,
+      tab.sessionId,
+    ],
   );
 
   const changeModel = useCallback(
@@ -612,6 +709,78 @@ export function ACPTabContent({
       }
     },
     [modelSelection, tab.id],
+  );
+
+  const associateArtifact = useCallback(
+    async (artifact: AcpArtifactAssociation) => {
+      const current = artifactsRef.current;
+      const next = dedupeAcpArtifacts([...current, artifact]);
+      if (!sessionIdRef.current) {
+        // No live session yet: queue until the session starts, then persist it
+        // under the agent session id.
+        applyPendingArtifacts(
+          dedupeAcpArtifacts([...pendingArtifactsRef.current, artifact]),
+        );
+        return;
+      }
+      if (next.length === current.length) return;
+
+      const revision = ++artifactMutationRef.current;
+      applyArtifacts(next);
+      try {
+        const result = await AcpService.setSessionArtifacts({
+          sessionKey: tab.id,
+          artifacts: next,
+        });
+        if (artifactMutationRef.current === revision) {
+          applyArtifacts(result.artifacts);
+        }
+      } catch (error) {
+        if (artifactMutationRef.current === revision) {
+          applyArtifacts(current);
+        }
+        addNotice(formatError(error));
+      }
+    },
+    [addNotice, applyArtifacts, applyPendingArtifacts, tab.id],
+  );
+
+  const removeArtifact = useCallback(
+    async (artifact: AcpArtifactAssociation) => {
+      const key = acpArtifactKey(artifact);
+      if (!sessionIdRef.current) {
+        applyPendingArtifacts(
+          pendingArtifactsRef.current.filter(
+            (candidate) => acpArtifactKey(candidate) !== key,
+          ),
+        );
+        return;
+      }
+
+      const current = artifactsRef.current;
+      const next = current.filter(
+        (candidate) => acpArtifactKey(candidate) !== key,
+      );
+      if (next.length === current.length) return;
+
+      const revision = ++artifactMutationRef.current;
+      applyArtifacts(next);
+      try {
+        const result = await AcpService.setSessionArtifacts({
+          sessionKey: tab.id,
+          artifacts: next,
+        });
+        if (artifactMutationRef.current === revision) {
+          applyArtifacts(result.artifacts);
+        }
+      } catch (error) {
+        if (artifactMutationRef.current === revision) {
+          applyArtifacts(current);
+        }
+        addNotice(formatError(error));
+      }
+    },
+    [addNotice, applyArtifacts, applyPendingArtifacts, tab.id],
   );
 
   // Quick Open starts a new session automatically. Restored tabs with a saved
@@ -636,7 +805,11 @@ export function ACPTabContent({
   }, [agentId, connect, startSession]);
 
   const send = useCallback(
-    async (text: string, reference?: AcpChatReference) => {
+    async (
+      text: string,
+      reference?: AcpChatReference,
+      stagedArtifacts?: AcpArtifactAssociation[],
+    ) => {
       if (isPromptingRef.current) return;
       setPrompting(true);
       setMessages((previous) => [
@@ -669,7 +842,11 @@ export function ACPTabContent({
         ? `${text}\n\n${quotedReference}`
         : text;
       try {
-        await AcpService.prompt(tab.id, promptText);
+        if (stagedArtifacts && stagedArtifacts.length > 0) {
+          await AcpService.prompt(tab.id, promptText, stagedArtifacts);
+        } else {
+          await AcpService.prompt(tab.id, promptText);
+        }
       } catch (promptError) {
         setMessages((previous) => [
           ...previous,
@@ -726,8 +903,13 @@ export function ACPTabContent({
         isPrompting={isPrompting}
         modelSelection={modelSelection}
         modelError={modelError}
+        sessionArtifacts={artifacts}
         onModelChange={(model) => void changeModel(model)}
-        onSend={(text, reference) => void send(text, reference)}
+        onAssociateArtifact={(artifact) => void associateArtifact(artifact)}
+        onRemoveArtifact={(artifact) => void removeArtifact(artifact)}
+        onSend={(text, reference, stagedArtifacts) =>
+          void send(text, reference, stagedArtifacts)
+        }
         onStop={stop}
         onRespondPermission={respondPermission}
       />
@@ -744,10 +926,12 @@ export function ACPTabContent({
       error={error}
       hasAttemptedConnection={autoStartedRef.current}
       isStartingSession={isStartingSession}
+      pendingArtifactCount={pendingArtifacts.length}
       onInitialize={(nextAgent) => void connect(nextAgent)}
       onStartSession={() => void startSession()}
       onStartFreshSession={() => void startFreshSession()}
       onRetry={() => void retry()}
+      onAssociateArtifact={(artifact) => void associateArtifact(artifact)}
     />
   );
 }

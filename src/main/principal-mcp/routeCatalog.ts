@@ -1188,6 +1188,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           'Use this to surface the topics, subsystem models, or drawings you are working with so the user sees them in the ACP tab without you pasting IDs into chat.',
           'The Artifacts list is derived from the replayed conversation, so the association survives renderer reloads and app restarts; it does not modify the artifact itself.',
           'The artifact is listed only; it does not open or focus the preview pane.',
+          'Users can also attach artifacts by dragging them into the ACP panel; user attachments are persisted per ACP session and included as context on every prompt.',
           'An OpenCode agent can discover its own session ID by running echo $OPENCODE_SESSION_ID in a shell.',
         ],
         example: {
@@ -1245,6 +1246,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         notes: [
           'Use POST /api/acp/sessions/open first if no session is already running.',
           'Permission requests continue to appear in the ACP tab and require the user to approve them there.',
+          'User-attached session artifacts (topics, subsystem models, drawings) are included automatically as context; there is no need to fetch them again just to mention them.',
           'Prompt and session-update content are not returned; only the stop reason and update counts are included.',
         ],
         example: {

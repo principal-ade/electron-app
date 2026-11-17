@@ -43,6 +43,7 @@ import {
   drawingContextDragText,
 } from '../../utils/agentContextDragText';
 import { tildifyPath } from '../../utils/tildifyPath';
+import { setAcpArtifactDragData } from '../../utils/acpArtifactDrag';
 import { isHomeTabPinnable, type HomeTabEntry } from './homeTabEntries';
 import {
   associationFromEntry,
@@ -334,6 +335,22 @@ export const HomeTabRow: React.FC<HomeTabRowProps> = ({
           event.dataTransfer.setData(
             TOPIC_ASSOCIATION_MIME,
             JSON.stringify(association),
+          );
+          setAcpArtifactDragData(
+            event.dataTransfer,
+            association.kind === 'subsystem-model'
+              ? {
+                  kind: 'subsystem-model',
+                  id: association.modelId,
+                  title: label,
+                }
+              : association.kind === 'drawing'
+                ? {
+                    kind: 'drawing',
+                    id: association.drawingId,
+                    title: label,
+                  }
+                : { kind: 'topic', id: association.topicId, title: label },
           );
         }
         setActiveTopicAssociationDrag(association);

@@ -48,6 +48,7 @@ import type {
 } from '@principal-ai/subsystems-core';
 import type {
   AcpAgentDefinition,
+  AcpArtifactAssociation,
   AcpFileOperation,
   AcpHighlightItem,
   AcpModelSelection,
@@ -77,8 +78,14 @@ import {
 import { ACPModelPicker } from './ACPModelPicker';
 import type { SubsystemTrailSelection } from '../../subsystem-models/SubsystemModelGraph';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
+import { useAcpArtifactDrop } from './useAcpArtifactDrop';
+import type { AcpArtifactDragHandlers } from './useAcpArtifactDrop';
 import { getAcpThemeStyle } from './acpTheme';
 import { getTracer } from '../../telemetry';
+import {
+  acpArtifactKey,
+  dedupeAcpArtifacts,
+} from '../../utils/acpArtifactDrag';
 
 const acpArtifactTracer = getTracer('principal-ade-dev-workspace');
 
@@ -174,8 +181,16 @@ export interface ACPSessionViewProps {
   /** Model picker state from `session/new`, shown before the first message. */
   modelSelection?: AcpModelSelection;
   modelError?: string;
+  /** User-attached artifacts persisted for this ACP session. */
+  sessionArtifacts?: AcpArtifactAssociation[];
   onModelChange?: (model: string) => void;
-  onSend: (text: string, reference?: AcpChatReference) => void;
+  onAssociateArtifact?: (artifact: AcpArtifactAssociation) => void;
+  onRemoveArtifact?: (artifact: AcpArtifactAssociation) => void;
+  onSend: (
+    text: string,
+    reference?: AcpChatReference,
+    stagedArtifacts?: AcpArtifactAssociation[],
+  ) => void;
   onStop: () => void;
   onRespondPermission: (requestId: string, optionId: string | null) => void;
 }
@@ -376,6 +391,9 @@ interface AcpArtifact {
   kind: AcpArtifactKind;
   id: string;
   openCount: number;
+  /** Where the row came from; user rows can be detached from the session. */
+  source?: 'agent' | 'user';
+  title?: string;
 }
 
 /** A selected artifact identity, used to drive the preview pane. */
@@ -652,9 +670,13 @@ function ACPToolCallsPanel({
   repository,
   activityView,
   selectedArtifact,
+  sessionArtifacts,
+  onRemoveArtifact,
   onOpenArtifact,
   onOpenFilePreview,
   onCloseFilePreview,
+  artifactDropHandlers,
+  isArtifactDropActive,
 }: {
   calls: AcpChatMessage[];
   workspacePath: string;
@@ -662,9 +684,13 @@ function ACPToolCallsPanel({
   repository?: ACPSessionViewProps['repository'];
   activityView: ACPActivityView;
   selectedArtifact: AcpArtifactRef | null;
+  sessionArtifacts: AcpArtifactAssociation[];
+  onRemoveArtifact?: (artifact: AcpArtifactAssociation) => void;
   onOpenArtifact: (artifact: AcpArtifactRef) => void;
   onOpenFilePreview: (relPath: string) => void;
   onCloseFilePreview: () => void;
+  artifactDropHandlers: AcpArtifactDragHandlers;
+  isArtifactDropActive: boolean;
 }) {
   const { theme } = useTheme();
   const [principalMcpOnly, setPrincipalMcpOnly] = useState(false);
@@ -755,15 +781,38 @@ function ACPToolCallsPanel({
     }
   }, [toolCalls]);
   // Explicit associations carry an agent-provided title, used as a fallback
-  // until the artifact id is looked up.
-  const associatedTitles = useMemo(
-    () => associationTitlesFromCalls(toolCalls),
-    [toolCalls],
-  );
-  const artifacts = useMemo(
-    () => artifactsFromCalls(principalMcpCalls),
-    [principalMcpCalls],
-  );
+  // until the artifact id is looked up. User-attached artifacts supply their
+  // title from the drag payload.
+  const associatedTitles = useMemo(() => {
+    const titles = associationTitlesFromCalls(toolCalls);
+    for (const artifact of sessionArtifacts) {
+      if (artifact.title) {
+        titles[artifactKey(artifact.kind, artifact.id)] = artifact.title;
+      }
+    }
+    return titles;
+  }, [sessionArtifacts, toolCalls]);
+  const artifacts = useMemo(() => {
+    const merged = new Map<string, AcpArtifact>();
+    for (const artifact of artifactsFromCalls(principalMcpCalls)) {
+      merged.set(artifactKey(artifact.kind, artifact.id), {
+        ...artifact,
+        source: 'agent',
+      });
+    }
+    for (const artifact of sessionArtifacts) {
+      const key = artifactKey(artifact.kind, artifact.id);
+      const existing = merged.get(key);
+      merged.set(key, {
+        kind: artifact.kind,
+        id: artifact.id,
+        openCount: Math.max(existing?.openCount ?? 0, 1),
+        source: 'user',
+        title: artifact.title ?? existing?.title,
+      });
+    }
+    return [...merged.values()];
+  }, [principalMcpCalls, sessionArtifacts]);
   useEffect(() => {
     if (artifacts.length === 0) return undefined;
     let cancelled = false;
@@ -983,7 +1032,19 @@ function ACPToolCallsPanel({
     [],
   );
   return (
-    <aside className="acp-session__tool-panel" aria-label="ACP activity">
+    <aside
+      className={`acp-session__tool-panel${isArtifactDropActive ? ' is-artifact-drop-active' : ''}`}
+      aria-label="ACP activity"
+      {...artifactDropHandlers}
+    >
+      {isArtifactDropActive ? (
+        <div
+          className="acp-session__drop-overlay acp-session__drop-overlay--panel"
+          role="status"
+        >
+          Drop to associate
+        </div>
+      ) : null}
       <div className="acp-session__tool-panel-content">
         <div className="acp-session__tool-activity-stage">
           {activityView === 'tools' ? (
@@ -1113,13 +1174,14 @@ function ACPToolCallsPanel({
                   role="status"
                 >
                   <span>
-                    Topics, subsystem models, and drawings the agent works with
-                    through Principal MCP will appear here.
+                    Drop a topic, subsystem model, or drawing here to associate
+                    it with this session. Artifacts the agent works with through
+                    Principal MCP also appear here.
                   </span>
                 </div>
               ) : (
                 <ol className="acp-session__artifact-list">
-                  {artifacts.map(({ kind, id, openCount }) => {
+                  {artifacts.map(({ kind, id, openCount, source }) => {
                     const isSelected =
                       selectedArtifact?.kind === kind &&
                       selectedArtifact.id === id;
@@ -1133,7 +1195,7 @@ function ACPToolCallsPanel({
                         key={artifactKey(kind, id)}
                       >
                         <button
-                          className={`acp-session__artifact-open${isSelected ? ' is-selected' : ''}`}
+                          className={`acp-session__artifact-open${isSelected ? ' is-selected' : ''}${source === 'user' ? ' has-remove' : ''}`}
                           type="button"
                           onClick={() => onOpenArtifact({ kind, id, title })}
                           aria-pressed={isSelected}
@@ -1154,12 +1216,26 @@ function ACPToolCallsPanel({
                             <strong>{title}</strong>
                             <small>
                               {artifactKindLabel(kind)}
+                              {source === 'user' ? ' · attached' : ''}
                               {openCount > 1
                                 ? ` · opened ${openCount} times`
                                 : ''}
                             </small>
                           </span>
                         </button>
+                        {source === 'user' && onRemoveArtifact ? (
+                          <button
+                            className="acp-session__artifact-remove"
+                            type="button"
+                            aria-label={`Remove ${artifactKindLabel(kind)} ${title} from this session`}
+                            title="Remove from this session"
+                            onClick={() =>
+                              onRemoveArtifact({ kind, id, title })
+                            }
+                          >
+                            <X size={13} />
+                          </button>
+                        ) : null}
                       </li>
                     );
                   })}
@@ -1744,7 +1820,10 @@ export function ACPSessionView({
   isPrompting,
   modelSelection,
   modelError,
+  sessionArtifacts = [],
   onModelChange,
+  onAssociateArtifact,
+  onRemoveArtifact,
   onSend,
   onStop,
   onRespondPermission,
@@ -1766,6 +1845,9 @@ export function ACPSessionView({
     useState<AcpModelReference | null>(null);
   const [selectedDrawingReference, setSelectedDrawingReference] =
     useState<AcpDrawingReference | null>(null);
+  const [stagedArtifacts, setStagedArtifacts] = useState<
+    AcpArtifactAssociation[]
+  >([]);
   const [topicPreviewLoading, setTopicPreviewLoading] = useState(false);
   const [topicPreviewError, setTopicPreviewError] = useState(false);
   const [topicPreviewHeight, setTopicPreviewHeight] = useState(75);
@@ -1883,7 +1965,9 @@ export function ACPSessionView({
     setSelectedTopicReference(null);
     setSelectedModelReference(null);
     setSelectedDrawingReference(null);
-    onSend(text, reference);
+    const staged = stagedArtifacts;
+    setStagedArtifacts([]);
+    onSend(text, reference, staged.length > 0 ? staged : undefined);
   };
   const openArtifactPreview = useCallback(
     (artifact: AcpArtifactRef) => {
@@ -1912,6 +1996,39 @@ export function ACPSessionView({
     },
     [selectedArtifact, topicPreviewClosing],
   );
+
+  const openOnArtifactDrop = useCallback(
+    (artifact: AcpArtifactAssociation) => {
+      onAssociateArtifact?.(artifact);
+      setActivityView('artifacts');
+      openArtifactPreview({
+        kind: artifact.kind,
+        id: artifact.id,
+        title:
+          artifact.title ?? artifactFallbackTitle(artifact.kind, artifact.id),
+      });
+    },
+    [onAssociateArtifact, openArtifactPreview],
+  );
+  const associateOnArtifactDrop = useCallback(
+    (artifact: AcpArtifactAssociation) => {
+      onAssociateArtifact?.(artifact);
+      setActivityView('artifacts');
+    },
+    [onAssociateArtifact],
+  );
+  const stageOnArtifactDrop = useCallback(
+    (artifact: AcpArtifactAssociation) => {
+      onAssociateArtifact?.(artifact);
+      setStagedArtifacts((previous) =>
+        dedupeAcpArtifacts([...previous, artifact]),
+      );
+    },
+    [onAssociateArtifact],
+  );
+  const chatArtifactDrop = useAcpArtifactDrop(openOnArtifactDrop);
+  const panelArtifactDrop = useAcpArtifactDrop(associateOnArtifactDrop);
+  const composerArtifactDrop = useAcpArtifactDrop(stageOnArtifactDrop);
   const finishTopicPreviewClose = useCallback(
     (event: React.AnimationEvent<HTMLElement>) => {
       if (event.animationName !== 'acp-topic-preview-exit') return;
@@ -2252,7 +2369,16 @@ export function ACPSessionView({
 
       <div className="acp-session__workspace">
         <div className="acp-session__main">
-          <div className="acp-session__chat-viewport" ref={chatViewportRef}>
+          <div
+            className={`acp-session__chat-viewport${chatArtifactDrop.isDragOver ? ' is-artifact-drop-active' : ''}`}
+            ref={chatViewportRef}
+            {...chatArtifactDrop.dragHandlers}
+          >
+            {chatArtifactDrop.isDragOver ? (
+              <div className="acp-session__drop-overlay" role="status">
+                Drop to open and associate
+              </div>
+            ) : null}
             {artifactPreview}
             {filePreview}
             <div
@@ -2432,7 +2558,58 @@ export function ACPSessionView({
             </div>
           ) : null}
 
-          <div className="acp-session__composer">
+          <div
+            className={`acp-session__composer${composerArtifactDrop.isDragOver ? ' is-artifact-drop-active' : ''}`}
+            {...composerArtifactDrop.dragHandlers}
+          >
+            {composerArtifactDrop.isDragOver ? (
+              <div
+                className="acp-session__drop-overlay acp-session__drop-overlay--composer"
+                role="status"
+              >
+                Drop to attach to this message
+              </div>
+            ) : null}
+            {stagedArtifacts.length > 0 ? (
+              <div className="acp-session__staged-artifacts">
+                <span className="acp-session__staged-label">
+                  For next message
+                </span>
+                {stagedArtifacts.map((artifact) => (
+                  <div
+                    className="acp-session__staged-artifact"
+                    key={acpArtifactKey(artifact)}
+                  >
+                    {artifact.kind === 'topic' ? (
+                      <TopicsIcon size={13} strokeWidth={1.5} />
+                    ) : artifact.kind === 'drawing' ? (
+                      <PenTool size={13} strokeWidth={1.5} />
+                    ) : (
+                      <Network size={13} strokeWidth={1.5} />
+                    )}
+                    <span>
+                      {artifact.title ??
+                        artifactFallbackTitle(artifact.kind, artifact.id)}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${artifact.title ?? artifact.id} from this message`}
+                      onClick={() =>
+                        setStagedArtifacts((previous) =>
+                          previous.filter(
+                            (candidate) =>
+                              acpArtifactKey(candidate) !==
+                              acpArtifactKey(artifact),
+                          ),
+                        )
+                      }
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             {selectedTopicReference ? (
               <div className="acp-session__reference-chip">
                 <TopicsIcon size={15} strokeWidth={1.5} />
@@ -2537,9 +2714,13 @@ export function ACPSessionView({
           repository={repository}
           activityView={activityView}
           selectedArtifact={selectedArtifact}
+          sessionArtifacts={sessionArtifacts}
+          onRemoveArtifact={onRemoveArtifact}
           onOpenArtifact={openArtifactPreview}
           onOpenFilePreview={openFilePreview}
           onCloseFilePreview={closeFilePreview}
+          artifactDropHandlers={panelArtifactDrop.dragHandlers}
+          isArtifactDropActive={panelArtifactDrop.isDragOver}
         />
       </div>
     </main>

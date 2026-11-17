@@ -22,6 +22,7 @@ import {
 import { useTheme } from '@principal-ade/industry-theme';
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
 import { drawingContextDragText } from '../utils/agentContextDragText';
+import { setAcpArtifactDragData } from '../utils/acpArtifactDrag';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import {
   DRAWING_EVENTS,
@@ -370,6 +371,11 @@ export const DrawingsLeftPanel: React.FC<DrawingsLeftPanelProps> = ({
                           'text/plain',
                           drawingContextDragText(item.path, item.name),
                         );
+                        setAcpArtifactDragData(event.dataTransfer, {
+                          kind: 'drawing',
+                          id: item.id,
+                          title: item.name,
+                        });
                       }}
                       onClick={() => handleOpen(item)}
                       style={{

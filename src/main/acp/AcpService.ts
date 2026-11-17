@@ -48,6 +48,8 @@ import {
   type AcpRespondPermissionRequest,
   type AcpSetModelRequest,
   type AcpSetModelResult,
+  type AcpSetSessionArtifactsRequest,
+  type AcpSetSessionArtifactsResult,
   type AcpSessionEvent,
   type AcpSessionEventEnvelope,
   type AcpHighlightItem,
@@ -58,6 +60,8 @@ import { repositoryTelemetryId } from '../telemetry/repositoryIdentity';
 import { openCodeSessionHistoryService } from '../opencode/OpenCodeSessionHistoryService';
 import { getProcessPath } from '../utils/processPath';
 import { getEventServerManager } from '../agent-session-events/EventServerManager';
+import { AcpArtifactStore, dedupeArtifacts } from './AcpArtifactStore';
+import { buildAcpPromptContent } from './acpPromptContent';
 
 const tracer = getTracer('principal-ade-acp');
 const TITLE_LOOKUP_ATTEMPTS = 5;
@@ -74,6 +78,18 @@ function mergeHighlightItems(
   return [...byPath.values()];
 }
 
+function artifactKey(artifact: AcpArtifactAssociation): string {
+  return `${artifact.kind}:${artifact.id}`;
+}
+
+function artifactMap(
+  artifacts: AcpArtifactAssociation[],
+): Map<string, AcpArtifactAssociation> {
+  return new Map(
+    artifacts.map((artifact) => [artifactKey(artifact), artifact]),
+  );
+}
+
 interface AcpConnectionEntry {
   key: string;
   agentId: AcpAgentId;
@@ -85,6 +101,8 @@ interface AcpConnectionEntry {
   sessionId: string | null;
   sessionReady: boolean;
   sessionTitle: string | null;
+  /** User-attached artifacts for this agent session, keyed by kind:id. */
+  artifacts: Map<string, AcpArtifactAssociation>;
   /** Latest model picker state advertised by the agent for this session. */
   model?: AcpModelSelection;
   titleLookupStarted: boolean;
@@ -143,6 +161,7 @@ async function withAcpSpan<T>(
 
 class AcpService {
   private readonly entries = new Map<string, AcpConnectionEntry>();
+  private readonly artifactStore = new AcpArtifactStore();
 
   constructor() {
     getEventServerManager().on(
@@ -265,6 +284,7 @@ class AcpService {
         sessionId: null,
         sessionReady: false,
         sessionTitle: null,
+        artifacts: new Map(),
         titleLookupStarted: false,
         pendingPermissions: new Map(),
         closed: false,
@@ -358,6 +378,7 @@ class AcpService {
         return {
           sessionId: entry.sessionId,
           model: entry.model,
+          artifacts: [...entry.artifacts.values()],
         };
       }
 
@@ -366,6 +387,7 @@ class AcpService {
         { cwd: entry.directory, mcpServers: [] },
       );
       entry.sessionId = response.sessionId;
+      const artifacts = this.hydrateSessionArtifacts(entry, response.sessionId);
 
       let model = normalizeAcpModelSelection(response.configOptions);
       const available = new Set(
@@ -408,7 +430,7 @@ class AcpService {
       log.info(
         `[ACP] Started session ${response.sessionId} in ${entry.directory}`,
       );
-      return { sessionId: response.sessionId, model };
+      return { sessionId: response.sessionId, model, artifacts };
     });
   }
 
@@ -431,6 +453,7 @@ class AcpService {
         return {
           sessionId: entry.sessionId,
           model: entry.model,
+          artifacts: [...entry.artifacts.values()],
         };
       }
       if (!entry.supportsLoadSession) {
@@ -456,15 +479,18 @@ class AcpService {
           entry.sessionId = null;
           entry.sessionReady = false;
           entry.model = undefined;
+          entry.artifacts = new Map();
         }
         throw error;
       }
+      const artifacts = this.hydrateSessionArtifacts(entry, request.sessionId);
       log.info(
         `[ACP] Restored session ${request.sessionId} in ${entry.directory}`,
       );
       return {
         sessionId: request.sessionId,
         model: entry.model,
+        artifacts,
       };
     });
   }
@@ -505,6 +531,32 @@ class AcpService {
     });
   }
 
+  async setSessionArtifacts(
+    request: AcpSetSessionArtifactsRequest,
+  ): Promise<AcpSetSessionArtifactsResult> {
+    return withAcpSpan('acp.session.artifacts.set', async (span) => {
+      const entry = this.requireEntry(request.sessionKey);
+      span.setAttribute('acp.agent.name', entry.agentName);
+      span.setAttribute(
+        'principal.repository.telemetry_id',
+        repositoryTelemetryId(entry.directory),
+      );
+      if (!entry.sessionId || !entry.sessionReady) {
+        throw new Error('Start an ACP session before associating artifacts.');
+      }
+
+      const artifacts = dedupeArtifacts(request.artifacts);
+      const saved = this.artifactStore.save(
+        entry.agentId,
+        entry.sessionId,
+        artifacts,
+      );
+      entry.artifacts = artifactMap(saved);
+      span.setAttribute('acp.artifact.count', saved.length);
+      return { artifacts: saved };
+    });
+  }
+
   async prompt(request: AcpPromptRequest): Promise<AcpPromptResult> {
     return withAcpSpan('acp.prompt', async (span) => {
       const entry = this.requireEntry(request.sessionKey);
@@ -520,6 +572,14 @@ class AcpService {
         throw new Error('An ACP prompt is already in progress.');
       }
 
+      const artifacts = [...entry.artifacts.values()];
+      const stagedArtifacts = request.stagedArtifacts ?? [];
+      span.setAttribute('acp.prompt.artifact.count', artifacts.length);
+      span.setAttribute(
+        'acp.prompt.staged_artifact.count',
+        stagedArtifacts.length,
+      );
+
       const activePrompt = {
         span,
         updateCounts: new Map<string, number>(),
@@ -531,7 +591,11 @@ class AcpService {
           methods.agent.session.prompt,
           {
             sessionId: entry.sessionId,
-            prompt: [{ type: 'text', text: request.text }],
+            prompt: buildAcpPromptContent({
+              text: request.text,
+              artifacts,
+              stagedArtifacts,
+            }),
           },
         );
         span.setAttribute('acp.prompt.stop_reason', response.stopReason);
@@ -674,6 +738,16 @@ class AcpService {
       throw new Error('The ACP agent is not connected.');
     }
     return entry;
+  }
+
+  /** Load user-attached artifacts for a session id into the live entry. */
+  private hydrateSessionArtifacts(
+    entry: AcpConnectionEntry,
+    sessionId: string,
+  ): AcpArtifactAssociation[] {
+    const artifacts = this.artifactStore.load(entry.agentId, sessionId);
+    entry.artifacts = artifactMap(artifacts);
+    return artifacts;
   }
 
   private attachLifecycle(entry: AcpConnectionEntry): void {

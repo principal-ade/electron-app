@@ -14,6 +14,7 @@ import type { AcpSessionEventEnvelope } from '../../../shared/main-process-api-i
 import type { AcpTab } from '../../events/portalTabs';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import { AcpService } from '../../main-process-api/AcpService';
+import { ACP_ARTIFACT_MIME } from '../../utils/acpArtifactDrag';
 import { SubsystemModelService } from '../../main-process-api/SubsystemModelService';
 import { TopicService } from '../../main-process-api/TopicService';
 import { getDrawingSummary } from '../../drawings-view/drawingsStorage';
@@ -37,6 +38,7 @@ jest.mock('../../main-process-api/AcpService', () => ({
     newSession: jest.fn(),
     loadSession: jest.fn(),
     setModel: jest.fn(),
+    setSessionArtifacts: jest.fn(),
     prompt: jest.fn(),
     cancel: jest.fn(),
     respondPermission: jest.fn(),
@@ -274,6 +276,23 @@ function makeTab(overrides: Partial<AcpTab> = {}): AcpTab {
   };
 }
 
+function artifactDataTransfer(artifact: {
+  kind: string;
+  id: string;
+  title?: string;
+}) {
+  const values: Record<string, string> = {
+    [ACP_ARTIFACT_MIME]: JSON.stringify(artifact),
+  };
+  return {
+    types: [ACP_ARTIFACT_MIME],
+    dropEffect: 'none',
+    effectAllowed: 'none',
+    setData: jest.fn(),
+    getData: (type: string) => values[type] ?? '',
+  };
+}
+
 let emit: ((envelope: AcpSessionEventEnvelope) => void) | null = null;
 
 beforeEach(() => {
@@ -294,6 +313,9 @@ beforeEach(() => {
   mocked.setModel.mockResolvedValue({
     model: { currentValue: 'opencode-go/a', options: [] },
   });
+  mocked.setSessionArtifacts.mockImplementation(async ({ artifacts }) => ({
+    artifacts,
+  }));
   mocked.prompt.mockResolvedValue({ stopReason: 'end_turn' });
   mocked.cancel.mockResolvedValue();
   mocked.respondPermission.mockResolvedValue();
@@ -1294,6 +1316,175 @@ describe('ACPTabContent', () => {
     expect(screen.getByText('Agent model')).toBeInTheDocument();
     expect(screen.queryByText('Other tab')).not.toBeInTheDocument();
     expect(screen.getAllByText('Agent topic')).toHaveLength(1);
+  });
+
+  it('opens a preview and associates an artifact dropped on the messages area', async () => {
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Pick model');
+
+    const chat = document.querySelector(
+      '.acp-session__chat-viewport',
+    ) as HTMLElement;
+    const dataTransfer = artifactDataTransfer({
+      kind: 'topic',
+      id: 'topic-drop',
+      title: 'Dropped topic',
+    });
+    fireEvent.dragOver(chat, { dataTransfer });
+    fireEvent.drop(chat, { dataTransfer });
+
+    await waitFor(() =>
+      expect(mocked.setSessionArtifacts).toHaveBeenCalledWith({
+        sessionKey: 'acp-/repo',
+        artifacts: [
+          { kind: 'topic', id: 'topic-drop', title: 'Dropped topic' },
+        ],
+      }),
+    );
+    expect(
+      await screen.findByRole('region', { name: /Topic preview/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('associates without opening a preview when dropped on the activity panel', async () => {
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Pick model');
+
+    const panel = screen.getByLabelText('ACP activity');
+    const dataTransfer = artifactDataTransfer({
+      kind: 'subsystem-model',
+      id: 'model-drop',
+      title: 'Dropped model',
+    });
+    fireEvent.drop(panel, { dataTransfer });
+
+    await waitFor(() =>
+      expect(mocked.setSessionArtifacts).toHaveBeenCalledWith({
+        sessionKey: 'acp-/repo',
+        artifacts: [
+          {
+            kind: 'subsystem-model',
+            id: 'model-drop',
+            title: 'Dropped model',
+          },
+        ],
+      }),
+    );
+    expect(screen.queryByRole('region', { name: /preview/i })).toBeNull();
+  });
+
+  it('stages an artifact dropped on the composer for the next prompt', async () => {
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Pick model');
+
+    const composer = document.querySelector(
+      '.acp-session__composer',
+    ) as HTMLElement;
+    const dataTransfer = artifactDataTransfer({
+      kind: 'drawing',
+      id: 'notes',
+      title: 'Agent notes',
+    });
+    fireEvent.drop(composer, { dataTransfer });
+
+    expect(await screen.findByText('For next message')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Message the agent'), {
+      target: { value: 'Take a look' },
+    });
+    fireEvent.keyDown(screen.getByLabelText('Message the agent'), {
+      key: 'Enter',
+      shiftKey: false,
+    });
+
+    await waitFor(() =>
+      expect(mocked.prompt).toHaveBeenCalledWith('acp-/repo', 'Take a look', [
+        { kind: 'drawing', id: 'notes', title: 'Agent notes' },
+      ]),
+    );
+    expect(screen.queryByText('For next message')).not.toBeInTheDocument();
+  });
+
+  it('restores session artifacts returned by loadSession', async () => {
+    mocked.loadSession.mockResolvedValue({
+      sessionId: 'ses_saved',
+      artifacts: [
+        {
+          kind: 'subsystem-model',
+          id: 'model-9',
+          title: 'Saved model',
+        },
+      ],
+    });
+    mockedSubsystemModelService.get.mockResolvedValue({
+      id: 'model-9',
+      title: 'Saved model',
+    } as never);
+
+    render(<ACPTabContent tab={makeTab({ sessionId: 'ses_saved' })} />);
+    await screen.findByText('Pick model');
+    fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
+
+    expect(await screen.findByText('Saved model')).toBeInTheDocument();
+  });
+
+  it('removes a user-attached session artifact', async () => {
+    mockedTopicService.getTopic.mockResolvedValue(null as never);
+    mocked.loadSession.mockResolvedValue({
+      sessionId: 'ses_saved',
+      artifacts: [
+        {
+          kind: 'topic',
+          id: 'topic-attached',
+          title: 'Attached topic',
+        },
+      ],
+    });
+
+    render(<ACPTabContent tab={makeTab({ sessionId: 'ses_saved' })} />);
+    await screen.findByText('Pick model');
+    fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Remove Topic Attached topic from this session',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(mocked.setSessionArtifacts).toHaveBeenCalledWith({
+        sessionKey: 'acp-/repo',
+        artifacts: [],
+      }),
+    );
+  });
+
+  it('queues artifacts dropped before the session starts', async () => {
+    render(<ACPTabContent tab={makeTab()} />);
+
+    const main = screen.getByRole('main', { name: 'ACP agent session' });
+    fireEvent.drop(main, {
+      dataTransfer: artifactDataTransfer({
+        kind: 'topic',
+        id: 'pending-topic',
+        title: 'Pending topic',
+      }),
+    });
+    expect(
+      screen.getByText(/1 artifact will be associated when the session starts/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Connect OpenCode' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Start a session' }),
+    );
+
+    await waitFor(() =>
+      expect(mocked.setSessionArtifacts).toHaveBeenCalledWith({
+        sessionKey: 'acp-/repo',
+        artifacts: [
+          { kind: 'topic', id: 'pending-topic', title: 'Pending topic' },
+        ],
+      }),
+    );
   });
 
   it('restores associated artifacts from the replayed conversation', async () => {

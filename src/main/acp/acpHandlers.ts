@@ -12,6 +12,7 @@ import {
   type AcpPromptRequest,
   type AcpRespondPermissionRequest,
   type AcpSetModelRequest,
+  type AcpSetSessionArtifactsRequest,
 } from '../../shared/main-process-api-interfaces/AcpAPI';
 import { getAcpService } from './AcpService';
 
@@ -54,6 +55,14 @@ export function registerAcpHandlers(): void {
     (event, request: AcpSetModelRequest) => {
       requireRendererFrame(event);
       return service.setModel(request);
+    },
+  );
+
+  ipcMain.handle(
+    AcpAPIEvent.SET_SESSION_ARTIFACTS,
+    (event, request: AcpSetSessionArtifactsRequest) => {
+      requireRendererFrame(event);
+      return service.setSessionArtifacts(request);
     },
   );
 
