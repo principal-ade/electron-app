@@ -94,6 +94,18 @@ const messages: AcpChatMessage[] = [
         'curl -s -X POST http://[::1]:3054/api/acp/sessions/ses_story/artifacts -d \'{"kind":"topic","id":"topic-123"}\'',
     },
   },
+  {
+    id: 'tool-5',
+    role: 'tool',
+    toolCallId: 'call-read-drawing',
+    title: 'Reading the launch plan drawing',
+    name: 'shell',
+    kind: 'execute',
+    status: 'completed',
+    rawInput: {
+      command: 'cat ~/.alexandria/drawings/launch-plan.excalidraw',
+    },
+  },
 ];
 
 export const ToolCallActivity: Story = {

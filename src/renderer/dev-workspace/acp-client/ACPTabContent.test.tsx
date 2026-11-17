@@ -16,6 +16,7 @@ import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMo
 import { AcpService } from '../../main-process-api/AcpService';
 import { SubsystemModelService } from '../../main-process-api/SubsystemModelService';
 import { TopicService } from '../../main-process-api/TopicService';
+import { getDrawingSummary } from '../../drawings-view/drawingsStorage';
 import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 import { useFileTree } from '@pierre/trees/react';
 import { parsePatchFiles } from '@pierre/diffs';
@@ -174,6 +175,17 @@ jest.mock('../../main-process-api/SubsystemModelService', () => ({
   },
 }));
 
+jest.mock('../../drawings-view/drawingsStorage', () => ({
+  getDrawingSummary: jest.fn(),
+}));
+
+jest.mock('./ACPDrawingPreview', () => ({
+  ACPDrawingPreview: ({ drawingId }: { drawingId: string }) =>
+    jest
+      .requireActual<typeof React>('react')
+      .createElement('div', { 'data-testid': 'drawing-preview' }, drawingId),
+}));
+
 jest.mock('../../subsystem-models/SubsystemModelTabContent', () => ({
   SubsystemModelTabContent: ({
     modelId,
@@ -207,6 +219,9 @@ const mocked = AcpService as jest.Mocked<typeof AcpService>;
 const mockedTopicService = TopicService as jest.Mocked<typeof TopicService>;
 const mockedSubsystemModelService = SubsystemModelService as jest.Mocked<
   typeof SubsystemModelService
+>;
+const mockedGetDrawingSummary = getDrawingSummary as jest.MockedFunction<
+  typeof getDrawingSummary
 >;
 const mockedRepositoryMonitoring = RepositoryMonitoringService as jest.Mocked<
   typeof RepositoryMonitoringService
@@ -789,6 +804,104 @@ describe('ACPTabContent', () => {
     expect(
       screen.queryByRole('region', {
         name: 'Subsystem model preview: Bridge Subsystem',
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows drawings the agent reads in the Artifacts view', async () => {
+    mockedGetDrawingSummary.mockImplementation(async (id: string) =>
+      id === 'launch-plan'
+        ? {
+            id,
+            name: 'Launch plan',
+            path: '/home/.alexandria/drawings/launch-plan.excalidraw',
+          }
+        : null,
+    );
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Session ready');
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-drawing-read',
+            title: 'Read the launch plan',
+            name: 'shell',
+            status: 'completed',
+            rawInput: {
+              command: 'cat ~/.alexandria/drawings/launch-plan.excalidraw',
+            },
+          },
+        },
+      });
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-drawing-associate',
+            title: 'Associate the notes drawing',
+            name: 'shell',
+            status: 'completed',
+            rawInput: {
+              command:
+                'curl -s -X POST http://[::1]:3054/api/acp/sessions/ses_1/artifacts -d \'{"kind":"drawing","id":"notes","title":"Agent notes"}\'',
+            },
+          },
+        },
+      });
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Filter Principal MCP calls' }),
+    );
+    expect(screen.getByText('Read the launch plan')).toBeInTheDocument();
+    expect(screen.getByText('Associate the notes drawing')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
+
+    // Looked-up names win; the agent-provided title is the fallback.
+    expect(await screen.findByText('Launch plan')).toBeInTheDocument();
+    expect(screen.getByText('Agent notes')).toBeInTheDocument();
+    expect(screen.getAllByText('Drawing')).toHaveLength(2);
+    expect(mockedGetDrawingSummary).toHaveBeenCalledWith('launch-plan');
+    expect(mockedGetDrawingSummary).toHaveBeenCalledWith('notes');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open Drawing Launch plan in chat',
+      }),
+    );
+    const drawingPreview = await screen.findByRole('region', {
+      name: 'Drawing preview: Launch plan',
+    });
+    expect(drawingPreview).toHaveStyle({ height: '75%' });
+    expect(screen.getByTestId('drawing-preview')).toHaveTextContent(
+      'launch-plan',
+    );
+    expect(drawingPreview.parentElement).toHaveClass(
+      'acp-session__chat-viewport',
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Close Drawing Launch plan preview',
+      }),
+    );
+    expect(drawingPreview).toHaveClass('is-closing');
+    const animationEnd = new Event('animationend', { bubbles: true });
+    Object.defineProperty(animationEnd, 'animationName', {
+      value: 'acp-topic-preview-exit',
+    });
+    act(() => drawingPreview.dispatchEvent(animationEnd));
+    expect(
+      screen.queryByRole('region', {
+        name: 'Drawing preview: Launch plan',
       }),
     ).not.toBeInTheDocument();
   });

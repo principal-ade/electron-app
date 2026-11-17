@@ -211,7 +211,7 @@ export interface AcpActiveSessionSummary {
 }
 
 /** App artifact kinds an ACP agent can associate with its session. */
-export type AcpArtifactKind = 'topic' | 'subsystem-model';
+export type AcpArtifactKind = 'topic' | 'subsystem-model' | 'drawing';
 
 /**
  * An artifact the agent explicitly associated with its session (e.g. a

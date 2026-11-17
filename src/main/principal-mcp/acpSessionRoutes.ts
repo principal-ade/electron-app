@@ -14,7 +14,7 @@ const tracer = getTracer('principal-ade-acp-mcp');
 const MAX_PROMPT_LENGTH = 20_000;
 const MAX_ARTIFACT_ID_LENGTH = 200;
 const MAX_ARTIFACT_TITLE_LENGTH = 300;
-const ARTIFACT_KINDS = ['topic', 'subsystem-model'] as const;
+const ARTIFACT_KINDS = ['topic', 'subsystem-model', 'drawing'] as const;
 
 export interface AcpSessionRouteDependencies {
   getRepositoryDirectories(): Promise<string[]>;
@@ -296,7 +296,7 @@ export function registerAcpSessionRoutes(
     ) {
       res.status(400).json({
         success: false,
-        error: 'kind must be topic or subsystem-model',
+        error: 'kind must be topic, subsystem-model or drawing',
       });
       return;
     }

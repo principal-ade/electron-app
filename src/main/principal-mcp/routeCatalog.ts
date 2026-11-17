@@ -1152,13 +1152,13 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
         method: 'POST',
         path: '/api/acp/sessions/:sessionId/artifacts',
         summary:
-          'Associate an app artifact (topic or subsystem model) with an active ACP session so the ACP tab lists it under Artifacts.',
+          'Associate an app artifact (topic, subsystem model, or drawing) with an active ACP session so the ACP tab lists it under Artifacts.',
         parameters: {
           sessionId:
             'ACP session ID from GET /api/acp/sessions. For an OpenCode agent this equals the shell environment variable OPENCODE_SESSION_ID (echo $OPENCODE_SESSION_ID).',
         },
         body: {
-          kind: 'string (required): "topic" or "subsystem-model".',
+          kind: 'string (required): "topic", "subsystem-model", or "drawing".',
           id: 'string (required): artifact ID, at most 200 characters.',
           title:
             'string (optional): display title, at most 300 characters; blank is ignored.',
@@ -1175,7 +1175,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           '500': 'The artifact could not be associated with the ACP session.',
         },
         notes: [
-          'Use this to surface the topics or subsystem models you are working with so the user sees them in the ACP tab without you pasting IDs into chat.',
+          'Use this to surface the topics, subsystem models, or drawings you are working with so the user sees them in the ACP tab without you pasting IDs into chat.',
           'The Artifacts list is derived from the replayed conversation, so the association survives renderer reloads and app restarts; it does not modify the artifact itself.',
           'The artifact is listed only; it does not open or focus the preview pane.',
           'An OpenCode agent can discover its own session ID by running echo $OPENCODE_SESSION_ID in a shell.',

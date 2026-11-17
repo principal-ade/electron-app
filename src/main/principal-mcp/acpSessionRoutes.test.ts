@@ -361,6 +361,30 @@ test('associates an artifact with an active ACP session', async () => {
   });
 });
 
+test('associates a drawing with an active ACP session', async () => {
+  const { artifactsHandler, deps } = setup();
+  const res = response();
+
+  await artifactsHandler(
+    {
+      headers: {},
+      params: { sessionId: 'ses_1' },
+      body: { kind: 'drawing', id: 'launch-plan', title: 'Launch plan' },
+    } as unknown as Request,
+    res,
+  );
+
+  expect(deps.associateArtifact).toHaveBeenCalledWith(
+    'ses_1',
+    { kind: 'drawing', id: 'launch-plan', title: 'Launch plan' },
+    '/repos/acme/app',
+  );
+  expect(res.json).toHaveBeenCalledWith({
+    success: true,
+    artifact: { kind: 'drawing', id: 'launch-plan', title: 'Launch plan' },
+  });
+});
+
 test('omits a blank title when associating an artifact', async () => {
   const { artifactsHandler, deps } = setup();
   const res = response();

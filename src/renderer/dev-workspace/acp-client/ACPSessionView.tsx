@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Loader2,
   Network,
+  PenTool,
   ShieldQuestion,
   Sparkles,
   Square,
@@ -60,12 +61,14 @@ import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 import { GitService } from '../../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import { SubsystemModelService } from '../../main-process-api/SubsystemModelService';
+import { getDrawingSummary } from '../../drawings-view/drawingsStorage';
 import { TopicService, type Topic } from '../../main-process-api/TopicService';
 import { useRepoWatch } from '../../panels/home-panel/useRepoWatch';
 import { PierreFileView } from '../../panels/PierreFileView';
 import { gitStatusToHighlightLayers } from '../../utils/gitStatusHighlightLayers';
 import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
 import { SubsystemModelTabContent } from '../../subsystem-models/SubsystemModelTabContent';
+import { ACPDrawingPreview } from './ACPDrawingPreview';
 import type { SubsystemTrailSelection } from '../../subsystem-models/SubsystemModelGraph';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
 import { getAcpThemeStyle } from './acpTheme';
@@ -333,11 +336,12 @@ function isPrincipalMcpToolCall(
     toolName.includes(serverKey) ||
     Boolean(topicIdFromActivationInput(call)) ||
     Boolean(subsystemModelIdFromReadInput(call)) ||
+    Boolean(drawingIdFromFileInput(call)) ||
     Boolean(artifactAssociationFromInput(call))
   );
 }
 
-type AcpArtifactKind = 'topic' | 'subsystem-model';
+type AcpArtifactKind = 'topic' | 'subsystem-model' | 'drawing';
 
 interface AcpArtifact {
   kind: AcpArtifactKind;
@@ -437,7 +441,9 @@ function artifactAssociationFromInput(
   // Tool inputs arrive JSON-stringified, so a shell `curl -d '{"kind":…}'`
   // body shows up with escaped quotes. Normalize before extracting fields.
   const normalized = haystack.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-  const kindMatch = /"kind"\s*:\s*"(topic|subsystem-model)"/i.exec(normalized);
+  const kindMatch = /"kind"\s*:\s*"(topic|subsystem-model|drawing)"/i.exec(
+    normalized,
+  );
   const idMatch = /(?:^|[^A-Za-z0-9_])"id"\s*:\s*"([^"]+)"/.exec(normalized);
   if (!kindMatch?.[1] || !idMatch?.[1]) return undefined;
   const kind = kindMatch[1].toLowerCase() as AcpArtifactKind;
@@ -448,6 +454,25 @@ function artifactAssociationFromInput(
   );
   const title = titleMatch?.[1]?.trim();
   return { kind, id, ...(title ? { title } : {}) };
+}
+
+/**
+ * A drawing the agent read from disk. Drawings are local files rather than
+ * bridge resources, so the agent reaches them with shell reads like
+ * `cat ~/.alexandria/drawings/<id>.excalidraw` (see `drawingContextDragText`).
+ */
+function drawingIdFromFileInput(
+  call: Extract<AcpChatMessage, { role: 'tool' }>,
+): string | undefined {
+  const input = toolCallInputText(call);
+  if (input === undefined) return undefined;
+
+  const route = /drawings\/([^/?#"'\\\s]+?)\.excalidraw(?:[?#"'\\\s]|$)/i.exec(
+    `${call.name ?? ''}\n${call.title}\n${input}`,
+  );
+  if (!route?.[1]) return undefined;
+
+  return decodeRouteId(route[1]);
 }
 
 function topicIdOpenedByCall(
@@ -466,6 +491,14 @@ function subsystemModelIdReadByCall(
     : undefined;
 }
 
+function drawingIdReadByCall(
+  call: Extract<AcpChatMessage, { role: 'tool' }>,
+): string | undefined {
+  return isPrincipalMcpToolCall(call)
+    ? drawingIdFromFileInput(call)
+    : undefined;
+}
+
 function artifactsFromCalls(
   calls: Extract<AcpChatMessage, { role: 'tool' }>[],
 ): AcpArtifact[] {
@@ -480,6 +513,8 @@ function artifactsFromCalls(
     if (topicId) record('topic', topicId);
     const modelId = subsystemModelIdReadByCall(call);
     if (modelId) record('subsystem-model', modelId);
+    const drawingId = drawingIdReadByCall(call);
+    if (drawingId) record('drawing', drawingId);
     const association = artifactAssociationFromInput(call);
     if (association) record(association.kind, association.id);
   }
@@ -501,7 +536,18 @@ function associationTitlesFromCalls(
 }
 
 function artifactKindLabel(kind: AcpArtifactKind): string {
-  return kind === 'topic' ? 'Topic' : 'Subsystem model';
+  switch (kind) {
+    case 'topic':
+      return 'Topic';
+    case 'subsystem-model':
+      return 'Subsystem model';
+    case 'drawing':
+      return 'Drawing';
+  }
+}
+
+function artifactFallbackTitle(kind: AcpArtifactKind, id: string): string {
+  return `${artifactKindLabel(kind)} ${id}`;
 }
 
 /** One-line location for a trail step: file + optional line range. */
@@ -549,10 +595,7 @@ function artifactTitle(
   id: string,
   titles: Record<string, string>,
 ): string {
-  return (
-    titles[artifactKey(kind, id)] ??
-    `${kind === 'topic' ? 'Topic' : 'Subsystem model'} ${id}`
-  );
+  return titles[artifactKey(kind, id)] ?? artifactFallbackTitle(kind, id);
 }
 
 function ACPToolCallsPanel({
@@ -603,6 +646,7 @@ function ACPToolCallsPanel({
       const principalMcp = isPrincipalMcpToolCall(call);
       const topicActivationTopicId = topicIdFromActivationInput(call);
       const subsystemModelId = subsystemModelIdFromReadInput(call);
+      const drawingId = drawingIdFromFileInput(call);
       const association = artifactAssociationFromInput(call);
       const rawInputPresent =
         call.rawInput !== undefined && call.rawInput !== null;
@@ -611,10 +655,12 @@ function ACPToolCallsPanel({
           ? 'topic-open'
           : subsystemModelId
             ? 'subsystem-model-read'
-            : association
-              ? 'artifact-association'
-              : 'unrecognized-principal-mcp-call'
-        : topicActivationTopicId || subsystemModelId || association
+            : drawingId
+              ? 'drawing-file'
+              : association
+                ? 'artifact-association'
+                : 'unrecognized-principal-mcp-call'
+        : topicActivationTopicId || subsystemModelId || drawingId || association
           ? 'bridge-route-not-principal-mcp'
           : 'not-principal-mcp';
       const stateKey = [
@@ -622,6 +668,7 @@ function ACPToolCallsPanel({
         rawInputPresent,
         topicActivationTopicId ?? '',
         subsystemModelId ?? '',
+        drawingId ?? '',
         association ? `${association.kind}:${association.id}` : '',
         classification,
       ].join(':');
@@ -642,6 +689,10 @@ function ACPToolCallsPanel({
       span.setAttribute(
         'acp.artifact.subsystem_model_read_route_found',
         Boolean(subsystemModelId),
+      );
+      span.setAttribute(
+        'acp.artifact.drawing_file_route_found',
+        Boolean(drawingId),
       );
       span.setAttribute(
         'acp.artifact.association_route_found',
@@ -685,15 +736,25 @@ function ACPToolCallsPanel({
                 span.setStatus({ code: SpanStatusCode.OK });
                 return topic?.title;
               })
-            : SubsystemModelService.get(artifact.id).then((model) => {
-                span.setAttribute('acp.artifact.found', Boolean(model));
-                span.setAttribute(
-                  'acp.artifact.title_present',
-                  Boolean(model?.title),
-                );
-                span.setStatus({ code: SpanStatusCode.OK });
-                return model?.title;
-              });
+            : artifact.kind === 'drawing'
+              ? getDrawingSummary(artifact.id).then((drawing) => {
+                  span.setAttribute('acp.artifact.found', Boolean(drawing));
+                  span.setAttribute(
+                    'acp.artifact.title_present',
+                    Boolean(drawing?.name),
+                  );
+                  span.setStatus({ code: SpanStatusCode.OK });
+                  return drawing?.name;
+                })
+              : SubsystemModelService.get(artifact.id).then((model) => {
+                  span.setAttribute('acp.artifact.found', Boolean(model));
+                  span.setAttribute(
+                    'acp.artifact.title_present',
+                    Boolean(model?.title),
+                  );
+                  span.setStatus({ code: SpanStatusCode.OK });
+                  return model?.title;
+                });
         lookup = lookup
           .catch((error: unknown) => {
             span.setAttribute(
@@ -977,8 +1038,8 @@ function ACPToolCallsPanel({
                 role="status"
               >
                 <span>
-                  Topics and subsystem models the agent works with through
-                  Principal MCP will appear here.
+                  Topics, subsystem models, and drawings the agent works with
+                  through Principal MCP will appear here.
                 </span>
               </div>
             ) : (
@@ -1009,6 +1070,8 @@ function ACPToolCallsPanel({
                       >
                         {kind === 'topic' ? (
                           <TopicsIcon size={16} strokeWidth={1.5} />
+                        ) : kind === 'drawing' ? (
+                          <PenTool size={16} strokeWidth={1.5} />
                         ) : (
                           <Network size={16} strokeWidth={1.5} />
                         )}
@@ -1937,9 +2000,9 @@ export function ACPSessionView({
     >
       <div
         className={`acp-session__topic-preview-content${
-          selectedArtifact.kind === 'subsystem-model'
-            ? ' acp-session__topic-preview-content--graph'
-            : ''
+          selectedArtifact.kind === 'topic'
+            ? ''
+            : ' acp-session__topic-preview-content--graph'
         }`}
       >
         {selectedArtifact.kind === 'subsystem-model' ? (
@@ -1947,6 +2010,8 @@ export function ACPSessionView({
             modelId={selectedArtifact.id}
             onTrailSelect={handleModelTrailSelect}
           />
+        ) : selectedArtifact.kind === 'drawing' ? (
+          <ACPDrawingPreview drawingId={selectedArtifact.id} />
         ) : topicPreviewLoading && !selectedTopic ? (
           <div className="acp-session__topic-preview-message" role="status">
             <Loader2 className="acp-client__spinning" size={15} />
