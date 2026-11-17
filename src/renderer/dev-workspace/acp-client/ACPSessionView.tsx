@@ -12,6 +12,7 @@ import {
   Building2,
   CheckCircle2,
   ChevronRight,
+  Cpu,
   Loader2,
   Network,
   PenTool,
@@ -50,6 +51,7 @@ import type {
   AcpAgentDefinition,
   AcpFileOperation,
   AcpHighlightItem,
+  AcpModelSelection,
   AcpToolProcessingOutcome,
 } from '../../../shared/main-process-api-interfaces/AcpAPI';
 import { parsePatchFiles } from '@pierre/diffs';
@@ -73,6 +75,7 @@ import {
   type DrawingElementSelection,
   type DrawingSelectedElement,
 } from './ACPDrawingPreview';
+import { ACPModelPicker } from './ACPModelPicker';
 import type { SubsystemTrailSelection } from '../../subsystem-models/SubsystemModelGraph';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
 import { getAcpThemeStyle } from './acpTheme';
@@ -169,6 +172,10 @@ export interface ACPSessionViewProps {
   messages: AcpChatMessage[];
   permissions: AcpPendingPermission[];
   isPrompting: boolean;
+  /** Model picker state from `session/new`, shown before the first message. */
+  modelSelection?: AcpModelSelection;
+  modelError?: string;
+  onModelChange?: (model: string) => void;
   onSend: (text: string, reference?: AcpChatReference) => void;
   onStop: () => void;
   onRespondPermission: (requestId: string, optionId: string | null) => void;
@@ -1715,12 +1722,16 @@ export function ACPSessionView({
   messages,
   permissions,
   isPrompting,
+  modelSelection,
+  modelError,
+  onModelChange,
   onSend,
   onStop,
   onRespondPermission,
 }: ACPSessionViewProps) {
   const { theme } = useTheme();
-  const [activityView, setActivityView] = useState<ACPActivityView>('artifacts');
+  const [activityView, setActivityView] =
+    useState<ACPActivityView>('artifacts');
   const [selectedArtifact, setSelectedArtifact] =
     useState<AcpArtifactRef | null>(null);
   const [selectedPreviewFile, setSelectedPreviewFile] = useState<string | null>(
@@ -2241,6 +2252,21 @@ export function ACPSessionView({
                       ? 'Live tool activity is listed in the panel.'
                       : `Ask ${agent.name} to explore, explain, or change something in this workspace.`}
                   </span>
+                  {!hasToolCalls &&
+                  modelSelection &&
+                  modelSelection.options.length > 0 ? (
+                    <div className="acp-session__model-picker">
+                      <span className="acp-session__model-picker-label">
+                        <Cpu size={13} aria-hidden="true" /> Model
+                      </span>
+                      <ACPModelPicker
+                        disabled={isPrompting}
+                        error={modelError}
+                        onChange={(model) => onModelChange?.(model)}
+                        selection={modelSelection}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 

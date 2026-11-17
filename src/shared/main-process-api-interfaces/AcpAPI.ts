@@ -8,6 +8,7 @@
  */
 import type {
   RequestPermissionRequest,
+  SessionConfigOption,
   SessionUpdate,
   ToolCallLocation,
 } from '@agentclientprotocol/sdk';
@@ -16,6 +17,7 @@ export enum AcpAPIEvent {
   CONNECT = 'acp:connect',
   NEW_SESSION = 'acp:new-session',
   LOAD_SESSION = 'acp:load-session',
+  SET_MODEL = 'acp:set-model',
   PROMPT = 'acp:prompt',
   CANCEL = 'acp:cancel',
   RESPOND_PERMISSION = 'acp:respond-permission',
@@ -106,8 +108,59 @@ export interface AcpConnectResult {
   agentVersion?: string;
 }
 
+export interface AcpModelOption {
+  /** Value passed back to the agent, in `provider/model` form. */
+  value: string;
+  /** Display name with the provider prefix removed. */
+  name: string;
+  description?: string;
+  /** Provider id derived from the value prefix (e.g. `opencode-go`). */
+  provider: string;
+}
+
+/** Model picker state advertised by the agent in `session/new`. */
+export interface AcpModelSelection {
+  currentValue: string;
+  options: AcpModelOption[];
+}
+
+/**
+ * Extract the model picker state from ACP session config options.
+ *
+ * OpenCode advertises a `model` select alongside `effort` and `mode`. Options
+ * can be a flat list or provider groups, so both shapes are flattened here.
+ */
+export function normalizeAcpModelSelection(
+  configOptions: ReadonlyArray<SessionConfigOption> | null | undefined,
+): AcpModelSelection | undefined {
+  const model = configOptions?.find((option) => option.id === 'model');
+  if (!model || model.type !== 'select') return undefined;
+
+  const options = model.options.flatMap((option) =>
+    'value' in option ? [option] : option.options,
+  );
+  return {
+    currentValue: model.currentValue,
+    options: options.map((option) => {
+      const slash = option.value.indexOf('/');
+      const provider = slash > 0 ? option.value.slice(0, slash) : option.value;
+      const prefix = `${provider}/`;
+      return {
+        value: option.value,
+        name: option.name.startsWith(prefix)
+          ? option.name.slice(prefix.length)
+          : option.name,
+        description: option.description ?? undefined,
+        provider,
+      };
+    }),
+  };
+}
+
 export interface AcpNewSessionRequest {
   sessionKey: string;
+  /** Model to select after creating the session, in `provider/model` form. */
+  model?: string;
 }
 
 export interface AcpLoadSessionRequest extends AcpNewSessionRequest {
@@ -116,6 +169,17 @@ export interface AcpLoadSessionRequest extends AcpNewSessionRequest {
 
 export interface AcpNewSessionResult {
   sessionId: string;
+  /** Present when the agent advertises a model config option. */
+  model?: AcpModelSelection;
+}
+
+export interface AcpSetModelRequest {
+  sessionKey: string;
+  model: string;
+}
+
+export interface AcpSetModelResult {
+  model: AcpModelSelection;
 }
 
 export interface AcpPromptRequest {
@@ -244,6 +308,7 @@ export interface AcpAPI {
   connect(request: AcpConnectRequest): Promise<AcpConnectResult>;
   newSession(request: AcpNewSessionRequest): Promise<AcpNewSessionResult>;
   loadSession(request: AcpLoadSessionRequest): Promise<AcpNewSessionResult>;
+  setModel(request: AcpSetModelRequest): Promise<AcpSetModelResult>;
   prompt(request: AcpPromptRequest): Promise<AcpPromptResult>;
   cancel(request: AcpCancelRequest): Promise<void>;
   respondPermission(request: AcpRespondPermissionRequest): Promise<void>;

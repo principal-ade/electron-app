@@ -10,6 +10,7 @@ import {
   type AcpNewSessionRequest,
   type AcpPromptRequest,
   type AcpRespondPermissionRequest,
+  type AcpSetModelRequest,
   type AcpSessionEventEnvelope,
 } from '../../shared/main-process-api-interfaces/AcpAPI';
 
@@ -23,6 +24,9 @@ export const acpAPI: AcpAPI = {
   loadSession: (request: AcpLoadSessionRequest) =>
     ipcRenderer.invoke(AcpAPIEvent.LOAD_SESSION, request),
 
+  setModel: (request: AcpSetModelRequest) =>
+    ipcRenderer.invoke(AcpAPIEvent.SET_MODEL, request),
+
   prompt: (request: AcpPromptRequest) =>
     ipcRenderer.invoke(AcpAPIEvent.PROMPT, request),
 
@@ -35,9 +39,7 @@ export const acpAPI: AcpAPI = {
   disconnect: (request: { sessionKey: string }) =>
     ipcRenderer.invoke(AcpAPIEvent.DISCONNECT, request),
 
-  onSessionEvent: (
-    callback: (envelope: AcpSessionEventEnvelope) => void,
-  ) => {
+  onSessionEvent: (callback: (envelope: AcpSessionEventEnvelope) => void) => {
     const handler = (
       _event: Electron.IpcRendererEvent,
       envelope: AcpSessionEventEnvelope,

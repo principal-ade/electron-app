@@ -11,12 +11,11 @@ import {
   type AcpNewSessionRequest,
   type AcpPromptRequest,
   type AcpRespondPermissionRequest,
+  type AcpSetModelRequest,
 } from '../../shared/main-process-api-interfaces/AcpAPI';
 import { getAcpService } from './AcpService';
 
-function requireRendererFrame(
-  event: Electron.IpcMainInvokeEvent,
-): void {
+function requireRendererFrame(event: Electron.IpcMainInvokeEvent): void {
   if (
     !event.sender ||
     event.sender.isDestroyed() ||
@@ -29,13 +28,10 @@ function requireRendererFrame(
 export function registerAcpHandlers(): void {
   const service = getAcpService();
 
-  ipcMain.handle(
-    AcpAPIEvent.CONNECT,
-    (event, request: AcpConnectRequest) => {
-      requireRendererFrame(event);
-      return service.connect(request, event.sender);
-    },
-  );
+  ipcMain.handle(AcpAPIEvent.CONNECT, (event, request: AcpConnectRequest) => {
+    requireRendererFrame(event);
+    return service.connect(request, event.sender);
+  });
 
   ipcMain.handle(
     AcpAPIEvent.NEW_SESSION,
@@ -50,6 +46,14 @@ export function registerAcpHandlers(): void {
     (event, request: AcpLoadSessionRequest) => {
       requireRendererFrame(event);
       return service.loadSession(request);
+    },
+  );
+
+  ipcMain.handle(
+    AcpAPIEvent.SET_MODEL,
+    (event, request: AcpSetModelRequest) => {
+      requireRendererFrame(event);
+      return service.setModel(request);
     },
   );
 

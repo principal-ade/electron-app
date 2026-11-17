@@ -8,9 +8,12 @@ import type {
   AcpConnectRequest,
   AcpConnectResult,
   AcpLoadSessionRequest,
+  AcpNewSessionRequest,
   AcpNewSessionResult,
   AcpPromptResult,
   AcpRespondPermissionRequest,
+  AcpSetModelRequest,
+  AcpSetModelResult,
   AcpSessionEventEnvelope,
 } from '../../shared/main-process-api-interfaces/AcpAPI';
 
@@ -25,14 +28,20 @@ export class AcpService {
     return getApi().connect(request);
   }
 
-  static newSession(sessionKey: string): Promise<AcpNewSessionResult> {
-    return getApi().newSession({ sessionKey });
+  static newSession(
+    request: AcpNewSessionRequest,
+  ): Promise<AcpNewSessionResult> {
+    return getApi().newSession(request);
   }
 
   static loadSession(
     request: AcpLoadSessionRequest,
   ): Promise<AcpNewSessionResult> {
     return getApi().loadSession(request);
+  }
+
+  static setModel(request: AcpSetModelRequest): Promise<AcpSetModelResult> {
+    return getApi().setModel(request);
   }
 
   static prompt(sessionKey: string, text: string): Promise<AcpPromptResult> {

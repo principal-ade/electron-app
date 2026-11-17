@@ -10,6 +10,8 @@ import type {
 import {
   DEFAULT_ACP_AGENT,
   getAcpAgent,
+  normalizeAcpModelSelection,
+  type AcpModelSelection,
   type AcpToolProcessingResult,
   type AcpAgentId,
 } from '../../../shared/main-process-api-interfaces/AcpAPI';
@@ -420,6 +422,10 @@ export function ACPTabContent({
   const [messages, setMessages] = useState<AcpChatMessage[]>([]);
   const [permissions, setPermissions] = useState<AcpPendingPermission[]>([]);
   const [isPrompting, setIsPrompting] = useState(false);
+  const [modelSelection, setModelSelection] = useState<
+    AcpModelSelection | undefined
+  >();
+  const [modelError, setModelError] = useState<string | undefined>();
 
   const messageIdRef = useRef(0);
   const generationRef = useRef(0);
@@ -451,6 +457,13 @@ export function ACPTabContent({
             if (event.update.title !== undefined) {
               onSessionTitleChange?.(event.update.title);
             }
+            return;
+          }
+          if (event.update.sessionUpdate === 'config_option_update') {
+            const model = normalizeAcpModelSelection(
+              event.update.configOptions,
+            );
+            if (model) setModelSelection(model);
             return;
           }
           setMessages((previous) =>
@@ -519,6 +532,8 @@ export function ACPTabContent({
       setPermissions([]);
       setPrompting(false);
       setIsStartingSession(false);
+      setModelSelection(undefined);
+      setModelError(undefined);
 
       try {
         await AcpService.connect({
@@ -544,6 +559,7 @@ export function ACPTabContent({
       const generation = generationRef.current;
       setIsStartingSession(true);
       setError(undefined);
+      setModelError(undefined);
       try {
         const result =
           tab.sessionId && restoreSavedSession
@@ -551,9 +567,15 @@ export function ACPTabContent({
                 sessionKey: tab.id,
                 sessionId: tab.sessionId,
               })
-            : await AcpService.newSession(tab.id);
+            : await AcpService.newSession({
+                sessionKey: tab.id,
+                ...(modelSelection?.currentValue
+                  ? { model: modelSelection.currentValue }
+                  : {}),
+              });
         if (generation !== generationRef.current) return false;
         setSessionId(result.sessionId);
+        setModelSelection(result.model);
         onSessionIdChange?.(result.sessionId);
         setViewState('ready');
         return true;
@@ -568,7 +590,28 @@ export function ACPTabContent({
         }
       }
     },
-    [onSessionIdChange, tab.id, tab.sessionId],
+    [modelSelection?.currentValue, onSessionIdChange, tab.id, tab.sessionId],
+  );
+
+  const changeModel = useCallback(
+    async (model: string) => {
+      const previous = modelSelection;
+      if (!previous || previous.currentValue === model) return;
+      setModelError(undefined);
+      // Respond to the select immediately; revert if the agent rejects it.
+      setModelSelection({ ...previous, currentValue: model });
+      try {
+        const result = await AcpService.setModel({
+          sessionKey: tab.id,
+          model,
+        });
+        setModelSelection(result.model);
+      } catch (modelChangeError) {
+        setModelSelection(previous);
+        setModelError(formatError(modelChangeError));
+      }
+    },
+    [modelSelection, tab.id],
   );
 
   // Quick Open starts a new session automatically. Restored tabs with a saved
@@ -681,6 +724,9 @@ export function ACPTabContent({
         messages={messages}
         permissions={permissions}
         isPrompting={isPrompting}
+        modelSelection={modelSelection}
+        modelError={modelError}
+        onModelChange={(model) => void changeModel(model)}
         onSend={(text, reference) => void send(text, reference)}
         onStop={stop}
         onRespondPermission={respondPermission}

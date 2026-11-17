@@ -31,6 +31,7 @@ import {
   AcpAPIEvent,
   DEFAULT_ACP_MODEL,
   getAcpAgent,
+  normalizeAcpModelSelection,
   type AcpAgentId,
   type AcpArtifactAssociation,
   type AcpToolProcessingResult,
@@ -39,11 +40,14 @@ import {
   type AcpConnectRequest,
   type AcpConnectResult,
   type AcpLoadSessionRequest,
+  type AcpModelSelection,
   type AcpNewSessionRequest,
   type AcpNewSessionResult,
   type AcpPromptRequest,
   type AcpPromptResult,
   type AcpRespondPermissionRequest,
+  type AcpSetModelRequest,
+  type AcpSetModelResult,
   type AcpSessionEvent,
   type AcpSessionEventEnvelope,
   type AcpHighlightItem,
@@ -81,6 +85,8 @@ interface AcpConnectionEntry {
   sessionId: string | null;
   sessionReady: boolean;
   sessionTitle: string | null;
+  /** Latest model picker state advertised by the agent for this session. */
+  model?: AcpModelSelection;
   titleLookupStarted: boolean;
   pendingPermissions: Map<
     string,
@@ -351,6 +357,7 @@ class AcpService {
         span.setAttribute('acp.session.reused', true);
         return {
           sessionId: entry.sessionId,
+          model: entry.model,
         };
       }
 
@@ -360,37 +367,48 @@ class AcpService {
       );
       entry.sessionId = response.sessionId;
 
-      const modelOption = response.configOptions?.find(
-        (option) => option.id === 'model',
+      let model = normalizeAcpModelSelection(response.configOptions);
+      const available = new Set(
+        (model?.options ?? []).map((option) => option.value),
       );
-      if (
-        !modelOption ||
-        modelOption.type !== 'select' ||
-        !modelOption.options.some(
-          (option) => 'value' in option && option.value === DEFAULT_ACP_MODEL,
-        )
-      ) {
-        throw new Error(
-          `The configured OpenCode agent does not offer ${DEFAULT_ACP_MODEL}. ` +
-            'Connect OpenCode Go and make sure this model is available.',
-        );
+      const requestedModel =
+        request.model && available.has(request.model)
+          ? request.model
+          : undefined;
+      const defaultModel = available.has(DEFAULT_ACP_MODEL)
+        ? DEFAULT_ACP_MODEL
+        : undefined;
+      const targetModel = requestedModel ?? defaultModel;
+      if (targetModel && targetModel !== model?.currentValue) {
+        try {
+          const selected = await entry.connection.agent.request(
+            methods.agent.session.setConfigOption,
+            {
+              sessionId: response.sessionId,
+              configId: 'model',
+              value: targetModel,
+            },
+          );
+          model = normalizeAcpModelSelection(selected.configOptions) ?? model;
+        } catch (error) {
+          // The agent may have changed its available models between listing
+          // and selection. Keep its advertised current model instead of
+          // failing a session the user can still use.
+          span.setAttribute('acp.model.selection.failed', true);
+          log.warn(
+            `[ACP] Could not select model ${targetModel} (${error instanceof Error ? error.name : typeof error})`,
+          );
+        }
       }
-
-      await entry.connection.agent.request(
-        methods.agent.session.setConfigOption,
-        {
-          sessionId: response.sessionId,
-          configId: 'model',
-          value: DEFAULT_ACP_MODEL,
-        },
-      );
+      entry.model = model;
       entry.sessionReady = true;
 
       span.setAttribute('acp.session.reused', false);
+      span.setAttribute('acp.session.has_model_options', Boolean(model));
       log.info(
         `[ACP] Started session ${response.sessionId} in ${entry.directory}`,
       );
-      return { sessionId: response.sessionId };
+      return { sessionId: response.sessionId, model };
     });
   }
 
@@ -412,6 +430,7 @@ class AcpService {
         }
         return {
           sessionId: entry.sessionId,
+          model: entry.model,
         };
       }
       if (!entry.supportsLoadSession) {
@@ -422,16 +441,21 @@ class AcpService {
 
       entry.sessionId = request.sessionId;
       try {
-        await entry.connection.agent.request(methods.agent.session.load, {
-          sessionId: request.sessionId,
-          cwd: entry.directory,
-          mcpServers: [],
-        });
+        const response = await entry.connection.agent.request(
+          methods.agent.session.load,
+          {
+            sessionId: request.sessionId,
+            cwd: entry.directory,
+            mcpServers: [],
+          },
+        );
+        entry.model = normalizeAcpModelSelection(response?.configOptions);
         entry.sessionReady = true;
       } catch (error) {
         if (entry.sessionId === request.sessionId) {
           entry.sessionId = null;
           entry.sessionReady = false;
+          entry.model = undefined;
         }
         throw error;
       }
@@ -440,7 +464,44 @@ class AcpService {
       );
       return {
         sessionId: request.sessionId,
+        model: entry.model,
       };
+    });
+  }
+
+  async setModel(request: AcpSetModelRequest): Promise<AcpSetModelResult> {
+    return withAcpSpan('acp.session.set_model', async (span) => {
+      const entry = this.requireEntry(request.sessionKey);
+      span.setAttribute('acp.agent.name', entry.agentName);
+      span.setAttribute(
+        'principal.repository.telemetry_id',
+        repositoryTelemetryId(entry.directory),
+      );
+      if (!entry.sessionId || !entry.sessionReady) {
+        throw new Error('Start an ACP session before choosing a model.');
+      }
+      if (
+        entry.model &&
+        !entry.model.options.some((option) => option.value === request.model)
+      ) {
+        throw new Error('That model is not available for this session.');
+      }
+
+      const response = await entry.connection.agent.request(
+        methods.agent.session.setConfigOption,
+        {
+          sessionId: entry.sessionId,
+          configId: 'model',
+          value: request.model,
+        },
+      );
+      const model = normalizeAcpModelSelection(response.configOptions);
+      if (!model) {
+        throw new Error('The agent did not return model options.');
+      }
+      entry.model = model;
+      span.setAttribute('acp.model.changed', true);
+      return { model };
     });
   }
 
@@ -672,6 +733,15 @@ class AcpService {
       notification.update.sessionUpdate === 'session_info_update'
         ? notification.update.title
         : undefined;
+    if (
+      entry.sessionId &&
+      notification.update.sessionUpdate === 'config_option_update'
+    ) {
+      const model = normalizeAcpModelSelection(
+        notification.update.configOptions,
+      );
+      if (model) entry.model = model;
+    }
     const activePrompt = entry.activePrompt;
     if (activePrompt) {
       activePrompt.updateCounts.set(

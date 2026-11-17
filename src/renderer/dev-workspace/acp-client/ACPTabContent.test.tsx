@@ -36,6 +36,7 @@ jest.mock('../../main-process-api/AcpService', () => ({
     connect: jest.fn(),
     newSession: jest.fn(),
     loadSession: jest.fn(),
+    setModel: jest.fn(),
     prompt: jest.fn(),
     cancel: jest.fn(),
     respondPermission: jest.fn(),
@@ -290,6 +291,9 @@ beforeEach(() => {
   mocked.connect.mockResolvedValue({ protocolVersion: 1 });
   mocked.newSession.mockResolvedValue({ sessionId: 'ses_1' });
   mocked.loadSession.mockResolvedValue({ sessionId: 'ses_saved' });
+  mocked.setModel.mockResolvedValue({
+    model: { currentValue: 'opencode-go/a', options: [] },
+  });
   mocked.prompt.mockResolvedValue({ stopReason: 'end_turn' });
   mocked.cancel.mockResolvedValue();
   mocked.respondPermission.mockResolvedValue();
@@ -321,9 +325,71 @@ describe('ACPTabContent', () => {
       });
     });
     await waitFor(() =>
-      expect(mocked.newSession).toHaveBeenCalledWith('acp-/repo'),
+      expect(mocked.newSession).toHaveBeenCalledWith({
+        sessionKey: 'acp-/repo',
+      }),
     );
     expect(await screen.findByText('Session ready')).toBeInTheDocument();
+  });
+
+  it('shows a model picker before the first message and switches models', async () => {
+    const modelOptions = [
+      {
+        value: 'opencode-go/deepseek-v4.1-flash',
+        name: 'DeepSeek V4.1 Flash',
+        provider: 'opencode-go',
+      },
+      {
+        value: 'opencode-go/claude-haiku-5-5',
+        name: 'Claude Haiku 5.5',
+        provider: 'opencode-go',
+      },
+    ];
+    mocked.newSession.mockResolvedValue({
+      sessionId: 'ses_1',
+      model: {
+        currentValue: 'opencode-go/deepseek-v4.1-flash',
+        options: modelOptions,
+      },
+    });
+    mocked.setModel.mockResolvedValue({
+      model: {
+        currentValue: 'opencode-go/claude-haiku-5-5',
+        options: modelOptions,
+      },
+    });
+
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+
+    const trigger = await screen.findByRole('button', {
+      name: 'Model: DeepSeek V4.1 Flash',
+    });
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    const search = screen.getByRole('combobox', { name: 'Search models' });
+    expect(
+      screen.getByRole('option', { name: 'DeepSeek V4.1 Flash' }),
+    ).toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: 'haiku' } });
+    expect(
+      screen.queryByRole('option', { name: 'DeepSeek V4.1 Flash' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('option', { name: 'Claude Haiku 5.5' }));
+
+    await waitFor(() =>
+      expect(mocked.setModel).toHaveBeenCalledWith({
+        sessionKey: 'acp-/repo',
+        model: 'opencode-go/claude-haiku-5-5',
+      }),
+    );
+    expect(
+      await screen.findByRole('button', {
+        name: 'Model: Claude Haiku 5.5',
+      }),
+    ).toBeInTheDocument();
   });
 
   it('offers OpenCode reconnect for restored tabs without showing the picker', () => {
