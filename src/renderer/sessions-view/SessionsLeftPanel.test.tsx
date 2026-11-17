@@ -42,6 +42,15 @@ jest.mock('@principal-ade/industry-theme', () => ({
   }),
 }));
 
+const mockOpenAcpTab = jest.fn();
+jest.mock('../principal-window/PortalTabsContext', () => {
+  const actual = jest.requireActual('../principal-window/PortalTabsContext');
+  return {
+    ...actual,
+    useWorkspaceTabsOptional: () => ({ openAcpTab: mockOpenAcpTab }),
+  };
+});
+
 const RECENT_SESSION_TIME = Date.now();
 
 describe('SessionsLeftPanel', () => {
@@ -498,5 +507,81 @@ describe('SessionsLeftPanel', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByText('Old Composer conversation')).toBeNull();
+  });
+
+  it('opens an OpenCode session in an ACP tab on Cmd+Click or right-click', async () => {
+    history.listProjects.mockResolvedValue([
+      {
+        id: 'ses_acp01',
+        title: 'ACP this session',
+        directory: '/work/example',
+        createdAt: RECENT_SESSION_TIME - 60_000,
+        updatedAt: RECENT_SESSION_TIME,
+      },
+    ]);
+
+    render(
+      <SessionsLeftPanel
+        repositories={[
+          {
+            path: '/work',
+            github: { owner: 'acme', name: 'example' },
+          } as AlexandriaEntry,
+        ]}
+      />,
+    );
+
+    const rowButton = await screen.findByRole('button', {
+      name: 'Open OpenCode session: ACP this session',
+    });
+
+    fireEvent.click(rowButton, { metaKey: true });
+    expect(mockOpenAcpTab).toHaveBeenCalledWith({
+      directory: '/work/example',
+      sessionId: 'ses_acp01',
+      sessionTitle: 'ACP this session',
+      autoStart: true,
+      repository: { owner: 'acme', name: 'example' },
+    });
+    expect(history.resume).not.toHaveBeenCalled();
+
+    fireEvent.contextMenu(rowButton);
+    expect(mockOpenAcpTab).toHaveBeenCalledTimes(2);
+
+    // A plain click still resumes in the terminal.
+    fireEvent.click(rowButton);
+    await waitFor(() => {
+      expect(history.resume).toHaveBeenCalledWith(
+        '/work/example',
+        'ses_acp01',
+        expect.anything(),
+      );
+    });
+  });
+
+  it('does not offer the ACP tab action for non-OpenCode sessions', async () => {
+    claudeHistory.list.mockResolvedValue([
+      {
+        id: 'claude-1',
+        title: 'Claude session',
+        directory: '/work/example',
+        createdAt: RECENT_SESSION_TIME - 60_000,
+        updatedAt: RECENT_SESSION_TIME,
+      },
+    ]);
+
+    render(
+      <SessionsLeftPanel
+        repositories={[{ path: '/work/example' } as AlexandriaEntry]}
+      />,
+    );
+
+    const rowButton = await screen.findByRole('button', {
+      name: 'Open Claude Code session: Claude session',
+    });
+    expect(rowButton.getAttribute('title')).toBeNull();
+    fireEvent.contextMenu(rowButton);
+    fireEvent.click(rowButton, { metaKey: true });
+    expect(mockOpenAcpTab).not.toHaveBeenCalled();
   });
 });

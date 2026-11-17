@@ -19,6 +19,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import { agentSessionTabId } from '../../shared/agentSessionBookmark';
 import type { AgentSessionBookmarkProvider } from '../../shared/types/userPreferences.types';
 import { extractLocalClones } from '../events/repositorySelected';
+import { useWorkspaceTabsOptional } from '../principal-window/PortalTabsContext';
 import { SessionHistoryService } from '../main-process-api/SessionHistoryService';
 import { AgentSessionIcon } from './AgentSessionIcon';
 import { sessionBookmarkKey, useSessionBookmarks } from './useSessionBookmarks';
@@ -46,6 +47,31 @@ interface SessionHistoryEntry {
 
 function projectName(directory: string): string {
   return directory.split(/[\\/]/).filter(Boolean).at(-1) || 'Unknown project';
+}
+
+/**
+ * Resolve a session directory to its registered repository identity for the
+ * ACP tab header. Longest clone-path prefix wins, mirroring WorkspaceShell.
+ */
+function repositoryForDirectory(
+  repositories: AlexandriaEntry[],
+  directory: string,
+): { owner: string; name: string } | undefined {
+  let best: AlexandriaEntry | undefined;
+  let bestLen = -1;
+  for (const repository of repositories) {
+    for (const clone of extractLocalClones(repository) ?? []) {
+      if (
+        (directory === clone.path || directory.startsWith(`${clone.path}/`)) &&
+        clone.path.length > bestLen
+      ) {
+        best = repository;
+        bestLen = clone.path.length;
+      }
+    }
+  }
+  const github = best?.github;
+  return github ? { owner: github.owner, name: github.name } : undefined;
 }
 
 function timeAgo(timestamp: number): string {
@@ -192,6 +218,8 @@ const SessionRow: React.FC<{
   resuming: boolean;
   bookmarked: boolean;
   onResume: () => void;
+  /** OpenCode sessions can be opened in an ACP tab instead of a terminal. */
+  onOpenInAcp?: () => void;
   onToggleBookmark: () => void;
   onDelete?: () => void;
 }> = ({
@@ -199,6 +227,7 @@ const SessionRow: React.FC<{
   resuming,
   bookmarked,
   onResume,
+  onOpenInAcp,
   onToggleBookmark,
   onDelete,
 }) => {
@@ -228,12 +257,31 @@ const SessionRow: React.FC<{
     >
       <button
         type="button"
-        onClick={onResume}
+        onClick={(event) => {
+          if (onOpenInAcp && (event.metaKey || event.ctrlKey)) {
+            onOpenInAcp();
+            return;
+          }
+          onResume();
+        }}
+        onContextMenu={
+          onOpenInAcp
+            ? (event) => {
+                event.preventDefault();
+                onOpenInAcp();
+              }
+            : undefined
+        }
         disabled={resuming || !session.canResume}
         aria-label={
           session.canResume
             ? `Open ${session.agent} session: ${session.title}`
             : `${session.agent} IDE session: ${session.title} (cannot resume from CLI)`
+        }
+        title={
+          onOpenInAcp
+            ? 'Open in terminal — Cmd+Click or right-click opens in an ACP tab'
+            : undefined
         }
         style={{
           display: 'flex',
@@ -388,6 +436,9 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
   const [refreshToken, setRefreshToken] = useState(0);
   const { isBookmarked, toggleSessionBookmark, syncBookmarkDetails } =
     useSessionBookmarks();
+  // Null outside the tab provider (e.g. in tests): the ACP affordance is
+  // simply not offered there.
+  const workspaceTabs = useWorkspaceTabsOptional();
 
   const directories = useMemo(
     () =>
@@ -575,6 +626,24 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
     [isBookmarked],
   );
 
+  /**
+   * Open an OpenCode session in an ACP tab, resuming that exact session
+   * (the tab's saved sessionId drives `session/load`). Only offered when the
+   * tab provider is present.
+   */
+  const openSessionInAcp = useCallback(
+    (session: SessionHistoryEntry) => {
+      workspaceTabs?.openAcpTab({
+        directory: session.directory,
+        sessionId: session.id,
+        sessionTitle: session.title,
+        autoStart: true,
+        repository: repositoryForDirectory(repositories, session.directory),
+      });
+    },
+    [workspaceTabs, repositories],
+  );
+
   const deleteSession = useCallback(async () => {
     if (!deletingSession || deleteInProgress.current) return;
     deleteInProgress.current = true;
@@ -664,6 +733,11 @@ export const SessionsLeftPanel: React.FC<SessionsLeftPanelProps> = ({
             resuming={resumingId === session.id}
             bookmarked={bookmarked}
             onResume={() => void resume(session)}
+            onOpenInAcp={
+              session.agent === 'OpenCode' && session.canResume && workspaceTabs
+                ? () => openSessionInAcp(session)
+                : undefined
+            }
             onToggleBookmark={() => toggleSessionBookmark(session)}
             onDelete={() => {
               setDeleteError(null);
