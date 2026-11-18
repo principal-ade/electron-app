@@ -1100,6 +1100,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
           if (!entry.path) break;
           const repo = findEntryForDirectory(entry.path);
           openAcpTab({
+            tabId: entry.id,
             directory: entry.path,
             label: entry.label,
             agent: entry.acpAgent,

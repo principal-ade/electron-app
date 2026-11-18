@@ -375,6 +375,7 @@ export const IntegratedShell: React.FC = () => {
         label: payload.label,
         repository: payload.repository,
         autoStart: true,
+        newTab: payload.newTab,
       });
     });
   }, [openAcpTab]);

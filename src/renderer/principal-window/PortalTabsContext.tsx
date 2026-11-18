@@ -186,7 +186,9 @@ export interface WorkspaceTabsContextValue {
   /**
    * Open (or focus) an ACP agent tab for a local directory. `autoStart`
    * connects and creates a session immediately (Quick Open); it is a one-shot
-   * hint and is not persisted.
+   * hint and is not persisted. `newTab` appends a fresh tab even when this
+   * directory already has one (Quick Open's Command+Enter). `tabId` restores a
+   * specific tab identity (Home pins).
    */
   openAcpTab: (payload: {
     directory: string;
@@ -196,6 +198,8 @@ export interface WorkspaceTabsContextValue {
     sessionTitle?: AcpTab['sessionTitle'];
     autoStart?: boolean;
     repository?: AcpTab['repository'];
+    newTab?: boolean;
+    tabId?: string;
   }) => string;
   /**
    * Rename the active tab (or clear the rename with an empty name). Sets
@@ -242,6 +246,18 @@ export function useWorkspaceTabsOptional(): WorkspaceTabsContextValue | null {
 // the tab strip is blank until the user opens something (a repo profile, topic,
 // doc, terminal, …). The Sky View overlay is the landing surface; that is where
 // the "what needs attention" views live now.
+
+/**
+ * Unique tab id for an additional ACP session in the same directory. The id is
+ * the ACP session key, so tabs sharing a directory must not share an id.
+ */
+function uniqueAcpTabId(directory: string): string {
+  const suffix =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `acp-${directory}-${suffix}`;
+}
 
 function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
   const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
@@ -791,8 +807,14 @@ function useWorkspaceTabsValue(): WorkspaceTabsContextValue {
       sessionTitle?: AcpTab['sessionTitle'];
       autoStart?: boolean;
       repository?: AcpTab['repository'];
+      newTab?: boolean;
+      tabId?: string;
     }) => {
-      const id = `acp-${payload.directory}`;
+      const id =
+        payload.tabId ??
+        (payload.newTab
+          ? uniqueAcpTabId(payload.directory)
+          : `acp-${payload.directory}`);
       const fallbackLabel =
         payload.directory.split(/[\\/]/).filter(Boolean).pop() ?? 'ACP';
       setTabs((previous) => {

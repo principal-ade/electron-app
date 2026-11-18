@@ -65,6 +65,12 @@ export interface OpenAcpTabPayload {
   directory: string;
   /** Optional tab label (defaults to the directory basename). */
   label?: string;
+  /**
+   * Always append a fresh ACP tab instead of focusing the existing tab for
+   * this directory. Quick Open uses this so repeated Command+Enter gestures
+   * start independent agent sessions.
+   */
+  newTab?: boolean;
   /** Repository display metadata for the tab header. */
   repository?: {
     owner: string;

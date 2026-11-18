@@ -355,7 +355,14 @@ async function openAcpTabInPrincipal(
     return;
   }
 
-  const payload: OpenAcpTabPayload = { directory, label, repository };
+  const payload: OpenAcpTabPayload = {
+    directory,
+    label,
+    repository,
+    // Each Command+Enter gesture is a fresh agent session; never focus a tab
+    // already open for the same directory.
+    newTab: true,
+  };
   const send = () => {
     if (principal.window.isDestroyed()) return;
     principal.window.webContents.send(WindowEvent.OPEN_ACP_TAB, payload);

@@ -166,6 +166,7 @@ describe('Quick Open selection', () => {
         name: 'widgets',
         avatarUrl: 'https://github.com/acme.png',
       },
+      newTab: true,
     });
     expect(send).not.toHaveBeenCalledWith(
       WindowEvent.OPEN_TERMINAL_TAB,
@@ -190,6 +191,7 @@ describe('Quick Open selection', () => {
       directory: '/work/acme',
       label: 'acme',
       repository: undefined,
+      newTab: true,
     });
     expect(send).not.toHaveBeenCalledWith(
       WindowEvent.OPEN_TERMINAL_TAB,

@@ -91,7 +91,7 @@ test('bridge ranges update an existing source tab, including repeated identical 
   expect(result.current.activeTabId).toBe(firstId);
 });
 
-test('ACP tabs retain saved session ids when Home or Quick Open reopens them', () => {
+test('ACP tabs retain saved session ids when Home reopens them', () => {
   const { result } = renderHook(useWorkspaceTabs, { wrapper });
 
   act(() =>
@@ -121,6 +121,58 @@ test('ACP tabs retain saved session ids when Home or Quick Open reopens them', (
     sessionId: 'ses_saved',
     sessionTitle: 'Investigate ACP reconnect',
     autoStart: true,
+  });
+});
+
+test('Quick Open appends a new ACP tab instead of focusing the directory tab', () => {
+  const { result } = renderHook(useWorkspaceTabs, { wrapper });
+
+  let firstId = '';
+  act(() => {
+    firstId = result.current.openAcpTab({
+      directory: '/repo',
+      label: 'repo',
+      autoStart: true,
+    });
+  });
+
+  let secondId = '';
+  act(() => {
+    secondId = result.current.openAcpTab({
+      directory: '/repo',
+      label: 'repo',
+      autoStart: true,
+      newTab: true,
+    });
+  });
+
+  expect(secondId).not.toBe(firstId);
+  expect(result.current.tabs).toHaveLength(2);
+  expect(result.current.tabs.map((tab) => tab.id)).toEqual([firstId, secondId]);
+  expect(result.current.activeTabId).toBe(secondId);
+  expect(result.current.tabs[1]).toMatchObject({
+    contentType: 'acp',
+    directory: '/repo',
+    autoStart: true,
+  });
+});
+
+test('reopening a pinned ACP tab keeps the pinned tab id', () => {
+  const { result } = renderHook(useWorkspaceTabs, { wrapper });
+
+  act(() =>
+    result.current.openAcpTab({
+      tabId: 'acp-/repo-123',
+      directory: '/repo',
+      autoStart: true,
+    }),
+  );
+
+  expect(result.current.tabs).toHaveLength(1);
+  expect(result.current.tabs[0]).toMatchObject({
+    id: 'acp-/repo-123',
+    contentType: 'acp',
+    directory: '/repo',
   });
 });
 
