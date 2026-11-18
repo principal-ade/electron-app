@@ -722,6 +722,11 @@
   .acp-session__topic-preview {
     animation: none;
   }
+
+  .acp-session__thinking-dots span {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -753,12 +758,51 @@
   min-height: 54px;
   flex: 0 0 auto;
   align-items: stretch;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 350px);
+  grid-template-columns: minmax(0, 1fr) auto minmax(280px, 350px);
   gap: 12px;
   padding: 0 0 0 12px;
   border-bottom: 1px solid var(--acp-border);
   background: color-mix(in srgb, var(--acp-surface) 92%, transparent);
   backdrop-filter: blur(14px);
+}
+
+.acp-session__thinking-toggle {
+  display: inline-flex;
+  height: 28px;
+  align-items: center;
+  align-self: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--acp-border);
+  border-radius: 6px;
+  color: var(--acp-muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--acp-font-size-0) !important;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.acp-session__thinking-toggle:hover {
+  border-color: color-mix(in srgb, var(--acp-accent) 45%, var(--acp-border));
+  color: var(--acp-text);
+}
+
+.acp-session__thinking-toggle:focus-visible {
+  outline: 2px solid var(--acp-accent);
+  outline-offset: 2px;
+}
+
+.acp-session__thinking-toggle.is-active {
+  border-color: color-mix(in srgb, var(--acp-accent) 55%, var(--acp-border));
+  color: var(--acp-accent) !important;
+  background: color-mix(in srgb, var(--acp-accent) 12%, transparent);
+}
+
+.acp-session__thinking-toggle svg {
+  flex: 0 0 auto;
 }
 
 .acp-session__identity,
@@ -2197,6 +2241,64 @@
   color: var(--acp-accent);
 }
 
+.acp-session__thinking-summary {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-self: flex-start;
+  padding: 3px 4px;
+  color: var(--acp-muted);
+  font-size: var(--acp-font-size-0);
+  line-height: 1.5;
+}
+
+.acp-session__thinking-summary svg {
+  flex: 0 0 auto;
+  color: var(--acp-accent);
+}
+
+.acp-session__thinking-label {
+  display: inline-flex;
+  align-items: center;
+  color: var(--acp-text);
+  font-style: italic;
+}
+
+.acp-session__thinking-dots {
+  display: inline-flex;
+  margin-left: 1px;
+}
+
+.acp-session__thinking-dots span {
+  animation: acp-thinking-dot 1.2s ease-in-out infinite;
+  opacity: 0.25;
+}
+
+.acp-session__thinking-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.acp-session__thinking-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.acp-session__thinking-counts {
+  color: var(--acp-faint);
+}
+
+@keyframes acp-thinking-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+  }
+
+  30% {
+    opacity: 1;
+  }
+}
+
 .acp-session__tool {
   max-width: min(760px, 92%);
   padding: 9px 11px;
@@ -2504,6 +2606,14 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     padding: 10px 12px;
+  }
+
+  .acp-session__thinking-toggle {
+    justify-self: flex-start;
+  }
+
+  .acp-session__thinking-toggle span {
+    display: none;
   }
 
   .acp-session__activity-switch {

@@ -12,6 +12,8 @@ import {
   Building2,
   CheckCircle2,
   ChevronRight,
+  Eye,
+  EyeOff,
   Loader2,
   Network,
   PenTool,
@@ -49,7 +51,6 @@ import type {
 import type {
   AcpAgentDefinition,
   AcpArtifactAssociation,
-  AcpFileOperation,
   AcpHighlightItem,
   AcpModelSelection,
   AcpToolProcessingOutcome,
@@ -69,6 +70,7 @@ import { useRepoWatch } from '../../panels/home-panel/useRepoWatch';
 import { PierreFileView } from '../../panels/PierreFileView';
 import { gitStatusToHighlightLayers } from '../../utils/gitStatusHighlightLayers';
 import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
+import { buildAcpHighlightLayers } from './acpHighlightLayers';
 import { SubsystemModelTabContent } from '../../subsystem-models/SubsystemModelTabContent';
 import {
   ACPDrawingPreview,
@@ -180,6 +182,8 @@ export interface ACPSessionViewProps {
   messages: AcpChatMessage[];
   permissions: AcpPendingPermission[];
   isPrompting: boolean;
+  /** Collapse reasoning text into a compact "Thinking" activity line. */
+  hideThinking?: boolean;
   /** Model picker state from `session/new`, shown before the first message. */
   modelSelection?: AcpModelSelection;
   modelError?: string;
@@ -190,6 +194,7 @@ export interface ACPSessionViewProps {
   onLinkPullRequest?: (pullRequest: AcpLinkedPullRequest) => void;
   onUnlinkPullRequest?: () => void;
   onModelChange?: (model: string) => void;
+  onToggleHideThinking?: () => void;
   onAssociateArtifact?: (artifact: AcpArtifactAssociation) => void;
   onRemoveArtifact?: (artifact: AcpArtifactAssociation) => void;
   onSend: (
@@ -199,137 +204,6 @@ export interface ACPSessionViewProps {
   ) => void;
   onStop: () => void;
   onRespondPermission: (requestId: string, optionId: string | null) => void;
-}
-
-interface OperationLayerStyle {
-  label: string;
-  color: string;
-  priority: number;
-  opacity: number;
-  renderStrategy: 'fill' | 'border';
-  maxItems: number;
-}
-
-/**
- * Activity is bucketed by operation so writes/deletes stay legible even when
- * the session is dominated by reads. Priorities also decide which operation
- * wins when the same file appears in several calls.
- */
-const OPERATION_LAYER_STYLES: Record<AcpFileOperation, OperationLayerStyle> = {
-  delete: {
-    label: 'Deletes',
-    color: '#ef4444',
-    priority: 96,
-    opacity: 0.9,
-    renderStrategy: 'fill',
-    maxItems: 50,
-  },
-  write: {
-    label: 'Writes',
-    color: '#22c55e',
-    priority: 92,
-    opacity: 0.85,
-    renderStrategy: 'fill',
-    maxItems: 50,
-  },
-  create: {
-    label: 'New files',
-    color: '#10b981',
-    priority: 90,
-    opacity: 0.85,
-    renderStrategy: 'fill',
-    maxItems: 50,
-  },
-  edit: {
-    label: 'Edits',
-    color: '#f59e0b',
-    priority: 88,
-    opacity: 0.85,
-    renderStrategy: 'fill',
-    maxItems: 60,
-  },
-  move: {
-    label: 'Moves',
-    color: '#f97316',
-    priority: 86,
-    opacity: 0.8,
-    renderStrategy: 'fill',
-    maxItems: 40,
-  },
-  search: {
-    label: 'Searches',
-    color: '#8b5cf6',
-    priority: 60,
-    opacity: 0.5,
-    renderStrategy: 'border',
-    maxItems: 40,
-  },
-  list: {
-    label: 'Listings',
-    color: '#6366f1',
-    priority: 50,
-    opacity: 0.4,
-    renderStrategy: 'border',
-    maxItems: 20,
-  },
-  read: {
-    label: 'Reads',
-    color: '#3b82f6',
-    priority: 40,
-    opacity: 0.38,
-    renderStrategy: 'border',
-    maxItems: 30,
-  },
-  execute: {
-    label: 'Commands',
-    color: '#6b7280',
-    priority: 30,
-    opacity: 0.45,
-    renderStrategy: 'border',
-    maxItems: 25,
-  },
-};
-
-const OPERATION_ORDER: AcpFileOperation[] = [
-  'delete',
-  'write',
-  'create',
-  'edit',
-  'move',
-  'search',
-  'list',
-  'read',
-  'execute',
-];
-
-function operationFromTool(
-  call: Extract<AcpChatMessage, { role: 'tool' }>,
-): AcpFileOperation {
-  const kind = call.kind?.toLowerCase();
-  if (kind === 'read') return 'read';
-  if (kind === 'delete') return 'delete';
-  if (kind === 'move') return 'move';
-  if (kind === 'search') return 'search';
-  if (kind === 'edit') {
-    const name = call.name?.toLowerCase();
-    if (name === 'write') return 'write';
-    if (name === 'patch') return 'edit';
-    return 'edit';
-  }
-  return 'execute';
-}
-
-function callHighlightItems(
-  call: Extract<AcpChatMessage, { role: 'tool' }>,
-): AcpHighlightItem[] {
-  if (call.highlightItems && call.highlightItems.length > 0) {
-    return call.highlightItems;
-  }
-  const operation = operationFromTool(call);
-  return [...new Set(call.highlightPaths ?? [])].map((path) => ({
-    path,
-    operation,
-  }));
 }
 
 function toolStatusIcon(status?: string) {
@@ -897,112 +771,13 @@ function ACPToolCallsPanel({
     (call) => call.status === 'in_progress' || call.status === 'pending',
   );
   const activeToolCount = activeCount.length;
-  const highlightLayers = useMemo<HighlightLayer[]>(() => {
-    // Newest first so recency wins ties and each bucket caps to its newest
-    // items. Paths are lifted to the strongest operation that touched them.
-    const recentCalls = toolCalls.slice(-60).reverse();
-    const activePaths = new Set<string>();
-    const byOperation = new Map<
-      AcpFileOperation,
-      Map<string, AcpHighlightItem>
-    >();
-
-    for (const call of recentCalls) {
-      const isActive =
-        call.status === 'pending' || call.status === 'in_progress';
-      for (const item of callHighlightItems(call)) {
-        const operation = item.operation;
-        const operationPriority = OPERATION_LAYER_STYLES[operation].priority;
-        let superseded = false;
-        for (const [otherOperation, bucket] of byOperation) {
-          if (
-            otherOperation !== operation &&
-            bucket.has(item.path) &&
-            OPERATION_LAYER_STYLES[otherOperation].priority > operationPriority
-          ) {
-            superseded = true;
-            break;
-          }
-        }
-        if (superseded) continue;
-
-        for (const [otherOperation, bucket] of byOperation) {
-          if (
-            otherOperation !== operation &&
-            OPERATION_LAYER_STYLES[otherOperation].priority < operationPriority
-          ) {
-            bucket.delete(item.path);
-          }
-        }
-
-        const bucket = byOperation.get(operation) ?? new Map();
-        if (!bucket.has(item.path)) {
-          bucket.set(item.path, item);
-        }
-        byOperation.set(operation, bucket);
-        if (isActive) activePaths.add(item.path);
-      }
-    }
-
-    const layers: HighlightLayer[] = [];
-    for (const operation of OPERATION_ORDER) {
-      const bucket = byOperation.get(operation);
-      if (!bucket || bucket.size === 0) continue;
-      const style = OPERATION_LAYER_STYLES[operation];
-      layers.push({
-        id: `acp-operation-${operation}`,
-        name: style.label,
-        enabled: true,
-        color: style.color,
-        opacity: style.opacity,
-        priority: style.priority,
-        dynamic: true,
-        items: [...bucket.values()].slice(0, style.maxItems).map((item) => ({
-          path: item.path,
-          type: item.kind === 'directory' ? 'directory' : 'file',
-          renderStrategy: activePaths.has(item.path)
-            ? ('border' as const)
-            : style.renderStrategy,
-        })),
-      });
-    }
-
-    if (activePaths.size > 0) {
-      const activeItems = [...activePaths].flatMap((path) => {
-        for (const bucket of byOperation.values()) {
-          const item = bucket.get(path);
-          if (item) {
-            return [
-              {
-                path,
-                type:
-                  item.kind === 'directory'
-                    ? ('directory' as const)
-                    : ('file' as const),
-                renderStrategy: 'border' as const,
-              },
-            ];
-          }
-        }
-        return [];
-      });
-      if (activeItems.length > 0) {
-        layers.push({
-          id: 'acp-active-tool',
-          name: 'Active tool',
-          enabled: true,
-          color: theme.colors.primary,
-          opacity: 1,
-          borderWidth: 3,
-          priority: 120,
-          dynamic: true,
-          items: activeItems.slice(0, 40),
-        });
-      }
-    }
-
-    return layers;
-  }, [theme.colors.primary, toolCalls]);
+  const highlightLayers = useMemo<HighlightLayer[]>(
+    () =>
+      buildAcpHighlightLayers(toolCalls, {
+        activeColor: theme.colors.primary,
+      }),
+    [theme.colors.primary, toolCalls],
+  );
   const { gitStatusWithFiles } = useRepositoryGitStatus(workspacePath);
   const gitHighlightLayers = useMemo(
     () =>
@@ -1839,6 +1614,70 @@ function ACPFileDiffPreview({
   );
 }
 
+function ACPThinkingSummary({
+  active,
+  activeToolTitle,
+  permissionPending,
+  thoughtCount,
+  toolCallCount,
+}: {
+  active: boolean;
+  activeToolTitle?: string;
+  permissionPending: boolean;
+  thoughtCount: number;
+  toolCallCount: number;
+}) {
+  if (
+    !active &&
+    !permissionPending &&
+    thoughtCount === 0 &&
+    toolCallCount === 0
+  ) {
+    return null;
+  }
+
+  const label = permissionPending
+    ? 'Waiting for approval'
+    : activeToolTitle
+      ? `Running ${activeToolTitle}`
+      : active
+        ? 'Thinking'
+        : 'Thought process';
+  const counts = [
+    thoughtCount > 0
+      ? `${thoughtCount} thought${thoughtCount === 1 ? '' : 's'}`
+      : null,
+    toolCallCount > 0
+      ? `${toolCallCount} tool call${toolCallCount === 1 ? '' : 's'}`
+      : null,
+  ].filter((value): value is string => Boolean(value));
+
+  return (
+    <div
+      className="acp-session__thinking-summary"
+      role="status"
+      aria-live="polite"
+    >
+      <Sparkles size={13} aria-hidden="true" />
+      <span className="acp-session__thinking-label">
+        {label}
+        {active && !permissionPending ? (
+          <span className="acp-session__thinking-dots" aria-hidden="true">
+            <span>.</span>
+            <span>.</span>
+            <span>.</span>
+          </span>
+        ) : null}
+      </span>
+      {counts.length > 0 ? (
+        <span className="acp-session__thinking-counts">
+          {counts.join(' · ')}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function ACPSessionView({
   agent,
   workspacePath,
@@ -1847,6 +1686,7 @@ export function ACPSessionView({
   messages,
   permissions,
   isPrompting,
+  hideThinking = true,
   modelSelection,
   modelError,
   sessionArtifacts = [],
@@ -1854,6 +1694,7 @@ export function ACPSessionView({
   onLinkPullRequest,
   onUnlinkPullRequest,
   onModelChange,
+  onToggleHideThinking,
   onAssociateArtifact,
   onRemoveArtifact,
   onSend,
@@ -2219,6 +2060,12 @@ export function ACPSessionView({
   const hasAgentActivity = currentPromptMessages.some(
     (message) => message.role === 'agent' || message.role === 'thought',
   );
+  const currentPromptThoughtCount = currentPromptMessages.filter(
+    (message) => message.role === 'thought',
+  ).length;
+  const currentPromptToolCallCount = currentPromptMessages.filter(
+    (message) => message.role === 'tool',
+  ).length;
   const activityStatus =
     permissions.length > 0
       ? 'Waiting for approval'
@@ -2373,6 +2220,22 @@ export function ACPSessionView({
     >
       <header className="acp-session__topbar">
         <ACPWorkspaceIdentity sessionTitle={sessionTitle} />
+        <button
+          className={`acp-session__thinking-toggle${
+            hideThinking ? ' is-active' : ''
+          }`}
+          type="button"
+          aria-pressed={hideThinking}
+          title={
+            hideThinking
+              ? 'Show the agent’s thinking text'
+              : 'Hide the agent’s thinking text and show a compact activity summary'
+          }
+          onClick={onToggleHideThinking}
+        >
+          {hideThinking ? <EyeOff size={14} /> : <Eye size={14} />}
+          <span>Thinking</span>
+        </button>
         <div
           className="acp-session__activity-switch"
           role="tablist"
@@ -2504,6 +2367,7 @@ export function ACPSessionView({
                       </div>
                     );
                   case 'thought':
+                    if (hideThinking) return null;
                     return (
                       <div className="acp-session__thought" key={message.id}>
                         <Sparkles size={12} />
@@ -2526,7 +2390,15 @@ export function ACPSessionView({
                 }
               })}
 
-              {activityStatus ? (
+              {hideThinking ? (
+                <ACPThinkingSummary
+                  active={isPrompting}
+                  activeToolTitle={activeToolCall?.title}
+                  permissionPending={permissions.length > 0}
+                  thoughtCount={currentPromptThoughtCount}
+                  toolCallCount={currentPromptToolCallCount}
+                />
+              ) : activityStatus ? (
                 <div
                   className="acp-session__activity-status"
                   role="status"

@@ -36,6 +36,7 @@
     "icons:build:windows": "npm run icons:generate",
     "icons:build:linux": "npm run icons:generate",
     "validate:deps": "node scripts/validate-dependencies.js",
+    "audit:acp-highlights": "node scripts/collect-acp-highlight-corpus.mjs",
     "build": "npm run validate:deps && node .erb/scripts/copy-native-deps.js && npm run icons:build && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
     "build:mac": "npm run validate:deps && node .erb/scripts/copy-native-deps.js && npm run icons:build:mac && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
     "build:windows": "npm run validate:deps && npm run icons:build:windows && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",

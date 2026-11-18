@@ -20,6 +20,7 @@ import {
 } from '../../../shared/main-process-api-interfaces/AcpAPI';
 import type { AcpLinkedPullRequest, AcpTab } from '../../events/portalTabs';
 import { AcpService } from '../../main-process-api/AcpService';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import {
   acpArtifactKey,
   dedupeAcpArtifacts,
@@ -456,6 +457,7 @@ export function ACPTabContent({
     AcpModelSelection | undefined
   >();
   const [modelError, setModelError] = useState<string | undefined>();
+  const [hideThinking, setHideThinking] = useState(true);
 
   const messageIdRef = useRef(0);
   const generationRef = useRef(0);
@@ -498,6 +500,30 @@ export function ACPTabContent({
   useEffect(() => {
     sessionIdRef.current = sessionId;
   }, [sessionId]);
+
+  // "Hide thinking" is a persisted ACP preference so the setting follows the
+  // user across tabs and sessions.
+  useEffect(() => {
+    let isMounted = true;
+    const apply = (preferences: { acpHideThinking?: boolean }) => {
+      // Hidden unless the user explicitly opted into showing thought text.
+      if (isMounted) setHideThinking(preferences.acpHideThinking !== false);
+    };
+    void UserPreferencesService.getPreferences().then(apply);
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated(apply);
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const toggleHideThinking = useCallback(() => {
+    const next = !hideThinking;
+    setHideThinking(next);
+    void UserPreferencesService.updatePreferences({
+      acpHideThinking: next,
+    });
+  }, [hideThinking]);
 
   const agent = getAcpAgent(agentId);
 
@@ -914,6 +940,7 @@ export function ACPTabContent({
         messages={messages}
         permissions={permissions}
         isPrompting={isPrompting}
+        hideThinking={hideThinking}
         modelSelection={modelSelection}
         modelError={modelError}
         sessionArtifacts={artifacts}
@@ -921,6 +948,7 @@ export function ACPTabContent({
         onLinkPullRequest={linkPullRequest}
         onUnlinkPullRequest={unlinkPullRequest}
         onModelChange={(model) => void changeModel(model)}
+        onToggleHideThinking={toggleHideThinking}
         onAssociateArtifact={(artifact) => void associateArtifact(artifact)}
         onRemoveArtifact={(artifact) => void removeArtifact(artifact)}
         onSend={(text, reference, stagedArtifacts) =>

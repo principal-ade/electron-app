@@ -155,6 +155,14 @@ export interface UserPreferences {
   /** Automatically commit changes when stopping agent sessions */
   autoCommitOnStop?: boolean;
 
+  // ACP conversation preferences
+  /**
+   * Collapse the agent's reasoning in ACP tabs into a single "Thinking" line
+   * with activity counts, instead of streaming each thought (default: true).
+   * Set to `false` to always show the raw thought text.
+   */
+  acpHideThinking?: boolean;
+
   // UI preferences
   defaultView?: 'projects' | 'customization';
   showRepoFilterBar?: boolean; // Show/hide the filter bar in repos view
@@ -362,9 +370,7 @@ export interface WorkspaceTabsSnapshot {
 }
 
 export type AgentSessionBookmarkProvider =
-  | 'OpenCode'
-  | 'Claude Code'
-  | 'Cursor';
+  'OpenCode' | 'Claude Code' | 'Cursor';
 
 /** Enough metadata to show and reopen an agent-history session from Home. */
 export interface AgentSessionBookmark {

@@ -122,6 +122,57 @@ export const ToolCallActivity: Story = {
   },
 };
 
+/** A collapsed reasoning trail: thought text is hidden behind an activity summary. */
+export const HiddenThinking: Story = {
+  args: {
+    agent: getAcpAgent('opencode'),
+    workspacePath: '~/Developer/principal-ade/electron-app',
+    repository: { owner: 'principal-ai', name: 'electron-app' },
+    messages: [
+      {
+        id: 'user-hide-thinking',
+        role: 'user',
+        text: 'Trace how ACP tool calls reach the chat view.',
+      },
+      {
+        id: 'thought-hide-1',
+        role: 'thought',
+        text: 'I should start with the session event subscription.',
+      },
+      {
+        id: 'tool-hide-1',
+        role: 'tool',
+        toolCallId: 'call-hide-1',
+        title: 'Searching ACP session handlers',
+        name: 'grep',
+        kind: 'search',
+        status: 'completed',
+      },
+      {
+        id: 'thought-hide-2',
+        role: 'thought',
+        text: 'The subscription forwards updates through applyUpdate.',
+      },
+      {
+        id: 'tool-hide-2',
+        role: 'tool',
+        toolCallId: 'call-hide-2',
+        title: 'Reading updated render logic',
+        name: 'read_file',
+        kind: 'read',
+        status: 'in_progress',
+      },
+    ],
+    permissions: [],
+    isPrompting: true,
+    hideThinking: true,
+    onToggleHideThinking: () => {},
+    onSend: () => {},
+    onStop: () => {},
+    onRespondPermission: () => {},
+  },
+};
+
 /** A pull request attached to the tab, shown in the Artifacts panel. */
 export const LinkedPullRequest: Story = {
   args: {

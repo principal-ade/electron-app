@@ -17,6 +17,7 @@ import { AcpService } from '../../main-process-api/AcpService';
 import { ACP_ARTIFACT_MIME } from '../../utils/acpArtifactDrag';
 import { SubsystemModelService } from '../../main-process-api/SubsystemModelService';
 import { TopicService } from '../../main-process-api/TopicService';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { getDrawingSummary } from '../../drawings-view/drawingsStorage';
 import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 import { useFileTree } from '@pierre/trees/react';
@@ -44,6 +45,14 @@ jest.mock('../../main-process-api/AcpService', () => ({
     respondPermission: jest.fn(),
     disconnect: jest.fn(),
     onSessionEvent: jest.fn(),
+  },
+}));
+
+jest.mock('../../main-process-api/UserPreferencesService', () => ({
+  UserPreferencesService: {
+    getPreferences: jest.fn(),
+    updatePreferences: jest.fn(),
+    onPreferencesUpdated: jest.fn(),
   },
 }));
 
@@ -245,6 +254,9 @@ jest.mock('../../subsystem-models/SubsystemModelTabContent', () => ({
 }));
 
 const mocked = AcpService as jest.Mocked<typeof AcpService>;
+const mockedPreferences = UserPreferencesService as jest.Mocked<
+  typeof UserPreferencesService
+>;
 const mockedTopicService = TopicService as jest.Mocked<typeof TopicService>;
 const mockedSubsystemModelService = SubsystemModelService as jest.Mocked<
   typeof SubsystemModelService
@@ -320,6 +332,9 @@ beforeEach(() => {
   mocked.cancel.mockResolvedValue();
   mocked.respondPermission.mockResolvedValue();
   mocked.disconnect.mockResolvedValue();
+  mockedPreferences.getPreferences.mockResolvedValue({});
+  mockedPreferences.updatePreferences.mockResolvedValue();
+  mockedPreferences.onPreferencesUpdated.mockReturnValue(() => {});
   mockedRepositoryMonitoring.getFileTree.mockResolvedValue({} as never);
   mockedBuildCityData.mockResolvedValue({} as never);
   mockedUseRepositoryGitStatus.mockReturnValue({
@@ -542,6 +557,9 @@ describe('ACPTabContent', () => {
   });
 
   it('renders streamed updates and sends prompts for this tab only', async () => {
+    mockedPreferences.getPreferences.mockResolvedValue({
+      acpHideThinking: false,
+    });
     const onSessionTitleChange = jest.fn();
     render(
       <ACPTabContent
@@ -686,6 +704,90 @@ describe('ACPTabContent', () => {
       'true',
     );
     expect(screen.queryByText('Thinking…')).not.toBeInTheDocument();
+  });
+
+  it('hides thought text behind a compact summary by default', async () => {
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Pick model');
+
+    fireEvent.change(screen.getByLabelText('Message the agent'), {
+      target: { value: 'Investigate the bridge' },
+    });
+    mocked.prompt.mockImplementation(() => new Promise(() => {}));
+    fireEvent.keyDown(screen.getByLabelText('Message the agent'), {
+      key: 'Enter',
+    });
+    await waitFor(() => expect(mocked.prompt).toHaveBeenCalled());
+
+    const toggle = screen.getByRole('button', { name: 'Thinking' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'agent_thought_chunk',
+            content: { type: 'text', text: 'secret reasoning' },
+          },
+        },
+      });
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-summary-test',
+            title: 'Reading files',
+            status: 'in_progress',
+          },
+        },
+      });
+    });
+
+    expect(screen.queryByText('secret reasoning')).not.toBeInTheDocument();
+    expect(screen.getByText(/1 thought · 1 tool call/)).toBeInTheDocument();
+    expect(screen.getByText('Running Reading files')).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(mockedPreferences.updatePreferences).toHaveBeenCalledWith({
+      acpHideThinking: false,
+    });
+    expect(screen.getByText('secret reasoning')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/1 thought · 1 tool call/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows thought text when the preference explicitly opts out', async () => {
+    mockedPreferences.getPreferences.mockResolvedValue({
+      acpHideThinking: false,
+    });
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Pick model');
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Thinking' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      ),
+    );
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'agent_thought_chunk',
+            content: { type: 'text', text: 'visible reasoning' },
+          },
+        },
+      });
+    });
+
+    expect(screen.getByText('visible reasoning')).toBeInTheDocument();
   });
 
   it('lists ACP tool calls in the activity panel and updates their status', async () => {
