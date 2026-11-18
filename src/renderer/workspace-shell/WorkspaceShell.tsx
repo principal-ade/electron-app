@@ -139,6 +139,7 @@ import type {
   SkillTab,
   LocalhostBrowserTab,
   OpenBotChatTab,
+  AcpLinkedPullRequest,
   AcpTab,
   BuildConfigurationTab as BuildConfigurationTabModel,
   SpecTab,
@@ -337,6 +338,18 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         previous.map((tab) =>
           tab.id === tabId && tab.contentType === 'acp'
             ? { ...tab, sessionId }
+            : tab,
+        ),
+      );
+    },
+    [setTabs],
+  );
+  const handleAcpPullRequestChange = useCallback(
+    (tabId: string, pullRequest: AcpLinkedPullRequest | null) => {
+      setTabs((previous) =>
+        previous.map((tab) =>
+          tab.id === tabId && tab.contentType === 'acp'
+            ? { ...tab, pullRequest: pullRequest ?? undefined }
             : tab,
         ),
       );
@@ -758,6 +771,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onSessionTitleChange={(title) =>
                 handleAcpSessionTitleChange(acpTab.id, title)
               }
+              onPullRequestChange={(pullRequest) =>
+                handleAcpPullRequestChange(acpTab.id, pullRequest)
+              }
             />
           );
         }
@@ -771,6 +787,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       handleOpenTopicProject,
       handleAcpSessionIdChange,
       handleAcpSessionTitleChange,
+      handleAcpPullRequestChange,
       openModelFromReference,
       openTopicFromReference,
       openSketchFromReference,

@@ -229,6 +229,19 @@ export interface BuildConfigurationTab extends BaseTab {
 }
 
 /**
+ * A pull request the user linked to an ACP tab. Deliberately small: the tab
+ * only needs enough to render a clickable chip, and the link is independent of
+ * the watched-PR store in `PullRequestWatchAPI`.
+ */
+export interface AcpLinkedPullRequest {
+  owner: string;
+  repo: string;
+  number: number;
+  /** Canonical GitHub URL for the pull request. */
+  url: string;
+}
+
+/**
  * ACP agent tab — one local agent session scoped to a directory. The body
  * (`ACPTabContent`) owns the connection lifecycle; the tab carries the
  * directory, selected agent, resumable ACP session ID, and display metadata.
@@ -249,6 +262,8 @@ export interface AcpTab extends BaseTab {
     name: string;
     avatarUrl?: string;
   };
+  /** Pull request the user attached for quick access from the session header. */
+  pullRequest?: AcpLinkedPullRequest;
 }
 
 /**

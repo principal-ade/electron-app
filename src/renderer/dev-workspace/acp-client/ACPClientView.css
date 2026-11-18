@@ -806,6 +806,96 @@
   white-space: nowrap;
 }
 
+.acp-session__artifact-open > .acp-session__artifact-avatar {
+  display: grid;
+  flex-direction: initial;
+  gap: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 9px;
+  letter-spacing: -0.02em;
+}
+
+.acp-session__artifact-open--link {
+  color: var(--acp-muted);
+}
+
+.acp-session__artifact-open--link > svg {
+  color: var(--acp-muted);
+}
+
+.acp-session__artifact-open--link:hover > svg {
+  color: var(--acp-accent);
+}
+
+.acp-session__artifact-link-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.acp-session__artifact-link-form label {
+  color: var(--acp-muted);
+  font-size: var(--acp-font-size-0);
+}
+
+.acp-session__artifact-link-form code {
+  color: var(--acp-text);
+}
+
+.acp-session__artifact-link-form input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--acp-border);
+  border-radius: 7px;
+  color: var(--acp-text);
+  background: var(--acp-bg);
+  font: inherit;
+  font-size: var(--acp-font-size-0);
+}
+
+.acp-session__artifact-link-form input:focus {
+  border-color: var(--acp-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--acp-accent) 20%, transparent);
+}
+
+.acp-session__artifact-link-error {
+  margin: 0;
+  color: var(--acp-error);
+  font-size: var(--acp-font-size-0);
+}
+
+.acp-session__artifact-link-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.acp-session__artifact-link-actions button {
+  padding: 5px 10px;
+  border: 1px solid var(--acp-border);
+  border-radius: 6px;
+  color: var(--acp-muted) !important;
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--acp-font-size-0) !important;
+}
+
+.acp-session__artifact-link-actions button:hover {
+  color: var(--acp-text) !important;
+  background: var(--acp-hover);
+}
+
+.acp-session__artifact-link-actions button.is-primary {
+  border-color: var(--acp-accent);
+  color: var(--acp-text-on-primary) !important;
+  background: var(--acp-accent);
+}
+
 .acp-session__workspace {
   display: grid;
   min-height: 0;

@@ -77,6 +77,8 @@ import {
 } from './ACPDrawingPreview';
 import { ACPModelPicker } from './ACPModelPicker';
 import type { SubsystemTrailSelection } from '../../subsystem-models/SubsystemModelGraph';
+import type { AcpLinkedPullRequest } from '../../events/portalTabs';
+import { ACPPullRequestArtifact } from './ACPPullRequestArtifact';
 import { ACPWorkspaceIdentity } from './ACPWorkspaceIdentity';
 import { useAcpArtifactDrop } from './useAcpArtifactDrop';
 import type { AcpArtifactDragHandlers } from './useAcpArtifactDrop';
@@ -183,6 +185,10 @@ export interface ACPSessionViewProps {
   modelError?: string;
   /** User-attached artifacts persisted for this ACP session. */
   sessionArtifacts?: AcpArtifactAssociation[];
+  /** Pull request linked to this tab for one-click access. */
+  pullRequest?: AcpLinkedPullRequest;
+  onLinkPullRequest?: (pullRequest: AcpLinkedPullRequest) => void;
+  onUnlinkPullRequest?: () => void;
   onModelChange?: (model: string) => void;
   onAssociateArtifact?: (artifact: AcpArtifactAssociation) => void;
   onRemoveArtifact?: (artifact: AcpArtifactAssociation) => void;
@@ -671,6 +677,9 @@ function ACPToolCallsPanel({
   activityView,
   selectedArtifact,
   sessionArtifacts,
+  pullRequest,
+  onLinkPullRequest,
+  onUnlinkPullRequest,
   onRemoveArtifact,
   onOpenArtifact,
   onOpenFilePreview,
@@ -685,6 +694,9 @@ function ACPToolCallsPanel({
   activityView: ACPActivityView;
   selectedArtifact: AcpArtifactRef | null;
   sessionArtifacts: AcpArtifactAssociation[];
+  pullRequest?: AcpLinkedPullRequest;
+  onLinkPullRequest?: (pullRequest: AcpLinkedPullRequest) => void;
+  onUnlinkPullRequest?: () => void;
   onRemoveArtifact?: (artifact: AcpArtifactAssociation) => void;
   onOpenArtifact: (artifact: AcpArtifactRef) => void;
   onOpenFilePreview: (relPath: string) => void;
@@ -1168,6 +1180,84 @@ function ACPToolCallsPanel({
             </>
           ) : (
             <div className="acp-session__artifact-activity">
+              <ol className="acp-session__artifact-list">
+                {pullRequest ? (
+                  <ACPPullRequestArtifact
+                    pullRequest={pullRequest}
+                    ownerAvatarUrl={
+                      repository &&
+                      repository.owner.toLowerCase() ===
+                        pullRequest.owner.toLowerCase()
+                        ? repository.avatarUrl
+                        : undefined
+                    }
+                    onLink={(next) => onLinkPullRequest?.(next)}
+                    onUnlink={() => onUnlinkPullRequest?.()}
+                  />
+                ) : null}
+                {artifacts.map(({ kind, id, openCount, source }) => {
+                  const isSelected =
+                    selectedArtifact?.kind === kind &&
+                    selectedArtifact.id === id;
+                  const title = artifactTitle(kind, id, {
+                    ...associatedTitles,
+                    ...artifactTitles,
+                  });
+                  return (
+                    <li
+                      className="acp-session__artifact-card"
+                      key={artifactKey(kind, id)}
+                    >
+                      <button
+                        className={`acp-session__artifact-open${isSelected ? ' is-selected' : ''}${source === 'user' ? ' has-remove' : ''}`}
+                        type="button"
+                        onClick={() => onOpenArtifact({ kind, id, title })}
+                        aria-pressed={isSelected}
+                        aria-label={
+                          isSelected
+                            ? `Close ${artifactKindLabel(kind)} ${title} preview`
+                            : `Open ${artifactKindLabel(kind)} ${title} in chat`
+                        }
+                      >
+                        {kind === 'topic' ? (
+                          <TopicsIcon size={16} strokeWidth={1.5} />
+                        ) : kind === 'drawing' ? (
+                          <PenTool size={16} strokeWidth={1.5} />
+                        ) : (
+                          <Network size={16} strokeWidth={1.5} />
+                        )}
+                        <span>
+                          <strong>{title}</strong>
+                          <small>
+                            {artifactKindLabel(kind)}
+                            {source === 'user' ? ' · attached' : ''}
+                            {openCount > 1
+                              ? ` · opened ${openCount} times`
+                              : ''}
+                          </small>
+                        </span>
+                      </button>
+                      {source === 'user' && onRemoveArtifact ? (
+                        <button
+                          className="acp-session__artifact-remove"
+                          type="button"
+                          aria-label={`Remove ${artifactKindLabel(kind)} ${title} from this session`}
+                          title="Remove from this session"
+                          onClick={() => onRemoveArtifact({ kind, id, title })}
+                        >
+                          <X size={13} />
+                        </button>
+                      ) : null}
+                    </li>
+                  );
+                })}
+                {!pullRequest ? (
+                  <ACPPullRequestArtifact
+                    onLink={(next) => onLinkPullRequest?.(next)}
+                    onUnlink={() => onUnlinkPullRequest?.()}
+                  />
+                ) : null}
+              </ol>
               {artifacts.length === 0 ? (
                 <div
                   className="acp-session__tool-panel-empty acp-session__tool-panel-empty--activity"
@@ -1179,68 +1269,7 @@ function ACPToolCallsPanel({
                     Principal MCP also appear here.
                   </span>
                 </div>
-              ) : (
-                <ol className="acp-session__artifact-list">
-                  {artifacts.map(({ kind, id, openCount, source }) => {
-                    const isSelected =
-                      selectedArtifact?.kind === kind &&
-                      selectedArtifact.id === id;
-                    const title = artifactTitle(kind, id, {
-                      ...associatedTitles,
-                      ...artifactTitles,
-                    });
-                    return (
-                      <li
-                        className="acp-session__artifact-card"
-                        key={artifactKey(kind, id)}
-                      >
-                        <button
-                          className={`acp-session__artifact-open${isSelected ? ' is-selected' : ''}${source === 'user' ? ' has-remove' : ''}`}
-                          type="button"
-                          onClick={() => onOpenArtifact({ kind, id, title })}
-                          aria-pressed={isSelected}
-                          aria-label={
-                            isSelected
-                              ? `Close ${artifactKindLabel(kind)} ${title} preview`
-                              : `Open ${artifactKindLabel(kind)} ${title} in chat`
-                          }
-                        >
-                          {kind === 'topic' ? (
-                            <TopicsIcon size={16} strokeWidth={1.5} />
-                          ) : kind === 'drawing' ? (
-                            <PenTool size={16} strokeWidth={1.5} />
-                          ) : (
-                            <Network size={16} strokeWidth={1.5} />
-                          )}
-                          <span>
-                            <strong>{title}</strong>
-                            <small>
-                              {artifactKindLabel(kind)}
-                              {source === 'user' ? ' · attached' : ''}
-                              {openCount > 1
-                                ? ` · opened ${openCount} times`
-                                : ''}
-                            </small>
-                          </span>
-                        </button>
-                        {source === 'user' && onRemoveArtifact ? (
-                          <button
-                            className="acp-session__artifact-remove"
-                            type="button"
-                            aria-label={`Remove ${artifactKindLabel(kind)} ${title} from this session`}
-                            title="Remove from this session"
-                            onClick={() =>
-                              onRemoveArtifact({ kind, id, title })
-                            }
-                          >
-                            <X size={13} />
-                          </button>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ol>
-              )}
+              ) : null}
             </div>
           )}
           {/* The tree drops up over the tool/artifact activity instead of
@@ -1821,6 +1850,9 @@ export function ACPSessionView({
   modelSelection,
   modelError,
   sessionArtifacts = [],
+  pullRequest,
+  onLinkPullRequest,
+  onUnlinkPullRequest,
   onModelChange,
   onAssociateArtifact,
   onRemoveArtifact,
@@ -2715,6 +2747,9 @@ export function ACPSessionView({
           activityView={activityView}
           selectedArtifact={selectedArtifact}
           sessionArtifacts={sessionArtifacts}
+          pullRequest={pullRequest}
+          onLinkPullRequest={onLinkPullRequest}
+          onUnlinkPullRequest={onUnlinkPullRequest}
           onRemoveArtifact={onRemoveArtifact}
           onOpenArtifact={openArtifactPreview}
           onOpenFilePreview={openFilePreview}

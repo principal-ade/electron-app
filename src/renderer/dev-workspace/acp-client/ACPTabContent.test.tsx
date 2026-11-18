@@ -334,6 +334,60 @@ beforeEach(() => {
 });
 
 describe('ACPTabContent', () => {
+  it('links a pull request from the Artifacts panel', async () => {
+    const onPullRequestChange = jest.fn();
+    render(
+      <ACPTabContent
+        tab={makeTab({ autoStart: true })}
+        onPullRequestChange={onPullRequestChange}
+      />,
+    );
+    await screen.findByText('Pick model');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Link pull request' }));
+    fireEvent.change(
+      screen.getByLabelText('GitHub pull request URL or owner/repo#123'),
+      { target: { value: 'acme/widgets#42' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Link' }));
+
+    expect(onPullRequestChange).toHaveBeenCalledWith({
+      owner: 'acme',
+      repo: 'widgets',
+      number: 42,
+      url: 'https://github.com/acme/widgets/pull/42',
+    });
+  });
+
+  it('shows and unlinks a linked pull request artifact', async () => {
+    const onPullRequestChange = jest.fn();
+    render(
+      <ACPTabContent
+        tab={makeTab({
+          autoStart: true,
+          pullRequest: {
+            owner: 'acme',
+            repo: 'widgets',
+            number: 42,
+            url: 'https://github.com/acme/widgets/pull/42',
+          },
+        })}
+        onPullRequestChange={onPullRequestChange}
+      />,
+    );
+    await screen.findByText('Pick model');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Artifacts' }));
+    expect(
+      screen.getByRole('button', { name: 'Open acme/widgets#42 on GitHub' }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Unlink acme/widgets#42' }),
+    );
+    expect(onPullRequestChange).toHaveBeenCalledWith(null);
+  });
+
   it('connects and starts a session automatically for Quick Open tabs', async () => {
     render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
     expect(screen.queryByText('Choose an agent')).not.toBeInTheDocument();

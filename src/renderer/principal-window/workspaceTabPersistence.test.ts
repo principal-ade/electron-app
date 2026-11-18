@@ -105,6 +105,12 @@ describe('workspace tab persistence', () => {
       sessionTitle: 'Investigate ACP reconnect',
       autoStart: true,
       repository: { owner: 'acme', name: 'widgets' },
+      pullRequest: {
+        owner: 'acme',
+        repo: 'widgets',
+        number: 42,
+        url: 'https://github.com/acme/widgets/pull/42',
+      },
     } as WorkspaceTab;
 
     const snapshot = createWorkspaceTabsSnapshot([tab], tab.id);
@@ -118,8 +124,37 @@ describe('workspace tab persistence', () => {
       agent: 'opencode',
       sessionId: 'ses_saved',
       sessionTitle: 'Investigate ACP reconnect',
+      pullRequest: {
+        owner: 'acme',
+        repo: 'widgets',
+        number: 42,
+        url: 'https://github.com/acme/widgets/pull/42',
+      },
     });
     expect(restored?.tabs[0]).not.toHaveProperty('autoStart');
+  });
+
+  it('drops ACP tabs with a malformed linked pull request', () => {
+    const restored = restoreWorkspaceTabsSnapshot(
+      {
+        version: 1,
+        activeTabId: 'acp-bad-pr',
+        tabs: [
+          {
+            id: 'acp-bad-pr',
+            contentType: 'acp',
+            label: 'Bad PR',
+            closable: true,
+            directory: '/repo',
+            pullRequest: { owner: 'acme', repo: 'widgets' },
+          },
+        ],
+      },
+      [],
+    );
+
+    expect(restored?.tabs).toEqual([]);
+    expect(restored?.activeTabId).toBeNull();
   });
 
   it('drops ACP tabs without a directory', () => {

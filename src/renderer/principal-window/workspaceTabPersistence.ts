@@ -59,6 +59,18 @@ function optionalStringFields(
   return fields.every((field) => tab[field] === undefined || isString(tab[field]));
 }
 
+function isAcpLinkedPullRequest(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    isString(value.owner) &&
+    isString(value.repo) &&
+    typeof value.number === 'number' &&
+    Number.isSafeInteger(value.number) &&
+    value.number > 0 &&
+    isString(value.url)
+  );
+}
+
 /**
  * Remove renderer/runtime state before saving. In particular, prepared request
  * definitions live in secure storage, not user preferences; only their stable
@@ -225,7 +237,9 @@ function restoreTab(
           'label',
           'sessionId',
           'sessionTitle',
-        ])
+        ]) ||
+        (tab.pullRequest !== undefined &&
+          !isAcpLinkedPullRequest(tab.pullRequest))
       ) {
         return null;
       }

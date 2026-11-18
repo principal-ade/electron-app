@@ -18,7 +18,7 @@ import {
   type AcpAgentId,
   type AcpArtifactAssociation,
 } from '../../../shared/main-process-api-interfaces/AcpAPI';
-import type { AcpTab } from '../../events/portalTabs';
+import type { AcpLinkedPullRequest, AcpTab } from '../../events/portalTabs';
 import { AcpService } from '../../main-process-api/AcpService';
 import {
   acpArtifactKey,
@@ -42,6 +42,7 @@ export interface ACPTabContentProps {
   tab: AcpTab;
   onSessionIdChange?: (sessionId: string) => void;
   onSessionTitleChange?: (title: string | null) => void;
+  onPullRequestChange?: (pullRequest: AcpLinkedPullRequest | null) => void;
 }
 
 function formatError(error: unknown): string {
@@ -435,6 +436,7 @@ export function ACPTabContent({
   tab,
   onSessionIdChange,
   onSessionTitleChange,
+  onPullRequestChange,
 }: ACPTabContentProps) {
   const [viewState, setViewState] = useState<ACPClientViewState>('setup');
   const [agentId, setAgentId] = useState<AcpAgentId>(
@@ -498,6 +500,17 @@ export function ACPTabContent({
   }, [sessionId]);
 
   const agent = getAcpAgent(agentId);
+
+  const linkPullRequest = useCallback(
+    (pullRequest: AcpLinkedPullRequest) => {
+      onPullRequestChange?.(pullRequest);
+    },
+    [onPullRequestChange],
+  );
+
+  const unlinkPullRequest = useCallback(() => {
+    onPullRequestChange?.(null);
+  }, [onPullRequestChange]);
 
   const setPrompting = useCallback((value: boolean) => {
     isPromptingRef.current = value;
@@ -904,6 +917,9 @@ export function ACPTabContent({
         modelSelection={modelSelection}
         modelError={modelError}
         sessionArtifacts={artifacts}
+        pullRequest={tab.pullRequest}
+        onLinkPullRequest={linkPullRequest}
+        onUnlinkPullRequest={unlinkPullRequest}
         onModelChange={(model) => void changeModel(model)}
         onAssociateArtifact={(artifact) => void associateArtifact(artifact)}
         onRemoveArtifact={(artifact) => void removeArtifact(artifact)}

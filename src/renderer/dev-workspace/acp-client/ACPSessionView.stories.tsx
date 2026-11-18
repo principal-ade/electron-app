@@ -122,6 +122,29 @@ export const ToolCallActivity: Story = {
   },
 };
 
+/** A pull request attached to the tab, shown in the Artifacts panel. */
+export const LinkedPullRequest: Story = {
+  args: {
+    agent: getAcpAgent('opencode'),
+    workspacePath: '~/Developer/principal-ade/electron-app',
+    repository: { owner: 'principal-ade', name: 'electron-app' },
+    messages,
+    permissions: [],
+    isPrompting: false,
+    pullRequest: {
+      owner: 'principal-ade',
+      repo: 'electron-app',
+      number: 412,
+      url: 'https://github.com/principal-ade/electron-app/pull/412',
+    },
+    onLinkPullRequest: () => {},
+    onUnlinkPullRequest: () => {},
+    onSend: () => {},
+    onStop: () => {},
+    onRespondPermission: () => {},
+  },
+};
+
 /** Empty session with the searchable model picker shown before the first message. */
 export const ModelPicker: Story = {
   args: {
