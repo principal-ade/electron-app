@@ -15,9 +15,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type {
-  ProcessEntry,
-  ProcessRepo,
+import {
+  detectedProcessId,
+  type ProcessEntry,
+  type ProcessRepo,
 } from '../../shared/main-process-api-interfaces/ProcessRegistryAPI';
 import type { RunningServer } from '../../shared/main-process-api-interfaces/LocalhostDetectionAPI';
 import { ProcessRegistryService } from '../main-process-api/ProcessRegistryService';
@@ -87,7 +88,7 @@ function detectedEntries(
       return true;
     })
     .map((s) => ({
-      id: `detected:${s.pid ?? s.port}`,
+      id: detectedProcessId(s),
       label:
         s.displayName?.trim() ||
         (s.command?.trim()

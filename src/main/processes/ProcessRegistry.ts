@@ -42,7 +42,12 @@ const KILL_ESCALATION_MS = 5000;
 /** Max captured output chunks per process (ring buffer). */
 const MAX_LOG_CHUNKS = 500;
 
-/** Detected-process ids are `detected:<pid-or-port>`. */
+/**
+ * Detected-process ids are `detected:<port>` (or `detected:<pid>` when the
+ * port is unknown). Port is preferred so services sharing one PID — Docker
+ * Desktop forwards every published container port through one backend — stay
+ * independently nameable.
+ */
 function isDetectedId(id: string): boolean {
   return /^detected:\d+$/.test(id) && Number(id.slice('detected:'.length)) > 0;
 }
@@ -182,7 +187,7 @@ export class ProcessRegistry extends EventEmitter {
     }
 
     // Detected processes are owned by another program, so only their display
-    // name is mutable here. Their IDs are `detected:<pid-or-port>`.
+    // name is mutable here. Their IDs are `detected:<port>` (pid fallback).
     if (isDetectedId(id)) {
       this.detectedLabels.set(id, normalizedLabel);
       this.emitChanged();

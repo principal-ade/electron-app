@@ -150,6 +150,20 @@ export interface ProcessEntry {
   fromHistory?: boolean;
 }
 
+/**
+ * Identity for an externally detected server. Prefer the port: several
+ * services can share one PID (Docker Desktop forwards every published
+ * container port through the same backend process), and each needs its own
+ * id so labels and open actions can differ. Fall back to the pid only when
+ * the port is unknown.
+ */
+export function detectedProcessId(server: {
+  pid?: number;
+  port?: number;
+}): string {
+  return `detected:${server.port ?? server.pid ?? 0}`;
+}
+
 /** Body for starting a managed process. */
 export interface ProcessStartRequest {
   /** Command binary (e.g. "npm"). */

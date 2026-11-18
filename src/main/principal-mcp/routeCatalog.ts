@@ -760,7 +760,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
           '500': 'localhost scan failed.',
         },
         notes: [
-          'Servers already owned by a managed process (matched by pid or port) are dropped, matching the Processes panel merge. Detected entries use ids like `detected:<pid-or-port>` with origin `detected`, status `running`, and source `external`. Use PATCH /api/processes/:id to rename one or set its connection. A port-scoped override (`detected:<port>`) wins over a pid-scoped one, so services sharing a PID can differ.',
+          'Servers already owned by a managed process (matched by pid or port) are dropped, matching the Processes panel merge. Detected entries use `detected:<port>` ids (pid only when the port is unknown) with origin `detected`, status `running`, and source `external`, so services sharing one PID get distinct identities. Use PATCH /api/processes/:id to rename one or set its connection. A port-scoped override (`detected:<port>`) wins over a pid-scoped one, so services sharing a PID can differ.',
         ],
         example: { ports: '3000,5173', timeout: '500' },
       },
@@ -814,7 +814,7 @@ export const bridgeRouteCatalog: BridgeRouteGroup[] = [
             'Could not securely save the display name or connection for a pinned process.',
         },
         notes: [
-          'For a managed process, values appear in Home and pinned processes save them with their launch configuration. For an external process, use its detected id (`detected:<pid-or-port>` or a port-scoped `detected:<port>`); overrides are runtime-only and apply while Principal is running and the process remains detectable.',
+          'For a managed process, values appear in Home and pinned processes save them with their launch configuration. For an external process, use its detected id (`detected:<port>`, or `detected:<pid>` when the port is unknown); overrides are runtime-only and apply while Principal is running and the process remains detectable. Because ids are per-port, services behind one shared PID (e.g. Docker Desktop) can be named independently.',
           'Connections carry no credentials. `browser` opens `http://localhost:<port><path>`; `bruno` opens a remembered HTTP request by `requestId` (a `collectionPath` is metadata only until a workspace opener exists); `sql` shows connection details because no DB viewer exists yet.',
         ],
         example: {

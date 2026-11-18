@@ -16,6 +16,7 @@ import path from 'path';
 import type { Application, Request, Response } from 'express';
 import type { ProcessRegistry } from './ProcessRegistry';
 import {
+  detectedProcessId,
   parseProcessConnection,
   ProcessConnection,
   ProcessControlResult,
@@ -132,10 +133,19 @@ export function registerProcessRoutes(
     );
 
     // Port-scoped overrides win over pid-scoped ones so two services sharing a
-    // PID can be named and opened differently.
-    const detectedLabel = (s: RunningServer): string | undefined =>
-      registry.getDetectedLabelForServer?.(s.pid, s.port) ??
-      registry.getDetectedLabel(`detected:${s.pid ?? s.port}`);
+    // PID can be named and opened differently. Keep the pid lookup as a
+    // fallback for overrides written before ids became port-scoped.
+    const detectedLabel = (s: RunningServer): string | undefined => {
+      const portId = detectedProcessId(s);
+      const pidId = s.pid != null ? `detected:${s.pid}` : undefined;
+      return (
+        registry.getDetectedLabelForServer?.(s.pid, s.port) ??
+        registry.getDetectedLabel(portId) ??
+        (pidId && pidId !== portId
+          ? registry.getDetectedLabel(pidId)
+          : undefined)
+      );
+    };
     const detectedConnection = (
       s: RunningServer,
     ): ProcessConnection | undefined =>
@@ -155,7 +165,7 @@ export function registerProcessRoutes(
 
     const processes: ProcessEntry[] = await Promise.all(
       servers.map(async (s) => ({
-        id: `detected:${s.pid ?? s.port}`,
+        id: detectedProcessId(s),
         label:
           s.displayName?.trim() ||
           (s.command?.trim()
@@ -284,18 +294,15 @@ export function registerProcessRoutes(
     const label = body?.label;
     const hasLabel = label !== undefined;
     const hasConnection =
-      body !== null &&
-      Object.prototype.hasOwnProperty.call(body, 'connection');
-    const rawConnection =
-      hasConnection && body ? body.connection : undefined;
+      body !== null && Object.prototype.hasOwnProperty.call(body, 'connection');
+    const rawConnection = hasConnection && body ? body.connection : undefined;
     const parsedConnection =
       hasConnection && rawConnection !== null
         ? parseProcessConnection(rawConnection)
         : undefined;
 
     if (
-      (hasLabel &&
-        (typeof label !== 'string' || label.trim().length === 0)) ||
+      (hasLabel && (typeof label !== 'string' || label.trim().length === 0)) ||
       (!hasLabel && !hasConnection)
     ) {
       res.status(400).json({

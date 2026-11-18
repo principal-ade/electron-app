@@ -214,8 +214,8 @@ test('GET /api/processes/detected merges scan results and drops managed pid/port
   expect(body.scannedPorts).toEqual([3000, 5173, 8080]);
   expect(body.servers).toHaveLength(2);
   expect(body.processes.map((p: { id: string }) => p.id).sort()).toEqual([
-    'detected:222',
-    'detected:333',
+    'detected:5173',
+    'detected:8080',
   ]);
   expect(body.processes[0]).toMatchObject({
     origin: 'detected',
@@ -224,7 +224,7 @@ test('GET /api/processes/detected merges scan results and drops managed pid/port
   });
 });
 
-test('GET /api/processes/detected applies display-name overrides and repo attribution', async () => {
+test('GET /api/processes/detected uses port ids and falls back to pid-scoped names', async () => {
   mockScan.mockResolvedValue({
     servers: [
       {
@@ -257,7 +257,7 @@ test('GET /api/processes/detected applies display-name overrides and repo attrib
   expect(mockScan).toHaveBeenCalledWith({ ports: [5173], timeout: 250 });
   const body = res.json.mock.calls[0][0];
   expect(body.processes[0]).toMatchObject({
-    id: 'detected:222',
+    id: 'detected:5173',
     label: 'Custom name',
     repo: { name: 'app' },
   });
@@ -320,10 +320,12 @@ test('GET /api/processes/detected applies port-scoped overrides for a shared PID
 
   const body = res.json.mock.calls[0][0];
   expect(body.processes[0]).toMatchObject({
+    id: 'detected:4200',
     label: 'OpenBot agent-bot (4200)',
     connection: { type: 'bruno', collectionPath: 'openbot/api' },
   });
   expect(body.processes[1]).toMatchObject({
+    id: 'detected:5432',
     label: 'OpenBot PostgreSQL (5432)',
     connection: { type: 'sql', database: 'openbot' },
   });
