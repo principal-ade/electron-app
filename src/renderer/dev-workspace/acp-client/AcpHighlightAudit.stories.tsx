@@ -140,15 +140,13 @@ function formatDate(iso: string): string {
 }
 
 /**
- * Four roles, four consecutive theme tokens. Captions are the exception:
- * they share the base size, but lose weight and colour instead of dropping
- * below the scale. Keeping every size on the scale is the point.
+ * Body is the minimum. If something needs to be smaller than this, it usually
+ * needs to be removed or moved into an inspector instead of shrunk.
  */
 function auditFonts(theme: Theme) {
   return {
     family: theme.fonts.body,
     mono: theme.fonts.monospace,
-    caption: theme.fontSizes[0],
     body: theme.fontSizes[1],
     title: theme.fontSizes[2],
     page: theme.fontSizes[3],
@@ -206,22 +204,28 @@ function StatusBadge({ item }: { item: CorpusCase }) {
   const fonts = auditFonts(theme);
   const color =
     item.outcome === 'highlighted'
-      ? (theme.colors.success ?? '#22c55e')
-      : (theme.colors.warning ?? '#f59e0b');
+      ? theme.colors.success
+      : item.outcome === 'error'
+        ? theme.colors.error
+        : theme.colors.warning;
+  const label =
+    item.outcome === 'highlighted'
+      ? 'Highlighted'
+      : item.outcome === 'no-file-paths'
+        ? 'No paths'
+        : 'Error';
   return (
     <span
       style={{
-        fontFamily: fonts.mono,
-        fontSize: fonts.caption,
-        letterSpacing: 0.4,
-        textTransform: 'uppercase',
+        fontSize: fonts.body,
+        fontWeight: fonts.medium,
         color,
         border: `1px solid ${color}`,
         borderRadius: 4,
-        padding: '1px 5px',
+        padding: '1px 6px',
       }}
     >
-      {item.outcome}
+      {label}
     </span>
   );
 }
@@ -360,7 +364,7 @@ function CaseList({
                   <StatusBadge item={item} />
                   <span
                     style={{
-                      fontSize: fonts.caption,
+                      fontSize: fonts.body,
                       color: theme.colors.textSecondary,
                     }}
                   >
@@ -420,7 +424,7 @@ function JsonBlock({
     <pre
       style={{
         fontFamily: fonts.mono,
-        fontSize: fonts.caption,
+        fontSize: fonts.body,
         lineHeight: fonts.lineBody,
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
@@ -490,7 +494,7 @@ function StageCard({
       style={{
         display: 'grid',
         gap: 2,
-        minWidth: 126,
+        minWidth: 148,
         textAlign: 'left',
         padding: '7px 10px',
         borderRadius: 7,
@@ -507,9 +511,8 @@ function StageCard({
     >
       <span
         style={{
-          fontSize: fonts.caption,
-          letterSpacing: 0.6,
-          textTransform: 'uppercase',
+          fontSize: fonts.body,
+          fontWeight: fonts.medium,
           color: theme.colors.textSecondary,
         }}
       >
@@ -526,15 +529,17 @@ function StageCard({
       >
         {value}
       </span>
-      <span
-        style={{
-          fontSize: fonts.caption,
-          lineHeight: fonts.lineHeading,
-          color: theme.colors.textSecondary,
-        }}
-      >
-        {hint}
-      </span>
+      {hint ? (
+        <span
+          style={{
+            fontSize: fonts.body,
+            lineHeight: fonts.lineHeading,
+            color: theme.colors.textSecondary,
+          }}
+        >
+          {hint}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -594,7 +599,7 @@ function IntentDetail({
             <span
               style={{
                 color: theme.colors.textSecondary,
-                fontSize: fonts.caption,
+                fontSize: fonts.body,
               }}
             >
               priority {layer.priority}
@@ -682,7 +687,7 @@ function IntentsInspector({
         >
           <thead>
             <tr style={{ color: theme.colors.textSecondary }}>
-              {['Operation', 'Path', 'Layer', 'City'].map((label) => (
+              {['Operation', 'Kind', 'Path', 'Layer', 'City'].map((label) => (
                 <th
                   key={label}
                   style={{
@@ -732,27 +737,20 @@ function IntentsInspector({
                     style={{
                       padding: '6px 8px',
                       borderBottom: `1px solid ${theme.colors.border}`,
+                      color: theme.colors.textSecondary,
                     }}
                   >
-                    <span
-                      style={{
-                        display: 'block',
-                        fontFamily: fonts.mono,
-                        wordBreak: 'break-all',
-                      }}
-                    >
-                      {intent.path}
-                    </span>
-                    <span
-                      style={{
-                        display: 'block',
-                        fontSize: fonts.caption,
-                        lineHeight: fonts.lineTight,
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      {intent.kind} · {intent.source ?? '—'}
-                    </span>
+                    {intent.kind}
+                  </td>
+                  <td
+                    style={{
+                      fontFamily: fonts.mono,
+                      padding: '6px 8px',
+                      borderBottom: `1px solid ${theme.colors.border}`,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {intent.path}
                   </td>
                   <td
                     style={{
@@ -826,7 +824,7 @@ function ItemsInspector({
           >
             <thead>
               <tr style={{ color: theme.colors.textSecondary }}>
-                {['Path', 'Operation', 'Layer', 'City'].map((label) => (
+                {['Path', 'Operation', 'Kind', 'Layer', 'City'].map((label) => (
                   <th
                     key={label}
                     style={{
@@ -859,24 +857,13 @@ function ItemsInspector({
                   >
                     <td
                       style={{
+                        fontFamily: fonts.mono,
                         padding: '6px 8px',
                         borderBottom: `1px solid ${theme.colors.border}`,
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      <span style={{ fontFamily: fonts.mono }}>
-                        {entry.path}
-                      </span>
-                      <span
-                        style={{
-                          display: 'block',
-                          fontSize: fonts.caption,
-                          lineHeight: fonts.lineTight,
-                          color: theme.colors.textSecondary,
-                        }}
-                      >
-                        {entry.kind}
-                      </span>
+                      {entry.path}
                     </td>
                     <td
                       style={{
@@ -887,6 +874,15 @@ function ItemsInspector({
                       <OperationChip
                         operation={entry.operation as AcpFileOperation}
                       />
+                    </td>
+                    <td
+                      style={{
+                        padding: '6px 8px',
+                        borderBottom: `1px solid ${theme.colors.border}`,
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      {entry.kind}
                     </td>
                     <td
                       style={{
@@ -926,9 +922,7 @@ function ItemsInspector({
         <div style={{ display: 'grid', gap: 6 }}>
           <span
             style={{
-              fontSize: fonts.caption,
-              letterSpacing: 0.6,
-              textTransform: 'uppercase',
+              fontSize: fonts.body,
               color: theme.colors.warning,
             }}
           >
@@ -939,7 +933,7 @@ function ItemsInspector({
               key={`${entry.path}:${entry.reason}`}
               style={{
                 fontFamily: fonts.mono,
-                fontSize: fonts.caption,
+                fontSize: fonts.body,
                 display: 'flex',
                 gap: 10,
                 padding: '6px 8px',
@@ -1030,7 +1024,7 @@ function LayersInspector({
               <span
                 style={{
                   fontFamily: fonts.mono,
-                  fontSize: fonts.caption,
+                  fontSize: fonts.body,
                   color: theme.colors.textSecondary,
                 }}
               >
@@ -1042,7 +1036,7 @@ function LayersInspector({
                 display: 'grid',
                 gridTemplateColumns: 'auto 1fr',
                 gap: '2px 10px',
-                fontSize: fonts.caption,
+                fontSize: fonts.body,
                 color: theme.colors.textSecondary,
               }}
             >
@@ -1075,7 +1069,7 @@ function LayersInspector({
                         justifyContent: 'space-between',
                         gap: 10,
                         width: '100%',
-                        fontSize: fonts.caption,
+                        fontSize: fonts.body,
                         textAlign: 'left',
                         padding: '4px 6px',
                         borderRadius: 4,
@@ -1148,9 +1142,7 @@ function CallInspector({ item }: { item: CorpusCase }) {
         <div style={{ display: 'grid', gap: 5 }}>
           <span
             style={{
-              fontSize: fonts.caption,
-              letterSpacing: 0.6,
-              textTransform: 'uppercase',
+              fontSize: fonts.body,
               color: theme.colors.textSecondary,
             }}
           >
@@ -1174,7 +1166,7 @@ function CallInspector({ item }: { item: CorpusCase }) {
                   display: 'flex',
                   gap: 8,
                   alignItems: 'center',
-                  fontSize: fonts.caption,
+                  fontSize: fonts.body,
                   padding: '5px 7px',
                   borderRadius: 5,
                   border: `1px solid ${theme.colors.border}`,
@@ -1194,7 +1186,7 @@ function CallInspector({ item }: { item: CorpusCase }) {
                 {!location.path ? (
                   <span
                     style={{
-                      fontSize: fonts.caption,
+                      fontSize: fonts.body,
                       color: theme.colors.warning,
                       whiteSpace: 'nowrap',
                     }}
@@ -1208,7 +1200,7 @@ function CallInspector({ item }: { item: CorpusCase }) {
           {emptyLocations > 0 ? (
             <span
               style={{
-                fontSize: fonts.caption,
+                fontSize: fonts.body,
                 lineHeight: fonts.lineBody,
                 color: theme.colors.textSecondary,
               }}
@@ -1223,9 +1215,7 @@ function CallInspector({ item }: { item: CorpusCase }) {
       <div style={{ display: 'grid', gap: 5 }}>
         <span
           style={{
-            fontSize: fonts.caption,
-            letterSpacing: 0.6,
-            textTransform: 'uppercase',
+            fontSize: fonts.body,
             color: theme.colors.textSecondary,
           }}
         >
@@ -1251,16 +1241,14 @@ function OutputInspector({ item }: { item: CorpusCase }) {
   }
   return (
     <div style={{ display: 'grid', gap: 8 }}>
-      <span
-        style={{ fontSize: fonts.caption, color: theme.colors.textSecondary }}
-      >
+      <span style={{ fontSize: fonts.body, color: theme.colors.textSecondary }}>
         Recorded output (truncated to 800 characters). Shell stdout is not mined
         for paths.
       </span>
       <pre
         style={{
           fontFamily: fonts.mono,
-          fontSize: fonts.caption,
+          fontSize: fonts.body,
           lineHeight: fonts.lineBody,
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
@@ -1327,21 +1315,20 @@ function CaseDetail({ item }: { item: CorpusCase }) {
   > = {
     call: {
       value: item.tool.name,
-      hint: `${item.tool.locations?.length ?? 0} location${
-        (item.tool.locations?.length ?? 0) === 1 ? '' : 's'
-      } · ${Object.keys(item.tool.rawInput ?? {}).length} input keys`,
+      hint:
+        (item.tool.locations ?? []).filter((location) => !location.path)
+          .length > 0
+          ? 'empty location'
+          : (item.tool.locations?.length ?? 0) > 0
+            ? `${item.tool.locations?.length} location${
+                item.tool.locations?.length === 1 ? '' : 's'
+              }`
+            : '',
       tone: 'muted',
     },
     intents: {
       value: item.intents.length,
-      hint:
-        item.intents.length > 0
-          ? [
-              ...new Set(
-                item.intents.map((intent) => intent.source ?? 'input'),
-              ),
-            ].join(', ')
-          : 'nothing extracted',
+      hint: item.intents.length > 0 ? '' : 'nothing extracted',
       tone: item.intents.length > 0 ? 'ok' : 'warn',
     },
     items: {
@@ -1350,7 +1337,7 @@ function CaseDetail({ item }: { item: CorpusCase }) {
         item.dropped.length > 0
           ? `${item.dropped.length} dropped`
           : item.items.length > 0
-            ? 'all retained'
+            ? ''
             : 'nothing retained',
       tone:
         item.items.length > 0
@@ -1361,15 +1348,12 @@ function CaseDetail({ item }: { item: CorpusCase }) {
     },
     layers: {
       value: highlighted.length,
-      hint:
-        highlighted.length > 0
-          ? highlighted.map((layer) => layer.name).join(', ')
-          : 'no paint',
+      hint: highlighted.length > 0 ? '' : 'no paint',
       tone: highlighted.length > 0 ? 'ok' : 'warn',
     },
     output: {
-      value: item.tool.content ? `${item.tool.content.length}` : 'none',
-      hint: item.tool.content ? 'chars recorded' : 'no stdout',
+      value: item.tool.content ? 'recorded' : 'none',
+      hint: '',
       tone: 'muted',
       disabled: !item.tool.content,
     },
@@ -1506,9 +1490,7 @@ function CaseDetail({ item }: { item: CorpusCase }) {
           >
             <span
               style={{
-                fontSize: fonts.caption,
-                letterSpacing: 0.6,
-                textTransform: 'uppercase',
+                fontSize: fonts.body,
                 color: theme.colors.textSecondary,
               }}
             >
@@ -1562,7 +1544,7 @@ function CaseDetail({ item }: { item: CorpusCase }) {
             ) : (
               <span
                 style={{
-                  fontSize: fonts.caption,
+                  fontSize: fonts.body,
                   color: theme.colors.textSecondary,
                 }}
               >
@@ -1575,7 +1557,7 @@ function CaseDetail({ item }: { item: CorpusCase }) {
               padding: '0 12px 12px',
               display: 'grid',
               gap: 4,
-              fontSize: fonts.caption,
+              fontSize: fonts.body,
               lineHeight: fonts.lineBody,
               color: theme.colors.textSecondary,
             }}
@@ -1893,7 +1875,7 @@ function SessionReplay() {
         </div>
         <div
           style={{
-            fontSize: fonts.caption,
+            fontSize: fonts.body,
             color: theme.colors.textSecondary,
             lineHeight: fonts.lineBody,
           }}
