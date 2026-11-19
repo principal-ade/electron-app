@@ -156,6 +156,12 @@ const configuration: webpack.Configuration = {
         // Node never treats it as ESM, and unpacked from asar (package.json
         // asarUnpack) so a child process can execute it. We wrap it to set a
         // recognizable process title in Activity Monitor.
+        //
+        // This file only sets the title and requires the real daemon from
+        // @principal-ai/repository-monitoring-server. A plain node child
+        // cannot read inside app.asar, so that package must be unpacked too
+        // (see the asarUnpack entry in package.json); otherwise every spawn
+        // fails with MODULE_NOT_FOUND and the client retries in a loop.
         {
           from: path.resolve(
             webpackPaths.srcMainPath,
