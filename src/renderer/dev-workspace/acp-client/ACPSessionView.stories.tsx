@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { ThemeProvider, slateNeonTheme } from '@principal-ade/industry-theme';
 import { ACPSessionView, type AcpChatMessage } from './ACPSessionView';
 import { getAcpAgent } from '../../../shared/main-process-api-interfaces/AcpAPI';
+import './ACPClientView.css';
 
 const meta: Meta<typeof ACPSessionView> = {
   title: 'Dev Workspace/ACP Session',

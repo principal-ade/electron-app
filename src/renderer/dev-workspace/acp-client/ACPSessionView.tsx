@@ -8,10 +8,13 @@ import React, {
 import { useTheme } from '@principal-ade/industry-theme';
 import { SpanStatusCode } from '@opentelemetry/api';
 import {
+  ArrowDown,
   ArrowUp,
   Building2,
+  Check,
   CheckCircle2,
   ChevronRight,
+  Copy,
   Eye,
   EyeOff,
   Loader2,
@@ -1678,6 +1681,58 @@ function ACPThinkingSummary({
   );
 }
 
+const COPY_FEEDBACK_MS = 1400;
+
+/**
+ * Copies one message's text. The row reveals it on hover; touch and keyboard
+ * focus keep it visible so the action is not mouse-only.
+ */
+function AcpMessageCopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const resetTimer = useRef<number | undefined>(undefined);
+
+  useEffect(
+    () => () => {
+      if (resetTimer.current !== undefined) {
+        window.clearTimeout(resetTimer.current);
+      }
+    },
+    [],
+  );
+
+  const copy = () => {
+    const clipboard = navigator.clipboard;
+    if (!clipboard?.writeText) return;
+    void clipboard
+      .writeText(text)
+      .then(() => {
+        setCopied(true);
+        if (resetTimer.current !== undefined) {
+          window.clearTimeout(resetTimer.current);
+        }
+        resetTimer.current = window.setTimeout(
+          () => setCopied(false),
+          COPY_FEEDBACK_MS,
+        );
+      })
+      .catch(() => {
+        // A denied clipboard leaves the message as it was; nothing to report.
+      });
+  };
+
+  return (
+    <button
+      aria-label={copied ? 'Copied' : 'Copy message'}
+      className="acp-session__message-action"
+      onClick={copy}
+      title={copied ? 'Copied' : 'Copy message'}
+      type="button"
+    >
+      {copied ? <Check size={13} /> : <Copy size={13} />}
+    </button>
+  );
+}
+
 export function ACPSessionView({
   agent,
   workspacePath,
@@ -1726,7 +1781,9 @@ export function ACPSessionView({
   const [topicPreviewHeight, setTopicPreviewHeight] = useState(75);
   const [draft, setDraft] = useState('');
   const chatViewportRef = useRef<HTMLDivElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const followLatestRef = useRef(true);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const topicPreviewResizeRef = useRef<{
     startY: number;
@@ -1818,9 +1875,51 @@ export function ACPSessionView({
     };
   }, [selectedTopicId]);
 
+  // Follow the live edge only while the reader is already there. Scrolling up
+  // releases the follower instead of yanking the viewport back on the next
+  // delta; the jump control puts it back.
+  const handleMessagesScroll = useCallback(() => {
+    const viewport = messagesRef.current;
+    if (!viewport) return;
+    const distanceFromEnd =
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    followLatestRef.current = distanceFromEnd <= 64;
+    setShowJumpToLatest(distanceFromEnd > 160);
+  }, []);
+
+  const jumpToLatest = useCallback(() => {
+    const viewport = messagesRef.current;
+    if (!viewport) return;
+    followLatestRef.current = true;
+    setShowJumpToLatest(false);
+    const reducedMotion = window.matchMedia?.(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    viewport.scrollTo({
+      top: viewport.scrollHeight,
+      behavior: reducedMotion ? 'auto' : 'smooth',
+    });
+  }, []);
+
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: 'end' });
+    const viewport = messagesRef.current;
+    if (!viewport || !followLatestRef.current) return;
+    viewport.scrollTop = viewport.scrollHeight;
   }, [messages, permissions, isPrompting]);
+
+  useEffect(() => {
+    const viewport = messagesRef.current;
+    if (!viewport) return;
+    viewport.scrollTop = viewport.scrollHeight;
+  }, []);
+
+  // The draft grows the field instead of showing a resize handle.
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+  }, [draft]);
 
   useEffect(() => {
     if (!isPrompting) textareaRef.current?.focus();
@@ -1830,6 +1929,8 @@ export function ACPSessionView({
     const text = draft.trim();
     if (!text || isPrompting) return;
     setDraft('');
+    followLatestRef.current = true;
+    setShowJumpToLatest(false);
     const reference =
       selectedTopicReference ??
       selectedModelReference ??
@@ -2212,6 +2313,22 @@ export function ACPSessionView({
     </section>
   ) : null;
 
+  /**
+   * Consecutive messages from the same author read as one run: later messages
+   * skip the author label and tighten the corner that meets the previous one.
+   */
+  const groupedMessageIds = new Set<string>();
+  let previousAuthor: 'user' | 'agent' | null = null;
+  for (const message of messages) {
+    if (message.role === 'thought' || message.role === 'tool') continue;
+    if (message.role === 'user' || message.role === 'agent') {
+      if (previousAuthor === message.role) groupedMessageIds.add(message.id);
+      previousAuthor = message.role;
+    } else {
+      previousAuthor = null;
+    }
+  }
+
   return (
     <main
       className="acp-session"
@@ -2280,141 +2397,172 @@ export function ACPSessionView({
               className="acp-session__messages"
               role="log"
               aria-live={selectedArtifact ? 'off' : 'polite'}
+              ref={messagesRef}
+              onScroll={handleMessagesScroll}
             >
-              {messages.filter((message) => message.role !== 'tool').length ===
-              0 ? (
-                <div className="acp-session__empty acp-session__empty--ready">
-                  <strong>
-                    {hasToolCalls ? 'Agent is working' : 'Pick model'}
-                  </strong>
-                  {hasToolCalls ? (
-                    <span>Live tool activity is listed in the panel.</span>
-                  ) : null}
-                  {!hasToolCalls &&
-                  modelSelection &&
-                  modelSelection.options.length > 0 ? (
-                    <div className="acp-session__model-picker">
-                      <ACPModelPicker
-                        disabled={isPrompting}
-                        error={modelError}
-                        onChange={(model) => onModelChange?.(model)}
-                        selection={modelSelection}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
+              <div className="acp-session__lane">
+                {messages.filter((message) => message.role !== 'tool')
+                  .length === 0 ? (
+                  <div className="acp-session__empty acp-session__empty--ready">
+                    <strong>
+                      {hasToolCalls ? 'Agent is working' : 'Pick model'}
+                    </strong>
+                    {hasToolCalls ? (
+                      <span>Live tool activity is listed in the panel.</span>
+                    ) : null}
+                    {!hasToolCalls &&
+                    modelSelection &&
+                    modelSelection.options.length > 0 ? (
+                      <div className="acp-session__model-picker">
+                        <ACPModelPicker
+                          disabled={isPrompting}
+                          error={modelError}
+                          onChange={(model) => onModelChange?.(model)}
+                          selection={modelSelection}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
 
-              {messages.map((message) => {
-                switch (message.role) {
-                  case 'user':
-                    return (
-                      <div
-                        className="acp-session__row acp-session__row--user"
-                        key={message.id}
-                      >
-                        <div className="acp-session__bubble acp-session__bubble--user">
+                {messages.map((message) => {
+                  const grouped = groupedMessageIds.has(message.id);
+                  switch (message.role) {
+                    case 'user':
+                      return (
+                        <div
+                          className={`acp-session__row acp-session__row--user${grouped ? ' is-grouped' : ''}`}
+                          key={message.id}
+                        >
+                          <div className="acp-session__message-stack">
+                            <div className="acp-session__bubble acp-session__bubble--user">
+                              {message.text}
+                              {message.reference ? (
+                                isAcpTopicReference(message.reference) ? (
+                                  <div className="acp-session__message-reference">
+                                    <TopicsIcon size={13} strokeWidth={1.5} />
+                                    <span>
+                                      Reference · {message.reference.topicTitle}
+                                    </span>
+                                    <blockquote>
+                                      {message.reference.anchor.exact}
+                                    </blockquote>
+                                  </div>
+                                ) : isAcpModelReference(message.reference) ? (
+                                  <div className="acp-session__message-reference">
+                                    <Network size={13} strokeWidth={1.5} />
+                                    <span>
+                                      Reference · {message.reference.trailTitle}
+                                    </span>
+                                    <blockquote>
+                                      {message.reference.stepSummary}
+                                    </blockquote>
+                                  </div>
+                                ) : (
+                                  <div className="acp-session__message-reference">
+                                    <PenTool size={13} strokeWidth={1.5} />
+                                    <span>
+                                      Reference ·{' '}
+                                      {message.reference.drawingName}
+                                    </span>
+                                    <blockquote>
+                                      {message.reference.elementSummary}
+                                    </blockquote>
+                                  </div>
+                                )
+                              ) : null}
+                            </div>
+                            <div className="acp-session__message-meta">
+                              <AcpMessageCopyButton text={message.text} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    case 'agent':
+                      return (
+                        <div
+                          className={`acp-session__row acp-session__row--agent${grouped ? ' is-grouped' : ''}`}
+                          key={message.id}
+                        >
+                          <div className="acp-session__message-stack">
+                            <div className="acp-session__bubble acp-session__bubble--agent">
+                              {grouped ? null : (
+                                <span className="acp-session__role">
+                                  {agent.name}
+                                </span>
+                              )}
+                              <StreamdownMarkdown
+                                className="acp-session__text"
+                                streaming={
+                                  message.id === streamingAgentMessageId
+                                }
+                                text={message.text}
+                              />
+                            </div>
+                            <div className="acp-session__message-meta">
+                              <AcpMessageCopyButton text={message.text} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    case 'thought':
+                      if (hideThinking) return null;
+                      return (
+                        <div className="acp-session__thought" key={message.id}>
+                          <Sparkles size={12} />
+                          <span>{message.text}</span>
+                        </div>
+                      );
+                    case 'tool':
+                      return null;
+                    case 'notice':
+                      return (
+                        <div
+                          className={`acp-session__notice acp-session__notice--${message.level ?? 'info'}`}
+                          key={message.id}
+                        >
                           {message.text}
-                          {message.reference ? (
-                            isAcpTopicReference(message.reference) ? (
-                              <div className="acp-session__message-reference">
-                                <TopicsIcon size={13} strokeWidth={1.5} />
-                                <span>
-                                  Reference · {message.reference.topicTitle}
-                                </span>
-                                <blockquote>
-                                  {message.reference.anchor.exact}
-                                </blockquote>
-                              </div>
-                            ) : isAcpModelReference(message.reference) ? (
-                              <div className="acp-session__message-reference">
-                                <Network size={13} strokeWidth={1.5} />
-                                <span>
-                                  Reference · {message.reference.trailTitle}
-                                </span>
-                                <blockquote>
-                                  {message.reference.stepSummary}
-                                </blockquote>
-                              </div>
-                            ) : (
-                              <div className="acp-session__message-reference">
-                                <PenTool size={13} strokeWidth={1.5} />
-                                <span>
-                                  Reference · {message.reference.drawingName}
-                                </span>
-                                <blockquote>
-                                  {message.reference.elementSummary}
-                                </blockquote>
-                              </div>
-                            )
-                          ) : null}
                         </div>
-                      </div>
-                    );
-                  case 'agent':
-                    return (
-                      <div className="acp-session__row" key={message.id}>
-                        <div className="acp-session__bubble">
-                          <span className="acp-session__role">
-                            {agent.name}
-                          </span>
-                          <StreamdownMarkdown
-                            className="acp-session__text"
-                            streaming={message.id === streamingAgentMessageId}
-                            text={message.text}
-                          />
-                        </div>
-                      </div>
-                    );
-                  case 'thought':
-                    if (hideThinking) return null;
-                    return (
-                      <div className="acp-session__thought" key={message.id}>
-                        <Sparkles size={12} />
-                        <span>{message.text}</span>
-                      </div>
-                    );
-                  case 'tool':
-                    return null;
-                  case 'notice':
-                    return (
-                      <div
-                        className={`acp-session__notice acp-session__notice--${message.level ?? 'info'}`}
-                        key={message.id}
-                      >
-                        {message.text}
-                      </div>
-                    );
-                  default:
-                    return null;
-                }
-              })}
+                      );
+                    default:
+                      return null;
+                  }
+                })}
 
-              {hideThinking ? (
-                <ACPThinkingSummary
-                  active={isPrompting}
-                  activeToolTitle={activeToolCall?.title}
-                  permissionPending={permissions.length > 0}
-                  thoughtCount={currentPromptThoughtCount}
-                  toolCallCount={currentPromptToolCallCount}
-                />
-              ) : activityStatus ? (
-                <div
-                  className="acp-session__activity-status"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <Loader2
-                    className="acp-client__spinning"
-                    size={13}
-                    aria-hidden="true"
+                {hideThinking ? (
+                  <ACPThinkingSummary
+                    active={isPrompting}
+                    activeToolTitle={activeToolCall?.title}
+                    permissionPending={permissions.length > 0}
+                    thoughtCount={currentPromptThoughtCount}
+                    toolCallCount={currentPromptToolCallCount}
                   />
-                  <span>{activityStatus}</span>
-                </div>
-              ) : null}
-
-              <div ref={endRef} />
+                ) : activityStatus ? (
+                  <div
+                    className="acp-session__activity-status"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <Loader2
+                      className="acp-client__spinning"
+                      size={13}
+                      aria-hidden="true"
+                    />
+                    <span>{activityStatus}</span>
+                  </div>
+                ) : null}
+              </div>
             </div>
+            {showJumpToLatest ? (
+              <button
+                className="acp-session__jump-latest"
+                onClick={jumpToLatest}
+                type="button"
+              >
+                <ArrowDown size={13} aria-hidden="true" />
+                Latest
+              </button>
+            ) : null}
           </div>
 
           {permissions.length > 0 ? (
@@ -2474,140 +2622,146 @@ export function ACPSessionView({
                 Drop to attach to this message
               </div>
             ) : null}
-            {stagedArtifacts.length > 0 ? (
-              <div className="acp-session__staged-artifacts">
-                <span className="acp-session__staged-label">
-                  For next message
-                </span>
-                {stagedArtifacts.map((artifact) => (
-                  <div
-                    className="acp-session__staged-artifact"
-                    key={acpArtifactKey(artifact)}
-                  >
-                    {artifact.kind === 'topic' ? (
-                      <TopicsIcon size={13} strokeWidth={1.5} />
-                    ) : artifact.kind === 'drawing' ? (
-                      <PenTool size={13} strokeWidth={1.5} />
-                    ) : (
-                      <Network size={13} strokeWidth={1.5} />
-                    )}
-                    <span>
-                      {artifact.title ??
-                        artifactFallbackTitle(artifact.kind, artifact.id)}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label={`Remove ${artifact.title ?? artifact.id} from this message`}
-                      onClick={() =>
-                        setStagedArtifacts((previous) =>
-                          previous.filter(
-                            (candidate) =>
-                              acpArtifactKey(candidate) !==
-                              acpArtifactKey(artifact),
-                          ),
-                        )
-                      }
+            <div className="acp-session__composer-card">
+              {stagedArtifacts.length > 0 ? (
+                <div className="acp-session__staged-artifacts">
+                  <span className="acp-session__staged-label">
+                    For next message
+                  </span>
+                  {stagedArtifacts.map((artifact) => (
+                    <div
+                      className="acp-session__staged-artifact"
+                      key={acpArtifactKey(artifact)}
                     >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            {selectedTopicReference ? (
-              <div className="acp-session__reference-chip">
-                <TopicsIcon size={15} strokeWidth={1.5} />
-                <span>
-                  <strong>
-                    Reference · {selectedTopicReference.topicTitle}
-                  </strong>
-                  <small>{selectedTopicReference.anchor.exact}</small>
+                      {artifact.kind === 'topic' ? (
+                        <TopicsIcon size={13} strokeWidth={1.5} />
+                      ) : artifact.kind === 'drawing' ? (
+                        <PenTool size={13} strokeWidth={1.5} />
+                      ) : (
+                        <Network size={13} strokeWidth={1.5} />
+                      )}
+                      <span>
+                        {artifact.title ??
+                          artifactFallbackTitle(artifact.kind, artifact.id)}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${artifact.title ?? artifact.id} from this message`}
+                        onClick={() =>
+                          setStagedArtifacts((previous) =>
+                            previous.filter(
+                              (candidate) =>
+                                acpArtifactKey(candidate) !==
+                                acpArtifactKey(artifact),
+                            ),
+                          )
+                        }
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {selectedTopicReference ? (
+                <div className="acp-session__reference-chip">
+                  <TopicsIcon size={15} strokeWidth={1.5} />
+                  <span>
+                    <strong>
+                      Reference · {selectedTopicReference.topicTitle}
+                    </strong>
+                    <small>{selectedTopicReference.anchor.exact}</small>
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Remove topic reference"
+                    onClick={() => setSelectedTopicReference(null)}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : selectedModelReference ? (
+                <div className="acp-session__reference-chip">
+                  <Network size={15} strokeWidth={1.5} />
+                  <span>
+                    <strong>
+                      Reference · {selectedModelReference.trailTitle}
+                    </strong>
+                    <small>
+                      {selectedModelReference.stepSummary.split('\n')[0]}
+                    </small>
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Remove model reference"
+                    onClick={() => setSelectedModelReference(null)}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : selectedDrawingReference ? (
+                <div className="acp-session__reference-chip">
+                  <PenTool size={15} strokeWidth={1.5} />
+                  <span>
+                    <strong>
+                      Reference · {selectedDrawingReference.drawingName}
+                    </strong>
+                    <small>
+                      {selectedDrawingReference.elementSummary.split('\n')[0]}
+                    </small>
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Remove drawing reference"
+                    onClick={() => setSelectedDrawingReference(null)}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : null}
+              <textarea
+                aria-label="Message the agent"
+                className="acp-session__input"
+                disabled={isPrompting}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    submit();
+                  }
+                }}
+                placeholder={`Ask ${agent.name} to work in this workspace…`}
+                ref={textareaRef}
+                rows={1}
+                value={draft}
+              />
+              <div className="acp-session__composer-actions">
+                <span className="acp-session__hint">
+                  Enter to send · Shift+Enter for a new line
                 </span>
-                <button
-                  type="button"
-                  aria-label="Remove topic reference"
-                  onClick={() => setSelectedTopicReference(null)}
-                >
-                  <X size={14} />
-                </button>
+                {isPrompting ? (
+                  <button
+                    aria-label="Stop"
+                    className="acp-session__composer-icon-button acp-session__stop-button"
+                    onClick={onStop}
+                    title="Stop"
+                    type="button"
+                  >
+                    <Square size={11} />
+                  </button>
+                ) : (
+                  <button
+                    aria-label="Send"
+                    className="acp-session__composer-icon-button acp-session__send-button"
+                    disabled={!draft.trim()}
+                    onClick={submit}
+                    title="Send"
+                    type="button"
+                  >
+                    <ArrowUp size={16} />
+                  </button>
+                )}
               </div>
-            ) : selectedModelReference ? (
-              <div className="acp-session__reference-chip">
-                <Network size={15} strokeWidth={1.5} />
-                <span>
-                  <strong>
-                    Reference · {selectedModelReference.trailTitle}
-                  </strong>
-                  <small>
-                    {selectedModelReference.stepSummary.split('\n')[0]}
-                  </small>
-                </span>
-                <button
-                  type="button"
-                  aria-label="Remove model reference"
-                  onClick={() => setSelectedModelReference(null)}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : selectedDrawingReference ? (
-              <div className="acp-session__reference-chip">
-                <PenTool size={15} strokeWidth={1.5} />
-                <span>
-                  <strong>
-                    Reference · {selectedDrawingReference.drawingName}
-                  </strong>
-                  <small>
-                    {selectedDrawingReference.elementSummary.split('\n')[0]}
-                  </small>
-                </span>
-                <button
-                  type="button"
-                  aria-label="Remove drawing reference"
-                  onClick={() => setSelectedDrawingReference(null)}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : null}
-            <textarea
-              aria-label="Message the agent"
-              className="acp-session__input"
-              disabled={isPrompting}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault();
-                  submit();
-                }
-              }}
-              placeholder={`Ask ${agent.name} to work in this workspace…`}
-              ref={textareaRef}
-              rows={3}
-              value={draft}
-            />
-            <div className="acp-session__composer-actions">
-              <span className="acp-session__hint">
-                Enter to send · Shift+Enter for a new line
-              </span>
-              {isPrompting ? (
-                <button
-                  className="acp-session__stop-button"
-                  onClick={onStop}
-                  type="button"
-                >
-                  <Square size={12} /> Stop
-                </button>
-              ) : (
-                <button
-                  className="acp-session__send-button"
-                  disabled={!draft.trim()}
-                  onClick={submit}
-                  type="button"
-                >
-                  Send <ArrowUp size={14} />
-                </button>
-              )}
             </div>
           </div>
         </div>
