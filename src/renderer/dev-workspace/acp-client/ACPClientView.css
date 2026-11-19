@@ -1854,7 +1854,7 @@
   color: var(--acp-muted);
   background: color-mix(in srgb, var(--acp-surface) 92%, transparent);
   box-shadow: 0 1px 2px color-mix(in srgb, var(--acp-text) 6%, transparent);
-  font-size: var(--acp-font-size-0);
+  font-size: var(--acp-font-size-1);
   line-height: 1.55;
   text-align: center;
 }
@@ -1871,7 +1871,7 @@
 
 .acp-session__empty strong {
   color: var(--acp-text);
-  font-size: var(--acp-font-size-1);
+  font-size: var(--acp-font-size-2);
 }
 
 .acp-session__model-picker {
@@ -1933,11 +1933,11 @@
 
 .acp-model-picker__provider {
   color: var(--acp-faint);
-  font-size: var(--acp-font-size-0);
+  font-size: var(--acp-font-size-1);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   line-height: 1.2;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .acp-model-picker__current strong {
@@ -2018,7 +2018,7 @@
   border-radius: 6px;
   color: var(--acp-muted);
   cursor: pointer;
-  font-size: var(--acp-font-size-0);
+  font-size: var(--acp-font-size-1);
   line-height: 1.4;
 }
 
@@ -2100,7 +2100,7 @@
 
 .acp-session__bubble--agent {
   color: var(--acp-text);
-  font-size: var(--acp-font-size-1);
+  font-size: var(--acp-font-size-2);
 }
 
 .acp-session__bubble--user {
@@ -2112,6 +2112,7 @@
   color: var(--acp-text);
   background: color-mix(in srgb, var(--acp-accent) 20%, var(--acp-surface));
   box-shadow: 0 1px 2px color-mix(in srgb, var(--acp-text) 6%, transparent);
+  font-size: var(--acp-font-size-2);
   line-height: 1.55;
 }
 
@@ -2174,7 +2175,7 @@
   margin-top: 8px;
   padding-top: 7px;
   border-top: 1px solid color-mix(in srgb, currentColor 28%, transparent);
-  font-size: var(--acp-font-size-0);
+  font-size: var(--acp-font-size-1);
   text-align: left;
 }
 
@@ -2195,7 +2196,7 @@
   display: block;
   margin-bottom: 3px;
   color: var(--acp-muted);
-  font-size: var(--acp-font-size-0);
+  font-size: var(--acp-font-size-1);
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -2204,7 +2205,7 @@
 .acp-session__text {
   min-width: 0;
   color: var(--acp-text);
-  font-size: var(--acp-font-size-1);
+  font-size: var(--acp-font-size-2);
   overflow-wrap: anywhere;
 }
 
@@ -2349,7 +2350,7 @@
   margin-top: 10px;
   padding: 3px 1px;
   color: var(--acp-muted);
-  font-size: var(--acp-font-size-0);
+  font-size: var(--acp-font-size-1);
   font-style: italic;
   line-height: 1.55;
   white-space: pre-wrap;
@@ -2369,7 +2370,7 @@
   margin-top: 10px;
   padding: 3px 1px;
   color: var(--acp-muted);
-  font-size: var(--acp-font-size-0);
+  font-size: var(--acp-font-size-1);
   line-height: 1.5;
 }
 
@@ -2387,7 +2388,7 @@
   margin-top: 10px;
   padding: 3px 1px;
   color: var(--acp-muted);
-  font-size: var(--acp-font-size-0);
+  font-size: var(--acp-font-size-1);
   line-height: 1.5;
 }
 
@@ -2510,7 +2511,7 @@
   border-radius: 8px;
   color: var(--acp-muted);
   background: var(--acp-surface-soft);
-  font-size: var(--acp-font-size-0);
+  font-size: var(--acp-font-size-1);
   line-height: 1.5;
   white-space: pre-wrap;
 }
@@ -2717,7 +2718,7 @@
   color: var(--acp-text);
   background: transparent;
   font: inherit;
-  font-size: var(--acp-font-size-1);
+  font-size: var(--acp-font-size-2);
   line-height: 1.55;
   box-shadow: none;
 }
