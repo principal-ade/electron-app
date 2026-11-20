@@ -21,7 +21,6 @@ import {
   Network,
   PenTool,
   ShieldQuestion,
-  Sparkles,
   Square,
   Wrench,
   X,
@@ -32,6 +31,7 @@ import {
   type CityData,
   type HighlightLayer,
 } from '@principal-ai/file-city-react';
+import { PrincipalMark } from '../../components/PrincipalMark';
 import { useFileTree } from '@pierre/trees/react';
 import type { GitStatusEntry } from '@pierre/trees';
 import type {
@@ -1661,7 +1661,7 @@ function ACPThinkingSummary({
       role="status"
       aria-live="polite"
     >
-      <Sparkles size={13} aria-hidden="true" />
+      <PrincipalMark animated size={16} />
       <span className="acp-session__thinking-label">
         {label}
         {active && !permissionPending ? (
@@ -2509,7 +2509,7 @@ export function ACPSessionView({
                       if (hideThinking) return null;
                       return (
                         <div className="acp-session__thought" key={message.id}>
-                          <Sparkles size={12} />
+                          <PrincipalMark size={12} />
                           <span>{message.text}</span>
                         </div>
                       );

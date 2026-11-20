@@ -14,7 +14,6 @@ import { SpanStatusCode } from '@opentelemetry/api';
 import { getTracer } from '../telemetry';
 import { ShellService } from '../main-process-api/ShellService';
 import {
-  Sparkles,
   FileText,
   Code,
   GitBranch,
@@ -30,6 +29,7 @@ import {
   Network,
   PencilRuler,
 } from 'lucide-react';
+import { PrincipalMark } from '../components/PrincipalMark';
 import { TopicsIcon } from '../components/TopicsIcon';
 import {
   ConfigurablePanelLayout,
@@ -2345,7 +2345,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       case 'terminal':
         return <Terminal size={14} />;
       case 'skill':
-        return <Sparkles size={14} />;
+        return <PrincipalMark size={14} />;
       case 'markdown':
       case 'mdx-editor':
         return <FileText size={14} />;

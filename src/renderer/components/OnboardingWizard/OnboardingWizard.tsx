@@ -13,8 +13,8 @@ import {
   AlertCircle,
   Info,
   Pencil,
-  Sparkles,
 } from 'lucide-react';
+import { PrincipalMark } from '../PrincipalMark';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { GitService } from '../../main-process-api/GitService';
 import { AuthenticationService } from '../../main-process-api/AuthenticationService';
@@ -2624,7 +2624,7 @@ const SkillsStep: React.FC<SkillsStepProps> = ({
             borderRadius: '50%',
           }}
         >
-          <Sparkles size={48} color={theme.colors.primary} />
+          <PrincipalMark size={48} primary={theme.colors.primary} />
         </div>
       </div>
 
@@ -2814,7 +2814,7 @@ const SkillsStep: React.FC<SkillsStepProps> = ({
           transition: 'all 0.2s ease',
         }}
       >
-        <Sparkles size={16} />
+        <PrincipalMark size={16} />
         {isInstalling
           ? 'Installing...'
           : `Install ${selectedCount} skill${selectedCount === 1 ? '' : 's'}`}

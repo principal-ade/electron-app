@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { RefreshCw, Sparkles, Info } from 'lucide-react';
+import { RefreshCw, Info } from 'lucide-react';
+import { PrincipalMark } from '../../../../components/PrincipalMark';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { getTracer } from '../../../../telemetry';
 import type { Span } from '@opentelemetry/api';
@@ -398,7 +399,7 @@ export const UpdatesSettings: React.FC = () => {
                   gap: '8px',
                 }}
               >
-                <Sparkles size={20} />
+                <PrincipalMark size={20} />
                 New Version Available!
               </h4>
 

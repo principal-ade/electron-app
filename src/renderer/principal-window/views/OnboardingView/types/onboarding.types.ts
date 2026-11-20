@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react';
+import type { ComponentType } from 'react';
 
 /**
  * Represents a single onboarding concept card
@@ -10,8 +10,8 @@ export interface OnboardingCard {
   title: string;
   /** Short description */
   description: string;
-  /** Lucide icon component */
-  icon: LucideIcon;
+  /** Icon component rendered in the card header */
+  icon: ComponentType<{ size?: number; color?: string }>;
   /** Category for grouping cards */
   category: 'getting-started' | 'features' | 'advanced';
   /** Agent prompt to inject when dropped into terminal */

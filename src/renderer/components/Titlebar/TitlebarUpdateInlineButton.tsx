@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Download, Sparkles } from 'lucide-react';
+import { Download } from 'lucide-react';
+import { PrincipalMark } from '../PrincipalMark';
 import { AppVersionManagerService } from '../../main-process-api/AppVersionManagerService';
 
 type UpdateState =
@@ -132,8 +133,6 @@ export const TitlebarUpdateInlineButton: React.FC = () => {
         ? 'Retry Update'
         : 'Download Update';
 
-  const Icon = isDownloaded ? Sparkles : Download;
-
   const title = isError
     ? errorMessage || 'Update failed — click to retry'
     : isDownloading
@@ -169,7 +168,16 @@ export const TitlebarUpdateInlineButton: React.FC = () => {
         WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
       }}
     >
-      <Icon size={14} />
+      {isDownloaded ? (
+        <PrincipalMark
+          size={14}
+          primary={foreground}
+          accent={foreground}
+          color={foreground}
+        />
+      ) : (
+        <Download size={14} />
+      )}
       {label}
       {isDownloading && (
         <span

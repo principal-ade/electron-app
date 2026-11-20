@@ -12,8 +12,8 @@ import {
   Info,
   RefreshCw,
   Server,
-  Sparkles,
 } from 'lucide-react';
+import { PrincipalMark } from '../../../components/PrincipalMark';
 import type {
   OpenBotDeploymentComponent,
   OpenBotDeploymentEvent,
@@ -82,15 +82,10 @@ function StateIcon({ state }: { state: OpenBotHealthState }) {
 }
 
 function ComponentIcon({ id }: { id: OpenBotDeploymentComponent['id'] }) {
-  const Icon =
-    id === 'api'
-      ? Server
-      : id === 'worker'
-        ? Activity
-        : id === 'database'
-          ? Database
-          : Sparkles;
-  return <Icon size={16} aria-hidden="true" />;
+  if (id === 'api') return <Server size={16} aria-hidden="true" />;
+  if (id === 'worker') return <Activity size={16} aria-hidden="true" />;
+  if (id === 'database') return <Database size={16} aria-hidden="true" />;
+  return <PrincipalMark size={16} />;
 }
 
 export function OpenBotDeploymentOverview({

@@ -8,9 +8,9 @@ import {
   LockKeyhole,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
   TerminalSquare,
 } from 'lucide-react';
+import { PrincipalMark } from '../../components/PrincipalMark';
 import {
   ACP_AGENTS,
   DEFAULT_ACP_AGENT,
@@ -130,7 +130,7 @@ export function ACPClientView({
       <div className="acp-client__content">
         <section className="acp-client__intro">
           <div className="acp-client__eyebrow">
-            <Sparkles size={13} />
+            <PrincipalMark size={13} />
             <span>ACP AGENT CONNECTION</span>
           </div>
           <h1>Connect an agent to this project.</h1>

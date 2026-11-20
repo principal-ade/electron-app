@@ -3,12 +3,12 @@ import { createPortal } from 'react-dom';
 import {
   GraduationCap,
   Terminal,
-  Sparkles,
   MessageSquare,
   Check,
   RotateCcw,
   FolderOpen,
 } from 'lucide-react';
+import { PrincipalMark } from '../../../../components/PrincipalMark';
 import { useTheme } from '@principal-ade/industry-theme';
 
 interface WelcomePanelProps {
@@ -73,7 +73,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
       title: 'Launch an agent',
       description:
         'Run claude or opencode in the terminal to start an AI agent',
-      icon: <Sparkles size={18} />,
+      icon: <PrincipalMark size={18} />,
       isComplete: hasCompletedCard, // We assume they launched an agent if they completed a card
       isCurrent: hasTerminal && !hasCompletedCard,
     },

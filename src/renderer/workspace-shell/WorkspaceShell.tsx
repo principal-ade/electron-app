@@ -42,10 +42,10 @@ import {
   ScrollText,
   ToolCase,
   Send,
-  Sparkles,
   SquareArrowOutUpRight,
   Terminal,
 } from 'lucide-react';
+import { PrincipalMark } from '../components/PrincipalMark';
 import { HttpRequestTabContent } from '../requests/HttpRequestTabContent';
 import { RequestsLeftPanel } from '../requests/RequestsLeftPanel';
 import { requestDefinition } from '../../shared/requests/preparedRequest';
@@ -610,7 +610,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
         case 'openbot-chat':
           return <Bot size={14} />;
         case 'acp':
-          return <Sparkles size={14} />;
+          return <PrincipalMark size={14} />;
         case 'http-request':
           return <Send size={14} />;
         default:

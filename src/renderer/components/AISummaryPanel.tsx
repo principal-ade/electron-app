@@ -8,14 +8,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import {
-  Sparkles,
-  Loader2,
-  X,
-  Send,
-  AlertCircle,
-  Settings,
-} from 'lucide-react';
+import { Loader2, X, Send, AlertCircle, Settings } from 'lucide-react';
+import { PrincipalMark } from './PrincipalMark';
 import { GeminiService } from '../main-process-api/GeminiService';
 import { SecretsService } from '../main-process-api/SecretsService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
@@ -129,7 +123,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
           padding: spacing.md,
         }}
       >
-        <Sparkles
+        <PrincipalMark
           size={32}
           style={{ marginBottom: spacing.sm, opacity: 0.3 }}
         />
@@ -163,7 +157,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-          <Sparkles size={16} color={theme.colors.primary} />
+          <PrincipalMark size={16} primary={theme.colors.primary} />
           <span
             style={{
               fontSize: theme.fontSizes[1],

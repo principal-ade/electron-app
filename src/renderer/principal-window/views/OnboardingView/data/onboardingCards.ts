@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react';
+import { PrincipalMark } from '../../../../components/PrincipalMark';
 import type { OnboardingCard } from '../types/onboarding.types';
 
 /**
@@ -10,7 +10,7 @@ export const ONBOARDING_CARDS: OnboardingCard[] = [
     id: 'welcome-agent',
     title: 'Meet Your Agent',
     description: 'Learn how to interact with the AI agent in the terminal',
-    icon: Sparkles,
+    icon: PrincipalMark,
     category: 'getting-started',
     agentPrompt:
       "Hello! I'm new to Principal AI. Can you introduce yourself and explain what you can help me with? What are some things I should try first?",

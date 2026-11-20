@@ -12,9 +12,9 @@ import {
   Paperclip,
   Plus,
   Settings2,
-  Sparkles,
   X,
 } from 'lucide-react';
+import { PrincipalMark } from '../../components/PrincipalMark';
 import './OpenBotChatView.css';
 
 export interface OpenBotChatMessage {
@@ -197,7 +197,7 @@ export function OpenBotChatView({
               <PanelLeft aria-hidden="true" size={17} />
             </button>
             <span className="openbot-chat__avatar" aria-hidden="true">
-              <Sparkles size={15} />
+              <PrincipalMark size={15} />
             </span>
             <span className="openbot-chat__bot-name">{botName}</span>
           </div>
@@ -250,7 +250,7 @@ export function OpenBotChatView({
                     role="menuitem"
                     type="button"
                   >
-                    <Sparkles aria-hidden="true" size={14} />
+                    <PrincipalMark size={14} />
                     About this preview
                   </button>
                 </div>

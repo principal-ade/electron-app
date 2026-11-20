@@ -8,7 +8,8 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, User, Sparkles, FileCode } from 'lucide-react';
+import { FolderGit2, User, FileCode } from 'lucide-react';
+import { PrincipalMark } from '../components/PrincipalMark';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -831,7 +832,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   transition: 'all 0.15s ease',
                 }}
               >
-                <Sparkles size={12} />
+                <PrincipalMark size={12} />
                 <span>
                   {summary.commits.length > 1 ? 'Explain all' : 'Explain'}
                 </span>
