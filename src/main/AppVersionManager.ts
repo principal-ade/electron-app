@@ -33,6 +33,9 @@ type WindowEventData =
 
 const tracer = getTracer('principal-ade-main');
 
+/** How long to wait for a single update check before reporting a timeout. */
+const UPDATE_CHECK_TIMEOUT_MS = 30 * 1000;
+
 export default class AppVersionManager {
   private mainWindow: BrowserWindow | null = null;
 
@@ -151,41 +154,18 @@ export default class AppVersionManager {
 
     // Check for updates every hour
     const PERIODIC_CHECK_INTERVAL_MS = 60 * 60 * 1000;
-    const PERIODIC_CHECK_TIMEOUT_MS = 30 * 1000; // 30 second timeout
 
     setInterval(() => {
       if (this.mainWindow && !this.mainWindow.isDestroyed()) {
         log.info('[AppUpdater] Periodic update check triggered');
 
-        // Start check workflow span for periodic check
-        this.activeCheckSpan = tracer.startSpan('app_updates.check');
-        this.activeCheckSpan.addEvent('app_updates.check.periodic', {
+        this.startCheckSpan('periodic');
+        this.activeCheckSpan?.addEvent('app_updates.check.periodic', {
           interval_ms: PERIODIC_CHECK_INTERVAL_MS,
-          timeout_ms: PERIODIC_CHECK_TIMEOUT_MS,
-        });
-        this.activeCheckSpan.addEvent('app_updates.check.started', {
-          trigger: 'periodic',
-          current_version: app.getVersion(),
+          timeout_ms: UPDATE_CHECK_TIMEOUT_MS,
         });
 
-        // Create a timeout promise to catch hangs
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            reject(
-              new Error(
-                `Update check timed out after ${PERIODIC_CHECK_TIMEOUT_MS}ms`,
-              ),
-            );
-          }, PERIODIC_CHECK_TIMEOUT_MS);
-        });
-
-        // Race the check against the timeout
-        Promise.race([autoUpdater.checkForUpdates(), timeoutPromise]).catch(
-          (err) => {
-            log.error('[AppUpdater] Periodic update check failed:', err);
-            this.emitErrorEvent('check', err);
-          },
-        );
+        this.runCheckWithTimeout('periodic');
       }
     }, PERIODIC_CHECK_INTERVAL_MS);
 
@@ -316,7 +296,9 @@ export default class AppVersionManager {
 
       // Emit error event to the active span
       if (this.activeCheckSpan) {
-        this.emitErrorEvent('check', err);
+        // Check failures must also reach the renderer, otherwise any UI that
+        // set a "checking" state before the request never clears it.
+        this.failCheck(err);
       } else if (this.activeDownloadSpan) {
         this.emitErrorEvent('download', err);
       } else if (this.activeInstallSpan) {
@@ -403,6 +385,71 @@ export default class AppVersionManager {
     return 'unknown';
   }
 
+  /**
+   * Start (or join) the telemetry span for an update check. Reusing an active
+   * span keeps overlapping triggers (startup + hourly + settings) from leaking
+   * spans or mis-attributing errors.
+   */
+  private startCheckSpan(trigger: 'manual' | 'silent' | 'periodic') {
+    if (!this.activeCheckSpan) {
+      this.activeCheckSpan = tracer.startSpan('app_updates.check');
+    }
+    this.activeCheckSpan.addEvent('app_updates.check.started', {
+      trigger,
+      current_version: app.getVersion(),
+    });
+  }
+
+  /**
+   * Run an update check with a timeout so a stalled request can never leave the
+   * UI in a "checking" state forever.
+   */
+  private runCheckWithTimeout(trigger: 'manual' | 'silent' | 'periodic') {
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(
+          new Error(
+            `Update check timed out after ${UPDATE_CHECK_TIMEOUT_MS}ms`,
+          ),
+        );
+      }, UPDATE_CHECK_TIMEOUT_MS);
+    });
+
+    Promise.race([autoUpdater.checkForUpdates(), timeoutPromise])
+      .catch((err) => {
+        log.error(`[AppUpdater] ${trigger} update check failed:`, err);
+        if (trigger !== 'periodic') {
+          console.error(`[AppUpdater] ${trigger} update check failed:`, err);
+        }
+        this.failCheck(err);
+      })
+      .finally(() => {
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
+        }
+      });
+  }
+
+  /**
+   * Report a failed check through telemetry AND to the renderer. The renderer
+   * listens for `update-error` to clear its checking state.
+   */
+  private failCheck(err: unknown) {
+    const hadActiveCheck = this.activeCheckSpan !== null;
+
+    this.emitErrorEvent('check', err);
+
+    if (hadActiveCheck) {
+      this.sendToWindow(
+        AppVersionManagerAPIEvent.ON_UPDATE_ERROR,
+        err instanceof Error ? err : new Error(String(err)),
+      );
+      this.sendToWindow(AppVersionManagerAPIEvent.ON_UPDATE_CHECK_COMPLETE);
+    }
+  }
+
   private endCheckSpan(code: SpanStatusCode, message?: string) {
     if (this.activeCheckSpan) {
       this.activeCheckSpan.setStatus({ code, message });
@@ -460,15 +507,11 @@ export default class AppVersionManager {
     log.info(`[AppUpdater] ${trigger} update check requested`);
     console.log(`[AppUpdater] ${trigger} update check requested via TIPC`);
 
-    // Start check workflow span
-    this.activeCheckSpan = tracer.startSpan('app_updates.check');
+    // Start check workflow span (or join one that is already running)
+    this.startCheckSpan(trigger);
     // Add manual/silent trigger event to distinguish from periodic checks
-    this.activeCheckSpan.addEvent('app_updates.check.user_triggered', {
+    this.activeCheckSpan?.addEvent('app_updates.check.user_triggered', {
       trigger: trigger,
-    });
-    this.activeCheckSpan.addEvent('app_updates.check.started', {
-      trigger: trigger,
-      current_version: app.getVersion(),
     });
 
     // In dev mode, temporarily set allowDowngrade to ensure we can test
@@ -479,11 +522,7 @@ export default class AppVersionManager {
       }
     }
 
-    autoUpdater.checkForUpdates().catch((err) => {
-      log.error(`[AppUpdater] ${trigger} update check failed:`, err);
-      console.error(`[AppUpdater] ${trigger} update check failed:`, err);
-      this.emitErrorEvent('check', err);
-    });
+    this.runCheckWithTimeout(trigger);
   }
 
   /**

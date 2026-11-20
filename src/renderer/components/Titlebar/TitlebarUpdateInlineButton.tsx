@@ -4,7 +4,14 @@ import { Download, Sparkles } from 'lucide-react';
 import { AppVersionManagerService } from '../../main-process-api/AppVersionManagerService';
 
 type UpdateState =
-  'idle' | 'available' | 'downloading' | 'downloaded' | 'error';
+  | 'idle'
+  | 'available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error';
+
+/** Re-check for updates on the same cadence as the main-process monitor. */
+const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
 /**
  * Inline titlebar button that mirrors the Updates settings download flow:
@@ -30,8 +37,6 @@ export const TitlebarUpdateInlineButton: React.FC = () => {
     if (!isMac) {
       return;
     }
-
-    AppVersionManagerService.checkForUpdateSilently();
 
     const unsubscribe = [
       AppVersionManagerService.onUpdateAvailable(() => {
@@ -81,7 +86,14 @@ export const TitlebarUpdateInlineButton: React.FC = () => {
       }),
     ];
 
+    // Subscribe before checking so a fast response can't beat the listeners.
+    AppVersionManagerService.checkForUpdateSilently();
+    const interval = setInterval(() => {
+      AppVersionManagerService.checkForUpdateSilently();
+    }, UPDATE_CHECK_INTERVAL_MS);
+
     return () => {
+      clearInterval(interval);
       unsubscribe.forEach((fn) => fn());
     };
   }, [isMac]);
