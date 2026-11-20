@@ -185,6 +185,8 @@ export interface ACPSessionViewProps {
   messages: AcpChatMessage[];
   permissions: AcpPendingPermission[];
   isPrompting: boolean;
+  /** Whether this session's tab is the one currently shown. */
+  isActive?: boolean;
   /** Collapse reasoning text into a compact "Thinking" activity line. */
   hideThinking?: boolean;
   /** Model picker state from `session/new`, shown before the first message. */
@@ -1741,6 +1743,7 @@ export function ACPSessionView({
   messages,
   permissions,
   isPrompting,
+  isActive = true,
   hideThinking = true,
   modelSelection,
   modelError,
@@ -1922,8 +1925,15 @@ export function ACPSessionView({
   }, [draft]);
 
   useEffect(() => {
-    if (!isPrompting) textareaRef.current?.focus();
-  }, [isPrompting]);
+    if (!isActive || isPrompting) return;
+    // Switching back to this tab should put the cursor in the composer so
+    // typing works without an extra click. Wait one frame for the tab's
+    // active/inert styles to settle before focusing.
+    const frame = requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isActive, isPrompting]);
 
   const submit = () => {
     const text = draft.trim();
@@ -1943,6 +1953,29 @@ export function ACPSessionView({
     setStagedArtifacts([]);
     onSend(text, reference, staged.length > 0 ? staged : undefined);
   };
+
+  // Typing should go back to the composer after interacting with the
+  // transcript, matching the OpenCode TUI's click-to-refocus behavior. Leave
+  // focus alone when the click lands on a control or finishes a text
+  // selection so copy and message actions keep working.
+  const handleSessionMouseUp = useCallback(
+    (event: React.MouseEvent<HTMLElement>) => {
+      if (isPrompting) return;
+      if (window.getSelection()?.toString()) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          'button, a, input, textarea, select, label, summary, ' +
+            '[contenteditable="true"], [role="button"], [role="menuitem"], ' +
+            '[role="tab"], [role="checkbox"], [role="combobox"]',
+        )
+      ) {
+        return;
+      }
+      textareaRef.current?.focus();
+    },
+    [isPrompting],
+  );
   const openArtifactPreview = useCallback(
     (artifact: AcpArtifactRef) => {
       const isSame =
@@ -2334,6 +2367,7 @@ export function ACPSessionView({
       className="acp-session"
       aria-label="ACP agent session"
       style={getAcpThemeStyle(theme)}
+      onMouseUp={handleSessionMouseUp}
     >
       <header className="acp-session__topbar">
         <ACPWorkspaceIdentity sessionTitle={sessionTitle} />
@@ -2486,11 +2520,6 @@ export function ACPSessionView({
                         >
                           <div className="acp-session__message-stack">
                             <div className="acp-session__bubble acp-session__bubble--agent">
-                              {grouped ? null : (
-                                <span className="acp-session__role">
-                                  {agent.name}
-                                </span>
-                              )}
                               <StreamdownMarkdown
                                 className="acp-session__text"
                                 streaming={
@@ -2728,7 +2757,37 @@ export function ACPSessionView({
                   if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
                     submit();
+                    return;
                   }
+
+                  // Ctrl+C clears the composer, mirroring the terminal TUI.
+                  // Leave copy alone when text is selected (and never touch
+                  // Cmd+C, which is the copy shortcut on macOS).
+                  const isClearShortcut =
+                    event.ctrlKey &&
+                    !event.metaKey &&
+                    !event.altKey &&
+                    !event.shiftKey &&
+                    event.key.toLowerCase() === 'c';
+                  if (!isClearShortcut) return;
+
+                  const textarea = event.currentTarget;
+                  const hasSelection =
+                    textarea.selectionStart !== textarea.selectionEnd;
+                  const hasComposerContent =
+                    draft.length > 0 ||
+                    stagedArtifacts.length > 0 ||
+                    selectedTopicReference !== null ||
+                    selectedModelReference !== null ||
+                    selectedDrawingReference !== null;
+                  if (hasSelection || !hasComposerContent) return;
+
+                  event.preventDefault();
+                  setDraft('');
+                  setSelectedTopicReference(null);
+                  setSelectedModelReference(null);
+                  setSelectedDrawingReference(null);
+                  setStagedArtifacts([]);
                 }}
                 placeholder={`Ask ${agent.name} to work in this workspace…`}
                 ref={textareaRef}
@@ -2737,7 +2796,7 @@ export function ACPSessionView({
               />
               <div className="acp-session__composer-actions">
                 <span className="acp-session__hint">
-                  Enter to send · Shift+Enter for a new line
+                  Enter to send · Shift+Enter for a new line · Ctrl+C to clear
                 </span>
                 {isPrompting ? (
                   <button

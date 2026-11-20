@@ -41,6 +41,8 @@ import './ACPClientView.css';
 
 export interface ACPTabContentProps {
   tab: AcpTab;
+  /** Whether this tab is the currently shown one in its panel. */
+  isActive?: boolean;
   onSessionIdChange?: (sessionId: string) => void;
   onSessionTitleChange?: (title: string | null) => void;
   onPullRequestChange?: (pullRequest: AcpLinkedPullRequest | null) => void;
@@ -435,6 +437,7 @@ export function ACPStartupView({
 
 export function ACPTabContent({
   tab,
+  isActive = true,
   onSessionIdChange,
   onSessionTitleChange,
   onPullRequestChange,
@@ -940,6 +943,7 @@ export function ACPTabContent({
         messages={messages}
         permissions={permissions}
         isPrompting={isPrompting}
+        isActive={isActive}
         hideThinking={hideThinking}
         modelSelection={modelSelection}
         modelError={modelError}

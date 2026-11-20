@@ -648,7 +648,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
   );
 
   const renderTabContent = useCallback(
-    (tab: WorkspaceTab, _isActive: boolean) => {
+    (tab: WorkspaceTab, isActive: boolean) => {
       // Projects renders its own tabs + the shared document tabs (one source of
       // truth). It returns null for the Topics landing + topic tabs below.
       const projectsContent = renderProjectsTabContent(tab as FeedTab, {
@@ -765,6 +765,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
             <ACPTabContent
               key={acpTab.id}
               tab={acpTab}
+              isActive={isActive}
               onSessionIdChange={(sessionId) =>
                 handleAcpSessionIdChange(acpTab.id, sessionId)
               }

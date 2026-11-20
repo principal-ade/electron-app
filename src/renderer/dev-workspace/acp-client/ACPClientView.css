@@ -2192,16 +2192,6 @@
   white-space: pre-wrap;
 }
 
-.acp-session__role {
-  display: block;
-  margin-bottom: 3px;
-  color: var(--acp-muted);
-  font-size: var(--acp-font-size-1);
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
 .acp-session__text {
   min-width: 0;
   color: var(--acp-text);
