@@ -101,6 +101,7 @@ import {
 import type { Purl } from '@principal-ai/alexandria-core-library';
 import {
   TabbedTerminalPanel,
+  type ProgramStatusRecord,
   type TerminalPanelActions,
   type TerminalTabOpenRequest,
 } from '@industry-theme/xterm-terminal-panel';
@@ -446,6 +447,35 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
     [terminalCtx.terminalSessions, terminalCtx.terminalContext, programStatus],
   );
 
+  // ACP agents have no PTY session, so their tab-bar badge comes from the
+  // panel's per-tab activity map rather than OSC 7501 program status.
+  const [acpTabActivity, setAcpTabActivity] = useState<
+    Record<string, ProgramStatusRecord>
+  >({});
+  const handleAcpActivityChange = useCallback(
+    (tabId: string, activity: ProgramStatusRecord | null) => {
+      setAcpTabActivity((previous) => {
+        if (!activity) {
+          if (!(tabId in previous)) return previous;
+          const next = { ...previous };
+          delete next[tabId];
+          return next;
+        }
+        const current = previous[tabId];
+        if (
+          current?.state === activity.state &&
+          current?.kind === activity.kind &&
+          current?.app === activity.app &&
+          current?.title === activity.title
+        ) {
+          return previous;
+        }
+        return { ...previous, [tabId]: activity };
+      });
+    },
+    [],
+  );
+
   const terminalPanelContext = useMemo(
     () => ({
       currentScope: { type: 'workspace' as const },
@@ -775,6 +805,9 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               onPullRequestChange={(pullRequest) =>
                 handleAcpPullRequestChange(acpTab.id, pullRequest)
               }
+              onActivityChange={(activity) =>
+                handleAcpActivityChange(acpTab.id, activity)
+              }
             />
           );
         }
@@ -789,6 +822,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       handleAcpSessionIdChange,
       handleAcpSessionTitleChange,
       handleAcpPullRequestChange,
+      handleAcpActivityChange,
       openModelFromReference,
       openTopicFromReference,
       openSketchFromReference,
@@ -1617,6 +1651,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
               renderer={terminalImplementation}
               getRepoInfo={getRepoInfo}
               programStatus={programStatus}
+              tabActivity={acpTabActivity}
               initialTabs={tabs}
               {...terminalPanelRestoreOptions}
               onTabsChange={handleTerminalTabsChange}
@@ -1671,6 +1706,7 @@ const WorkspaceShellInner: React.FC<WorkspaceShellInnerProps> = ({
       terminalDirectory,
       getRepoInfo,
       programStatus,
+      acpTabActivity,
       homeProgramStatus,
       tabs,
       activeTabId,

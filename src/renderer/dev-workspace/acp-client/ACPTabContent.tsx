@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import type { ProgramStatusRecord } from '@industry-theme/xterm-terminal-panel';
 import { FileCityLogoAnimated } from '@principal-ai/logo-component';
 import { XCircle } from 'lucide-react';
 import type {
@@ -46,6 +47,8 @@ export interface ACPTabContentProps {
   onSessionIdChange?: (sessionId: string) => void;
   onSessionTitleChange?: (title: string | null) => void;
   onPullRequestChange?: (pullRequest: AcpLinkedPullRequest | null) => void;
+  /** Tab-bar activity: `working` while prompting, `blocked` on permissions. */
+  onActivityChange?: (activity: ProgramStatusRecord | null) => void;
 }
 
 function formatError(error: unknown): string {
@@ -441,6 +444,7 @@ export function ACPTabContent({
   onSessionIdChange,
   onSessionTitleChange,
   onPullRequestChange,
+  onActivityChange,
 }: ACPTabContentProps) {
   const [viewState, setViewState] = useState<ACPClientViewState>('setup');
   const [agentId, setAgentId] = useState<AcpAgentId>(
@@ -545,6 +549,32 @@ export function ACPTabContent({
     isPromptingRef.current = value;
     setIsPrompting(value);
   }, []);
+
+  // Mirror agent activity to the tab bar. A pending permission request wins
+  // over an in-flight prompt, matching the terminal badge's priority.
+  const activity = useMemo<ProgramStatusRecord | null>(() => {
+    if (permissions.length > 0) {
+      return {
+        state: 'blocked',
+        kind: 'permission',
+        app: agentId,
+        title: 'Permission required',
+      };
+    }
+    if (isPrompting) {
+      return { state: 'working', app: agentId };
+    }
+    return null;
+  }, [agentId, isPrompting, permissions.length]);
+
+  const onActivityChangeRef = useRef(onActivityChange);
+  onActivityChangeRef.current = onActivityChange;
+
+  useEffect(() => {
+    onActivityChangeRef.current?.(activity);
+  }, [activity]);
+
+  useEffect(() => () => onActivityChangeRef.current?.(null), []);
 
   // Session events for this tab. Subscriptions are keyed by the tab id so two
   // open ACP tabs never consume each other's updates.

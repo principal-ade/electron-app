@@ -1830,6 +1830,53 @@ describe('ACPTabContent', () => {
     });
   });
 
+  it('reports agent activity to the tab bar', async () => {
+    const onActivityChange = jest.fn();
+    render(
+      <ACPTabContent
+        tab={makeTab({ autoStart: true })}
+        onActivityChange={onActivityChange}
+      />,
+    );
+    await screen.findByText('Pick model');
+    expect(onActivityChange).toHaveBeenLastCalledWith(null);
+
+    mocked.prompt.mockImplementation(() => new Promise(() => {}));
+    fireEvent.change(screen.getByLabelText('Message the agent'), {
+      target: { value: 'Check the repo' },
+    });
+    fireEvent.keyDown(screen.getByLabelText('Message the agent'), {
+      key: 'Enter',
+    });
+    await waitFor(() =>
+      expect(onActivityChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ state: 'working' }),
+      ),
+    );
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'permission',
+          requestId: 'req-activity',
+          request: {
+            sessionId: 'ses_1',
+            toolCall: { toolCallId: 'tool-activity', title: 'Run the tests' },
+            options: [
+              { optionId: 'allow', name: 'Allow once', kind: 'allow_once' },
+            ],
+          },
+        },
+      });
+    });
+    await waitFor(() =>
+      expect(onActivityChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ state: 'blocked', kind: 'permission' }),
+      ),
+    );
+  });
+
   it('opens a working-tree diff over the chat when a highlighted file is selected', async () => {
     mockedRepositoryMonitoring.getFileTree.mockResolvedValue({
       allFiles: [{ path: '/repo/src/main.ts', relativePath: 'src/main.ts' }],
