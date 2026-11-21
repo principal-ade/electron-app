@@ -735,6 +735,9 @@
 
 .acp-session {
   --acp-chat-lane: 760px;
+  /* The composer reads as a distinct surface, so let it run slightly wider
+     than the message lane on both sides. */
+  --acp-composer-lane: 820px;
   position: relative;
   display: flex;
   width: 100%;
@@ -1053,6 +1056,9 @@
   min-height: 100%;
   flex: 1 0 auto;
   flex-direction: column;
+  /* Short transcripts rest against the composer; longer ones overflow and
+     scroll from the top as usual. */
+  justify-content: flex-end;
   margin-inline: auto;
 }
 
@@ -2918,7 +2924,7 @@
   position: relative;
   box-sizing: border-box;
   flex: 0 0 auto;
-  padding: 10px clamp(16px, 4vw, 32px) 16px;
+  padding: 10px clamp(12px, 3vw, 24px) 16px;
   background: var(--acp-bg);
 }
 
@@ -2927,7 +2933,7 @@
   box-sizing: border-box;
   display: flex;
   width: 100%;
-  max-width: var(--acp-chat-lane);
+  max-width: var(--acp-composer-lane);
   flex-direction: column;
   gap: 8px;
   margin-inline: auto;
@@ -3166,7 +3172,7 @@
   }
 
   .acp-session__composer {
-    padding-inline: 14px;
+    padding-inline: 10px;
   }
 
   .acp-session__hint {

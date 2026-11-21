@@ -761,6 +761,45 @@ describe('ACPTabContent', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('hides the topbar thinking toggle while the activity map is open', async () => {
+    render(<ACPTabContent tab={makeTab({ autoStart: true })} />);
+    await screen.findByText('Pick model');
+
+    expect(
+      screen.getByRole('button', { name: 'Thinking' }),
+    ).toBeInTheDocument();
+
+    act(() => {
+      emit?.({
+        sessionKey: 'acp-/repo',
+        event: {
+          type: 'update',
+          update: {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'call-map-test',
+            title: 'Reading files',
+            status: 'in_progress',
+          },
+        },
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /open activity map/ }));
+    expect(
+      screen.getByRole('region', { name: 'Agent activity map' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Thinking' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Close activity map' }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Thinking' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows thought text when the preference explicitly opts out', async () => {
     mockedPreferences.getPreferences.mockResolvedValue({
       acpHideThinking: false,

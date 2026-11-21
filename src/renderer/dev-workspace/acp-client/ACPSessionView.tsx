@@ -1697,7 +1697,7 @@ function ACPThinkingSummary({
       aria-label={`${label}${counts.length > 0 ? `, ${counts.join(', ')}` : ''} — open activity map`}
       title="Open the activity map"
     >
-      <PrincipalMark animated size={16} />
+      <PrincipalMark animated size={20} />
       <span
         className="acp-session__thinking-label"
         role="status"
@@ -2625,22 +2625,24 @@ export function ACPSessionView({
     >
       <header className="acp-session__topbar">
         <ACPWorkspaceIdentity sessionTitle={sessionTitle} />
-        <button
-          className={`acp-session__thinking-toggle${
-            hideThinking ? ' is-active' : ''
-          }`}
-          type="button"
-          aria-pressed={hideThinking}
-          title={
-            hideThinking
-              ? 'Show the agent’s thinking text'
-              : 'Hide the agent’s thinking text and show a compact activity summary'
-          }
-          onClick={onToggleHideThinking}
-        >
-          {hideThinking ? <EyeOff size={14} /> : <Eye size={14} />}
-          <span>Thinking</span>
-        </button>
+        {activityMapOpen ? null : (
+          <button
+            className={`acp-session__thinking-toggle${
+              hideThinking ? ' is-active' : ''
+            }`}
+            type="button"
+            aria-pressed={hideThinking}
+            title={
+              hideThinking
+                ? 'Show the agent’s thinking text'
+                : 'Hide the agent’s thinking text and show a compact activity summary'
+            }
+            onClick={onToggleHideThinking}
+          >
+            {hideThinking ? <EyeOff size={14} /> : <Eye size={14} />}
+            <span>Thinking</span>
+          </button>
+        )}
         {activityMapOpen ? null : (
           <div
             className="acp-session__activity-switch"
