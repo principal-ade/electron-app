@@ -165,16 +165,22 @@ export function buildAcpHighlightLayers(
 ): HighlightLayer[] {
   // Newest first so recency wins ties and each bucket caps to its newest
   // items. Paths are lifted to the strongest operation that touched them.
-  const recentCalls = [...toolCalls].slice(-60).reverse();
+  // Restored sessions interleave file work with shell calls that have no
+  // highlight paths, so filter to contributing calls *before* capping.
+  const recentCalls = toolCalls
+    .map((call) => ({ call, items: callHighlightItems(call) }))
+    .filter(({ items }) => items.length > 0)
+    .slice(-60)
+    .reverse();
   const activePaths = new Set<string>();
   const byOperation = new Map<
     AcpFileOperation,
     Map<string, AcpHighlightItem>
   >();
 
-  for (const call of recentCalls) {
+  for (const { call, items: callItems } of recentCalls) {
     const isActive = call.status === 'pending' || call.status === 'in_progress';
-    for (const item of callHighlightItems(call)) {
+    for (const item of callItems) {
       const operation = item.operation;
       const operationPriority = OPERATION_LAYER_STYLES[operation].priority;
       let superseded = false;

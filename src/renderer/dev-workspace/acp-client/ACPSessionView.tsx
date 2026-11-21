@@ -72,8 +72,9 @@ import { TopicService, type Topic } from '../../main-process-api/TopicService';
 import { useRepoWatch } from '../../panels/home-panel/useRepoWatch';
 import { PierreFileView } from '../../panels/PierreFileView';
 import { gitStatusToHighlightLayers } from '../../utils/gitStatusHighlightLayers';
-import { buildCityDataFromContext } from '../file-city-panel/buildCityDataFromContext';
 import { buildAcpHighlightLayers } from './acpHighlightLayers';
+import { AgentRepoMap, type AgentRepoMapCall } from './AgentRepoMap';
+import { useWorkspaceCity } from './useWorkspaceCity';
 import { SubsystemModelTabContent } from '../../subsystem-models/SubsystemModelTabContent';
 import {
   ACPDrawingPreview,
@@ -154,7 +155,9 @@ export interface AcpDrawingReference {
 }
 
 export type AcpChatReference =
-  AcpTopicReference | AcpModelReference | AcpDrawingReference;
+  | AcpTopicReference
+  | AcpModelReference
+  | AcpDrawingReference;
 
 export function isAcpTopicReference(
   reference: AcpChatReference,
@@ -553,6 +556,9 @@ function ACPToolCallsPanel({
   workspacePath,
   workspaceName,
   repository,
+  cityData,
+  cityError,
+  cityLoading,
   activityView,
   selectedArtifact,
   sessionArtifacts,
@@ -570,6 +576,9 @@ function ACPToolCallsPanel({
   workspacePath: string;
   workspaceName: string;
   repository?: ACPSessionViewProps['repository'];
+  cityData: CityData | null;
+  cityError: string | null;
+  cityLoading: boolean;
   activityView: ACPActivityView;
   selectedArtifact: AcpArtifactRef | null;
   sessionArtifacts: AcpArtifactAssociation[];
@@ -776,12 +785,23 @@ function ACPToolCallsPanel({
     (call) => call.status === 'in_progress' || call.status === 'pending',
   );
   const activeToolCount = activeCount.length;
+  const highlightCalls = useMemo(
+    () =>
+      toolCalls.map((call) => ({
+        status: call.status,
+        name: call.name,
+        kind: call.kind,
+        highlightItems: call.highlightItems,
+        highlightPaths: highlightPathsForToolMessage(call, workspacePath),
+      })),
+    [toolCalls, workspacePath],
+  );
   const highlightLayers = useMemo<HighlightLayer[]>(
     () =>
-      buildAcpHighlightLayers(toolCalls, {
+      buildAcpHighlightLayers(highlightCalls, {
         activeColor: theme.colors.primary,
       }),
-    [theme.colors.primary, toolCalls],
+    [theme.colors.primary, highlightCalls],
   );
   const { gitStatusWithFiles } = useRepositoryGitStatus(workspacePath);
   const gitHighlightLayers = useMemo(
@@ -1111,6 +1131,9 @@ function ACPToolCallsPanel({
             workspacePath={workspacePath}
             highlightLayers={highlightLayers}
             gitHighlightLayers={gitHighlightLayers}
+            cityData={cityData}
+            cityError={cityError}
+            cityLoading={cityLoading}
           />
         </section>
       </div>
@@ -1122,68 +1145,37 @@ function ACPFileCityView({
   workspacePath,
   highlightLayers,
   gitHighlightLayers,
+  cityData,
+  cityError,
+  cityLoading,
 }: {
   workspacePath: string;
   highlightLayers: HighlightLayer[];
   gitHighlightLayers: HighlightLayer[];
+  cityData: CityData | null;
+  cityError: string | null;
+  cityLoading: boolean;
 }) {
   const { theme } = useTheme();
   useRepoWatch(workspacePath);
   const { gitStatusWithFiles } = useRepositoryGitStatus(workspacePath);
-  const [cityData, setCityData] = useState<CityData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const visibleHighlightLayers = useMemo(
     () => [...gitHighlightLayers, ...highlightLayers],
     [gitHighlightLayers, highlightLayers],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    setCityData(null);
-    setIsLoading(true);
-    setError(null);
-
-    void (async () => {
-      try {
-        const fileTree =
-          await RepositoryMonitoringService.getFileTree(workspacePath);
-        if (!fileTree) throw new Error('No file tree is available');
-        const nextCityData = await buildCityDataFromContext({
-          fileTree,
-          repositoryPath: workspacePath,
-        });
-        if (!cancelled) setCityData(nextCityData);
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : 'Could not load this workspace File City',
-          );
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [workspacePath]);
 
   if (!cityData) {
     return (
       <div className="acp-session__file-city">
         <div
           className="acp-session__tool-panel-empty"
-          role={error ? 'alert' : 'status'}
+          role={cityError ? 'alert' : 'status'}
         >
           <Building2 size={15} />
           <span>
-            {isLoading
+            {cityLoading
               ? 'Building this workspace File City…'
-              : (error ?? 'File City is unavailable for this workspace.')}
+              : (cityError ?? 'File City is unavailable for this workspace.')}
           </span>
         </div>
       </div>
@@ -1234,6 +1226,40 @@ function ACPFileCityView({
 
 function normalizeWorkspacePath(path: string): string {
   return path.trim().replace(/^\.\//, '').replace(/\/+$/, '');
+}
+
+/** Strip the workspace root from an absolute tool-call location. */
+function toRepoRelativePath(path: string, workspacePath: string): string {
+  const normalized = path.trim().replace(/\\/g, '/');
+  const root = workspacePath.trim().replace(/\\/g, '/').replace(/\/+$/, '');
+  if (normalized === root) {
+    return '';
+  }
+  if (root && normalized.startsWith(`${root}/`)) {
+    return normalized.slice(root.length + 1);
+  }
+  return normalizeWorkspacePath(normalized);
+}
+
+/**
+ * Highlight paths for a tool message. Live MCP processing supplies these, but
+ * restored/replayed ACP sessions only carry tool-call `locations`; fall back
+ * to those so the map and tree still show what the session touched.
+ */
+function highlightPathsForToolMessage(
+  message: Extract<AcpChatMessage, { role: 'tool' }>,
+  workspacePath: string,
+): string[] | undefined {
+  if ((message.highlightItems?.length ?? 0) > 0) {
+    return message.highlightPaths;
+  }
+  if ((message.highlightPaths?.length ?? 0) > 0) {
+    return message.highlightPaths;
+  }
+  const fromLocations = (message.locations ?? [])
+    .map((location) => toRepoRelativePath(location.path, workspacePath))
+    .filter(Boolean);
+  return fromLocations.length > 0 ? [...new Set(fromLocations)] : undefined;
 }
 
 // Adapter: collapse the categorical buckets in `GitStatusWithFiles`
@@ -1625,12 +1651,16 @@ function ACPThinkingSummary({
   permissionPending,
   thoughtCount,
   toolCallCount,
+  expanded = false,
+  onExpand,
 }: {
   active: boolean;
   activeToolTitle?: string;
   permissionPending: boolean;
   thoughtCount: number;
   toolCallCount: number;
+  expanded?: boolean;
+  onExpand?: () => void;
 }) {
   if (
     !active &&
@@ -1658,13 +1688,21 @@ function ACPThinkingSummary({
   ].filter((value): value is string => Boolean(value));
 
   return (
-    <div
-      className="acp-session__thinking-summary"
-      role="status"
-      aria-live="polite"
+    <button
+      className={`acp-session__thinking-summary${expanded ? ' is-expanded' : ''}`}
+      type="button"
+      onClick={onExpand}
+      aria-expanded={expanded}
+      aria-controls="acp-activity-map"
+      aria-label={`${label}${counts.length > 0 ? `, ${counts.join(', ')}` : ''} — open activity map`}
+      title="Open the activity map"
     >
       <PrincipalMark animated size={16} />
-      <span className="acp-session__thinking-label">
+      <span
+        className="acp-session__thinking-label"
+        role="status"
+        aria-live="polite"
+      >
         {label}
         {active && !permissionPending ? (
           <span className="acp-session__thinking-dots" aria-hidden="true">
@@ -1679,7 +1717,158 @@ function ACPThinkingSummary({
           {counts.join(' · ')}
         </span>
       ) : null}
-    </div>
+      <span className="acp-session__thinking-expand" aria-hidden="true">
+        <Building2 size={12} />
+        Map
+      </span>
+    </button>
+  );
+}
+
+/**
+ * The "thinking" summary opens into a live activity map: the files the
+ * session has touched on the left, the workspace city on the right. It shares
+ * the workspace city with the side-panel File City and follows the real
+ * tool-call statuses rather than a script.
+ */
+function ACPActivityMapOverlay({
+  calls,
+  cityData,
+  error,
+  fileCount,
+  highlightLayers,
+  isLoading,
+  onClose,
+  onCloseFilePreview,
+  onOpenFilePreview,
+  workspacePath,
+}: {
+  calls: AgentRepoMapCall[];
+  cityData: CityData | null;
+  error: string | null;
+  fileCount: number;
+  highlightLayers: HighlightLayer[];
+  isLoading: boolean;
+  onClose: () => void;
+  onCloseFilePreview: () => void;
+  onOpenFilePreview: (relPath: string) => void;
+  workspacePath: string;
+}) {
+  const activeCall = [...calls]
+    .reverse()
+    .find((call) => call.status === 'in_progress' || call.status === 'pending');
+  const lastCall = activeCall ?? calls[calls.length - 1] ?? null;
+  const lastStatusLabel = !lastCall
+    ? null
+    : lastCall.status === 'in_progress' || lastCall.status === 'pending'
+      ? 'In progress'
+      : lastCall.status === 'failed'
+        ? 'Failed'
+        : 'Completed';
+  const lastCallMeta = lastCall
+    ? [
+        lastStatusLabel,
+        lastCall.kind,
+        `${calls.length} call${calls.length === 1 ? '' : 's'}`,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : 'Tool calls will appear here as the agent works.';
+  const legendLayers = highlightLayers.filter(
+    (layer) => (layer.items?.length ?? 0) > 0,
+  );
+
+  return (
+    <section
+      id="acp-activity-map"
+      className="acp-session__activity-map"
+      role="region"
+      aria-label="Agent activity map"
+    >
+      <header className="acp-session__activity-map-head">
+        <PrincipalMark animated={Boolean(activeCall)} size={32} />
+        <div className="acp-session__activity-map-titles">
+          <strong title={lastCall?.summary ?? lastCall?.title ?? undefined}>
+            {lastCall?.title ?? 'No activity yet'}
+          </strong>
+          <span>{lastCallMeta}</span>
+        </div>
+        <button
+          className="acp-session__activity-map-close"
+          type="button"
+          onClick={onClose}
+          aria-label="Close activity map"
+          title="Close activity map"
+        >
+          <X size={15} />
+        </button>
+      </header>
+      <div className="acp-session__activity-map-body">
+        <aside
+          className="acp-session__activity-map-tree"
+          aria-label="Accessed files"
+        >
+          <div className="acp-session__activity-map-tree-head">
+            <strong>Accessed files</strong>
+          </div>
+          <div className="acp-session__activity-map-tree-body">
+            <ACPHighlightTreeView
+              gitStatusWithFiles={null}
+              highlightLayers={highlightLayers}
+              onCloseFilePreview={onCloseFilePreview}
+              onOpenFilePreview={onOpenFilePreview}
+              workspacePath={workspacePath}
+            />
+          </div>
+          <div className="acp-session__activity-map-tree-foot">
+            {legendLayers.length > 0 ? (
+              <div className="acp-session__activity-map-legend">
+                {legendLayers.map((layer) => (
+                  <span
+                    className="acp-session__activity-map-legend-item"
+                    key={layer.id}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="acp-session__activity-map-legend-swatch"
+                      style={{ background: layer.color }}
+                    />
+                    {layer.name}
+                    <span className="acp-session__activity-map-legend-count">
+                      {layer.items?.length ?? 0}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="acp-session__activity-map-tree-hint">
+                No file activity yet
+              </span>
+            )}
+            <span className="acp-session__activity-map-tree-count">
+              {fileCount} file{fileCount === 1 ? '' : 's'} touched
+            </span>
+          </div>
+        </aside>
+        <div className="acp-session__activity-map-canvas">
+          {cityData ? (
+            <AgentRepoMap cityData={cityData} calls={calls} />
+          ) : (
+            <div
+              className="acp-session__activity-map-loading"
+              role={error ? 'alert' : 'status'}
+            >
+              <Building2 size={15} />
+              <span>
+                {isLoading
+                  ? 'Building this workspace map…'
+                  : (error ?? 'The activity map is unavailable.')}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1782,6 +1971,7 @@ export function ACPSessionView({
   const [topicPreviewLoading, setTopicPreviewLoading] = useState(false);
   const [topicPreviewError, setTopicPreviewError] = useState(false);
   const [topicPreviewHeight, setTopicPreviewHeight] = useState(75);
+  const [activityMapOpen, setActivityMapOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const chatViewportRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
@@ -1795,6 +1985,22 @@ export function ACPSessionView({
   } | null>(null);
   const selectedTopicId =
     selectedArtifact?.kind === 'topic' ? selectedArtifact.id : null;
+
+  // Shared by the side-panel File City and the expanded activity map.
+  const {
+    cityData: workspaceCityData,
+    isLoading: workspaceCityLoading,
+    error: workspaceCityError,
+  } = useWorkspaceCity(workspacePath);
+
+  useEffect(() => {
+    if (!activityMapOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setActivityMapOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activityMapOpen]);
 
   const startTopicPreviewResize = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -1934,6 +2140,16 @@ export function ACPSessionView({
     });
     return () => cancelAnimationFrame(frame);
   }, [isActive, isPrompting]);
+
+  useEffect(() => {
+    if (!activityMapOpen || !isActive || isPrompting) return;
+    // Opening the map replaces the transcript; keep follow-up typing pointed
+    // at the composer below it.
+    const frame = requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activityMapOpen, isActive, isPrompting]);
 
   const submit = () => {
     const text = draft.trim();
@@ -2208,6 +2424,44 @@ export function ACPSessionView({
         : isPrompting && !hasAgentActivity
           ? 'Thinking…'
           : null;
+  const activityMapCalls = useMemo<AgentRepoMapCall[]>(
+    () =>
+      messages.flatMap((message) =>
+        message.role === 'tool'
+          ? [
+              {
+                id: message.toolCallId,
+                title: message.title,
+                summary: message.detail,
+                name: message.name ?? 'tool',
+                kind: message.kind ?? 'execute',
+                status: message.status,
+                highlightItems: message.highlightItems,
+                highlightPaths: highlightPathsForToolMessage(
+                  message,
+                  workspacePath,
+                ),
+              },
+            ]
+          : [],
+      ),
+    [messages, workspacePath],
+  );
+  // Files the session's tool calls touched, shaped for the highlight tree.
+  const activityMapHighlightLayers = useMemo<HighlightLayer[]>(
+    () =>
+      buildAcpHighlightLayers(activityMapCalls, {
+        activeColor: theme.colors.primary,
+      }),
+    [activityMapCalls, theme.colors.primary],
+  );
+  const activityMapFileCount = useMemo(() => {
+    const paths = new Set<string>();
+    for (const layer of activityMapHighlightLayers) {
+      for (const item of layer.items ?? []) paths.add(item.path);
+    }
+    return paths.size;
+  }, [activityMapHighlightLayers]);
   const workspaceName =
     repository?.name ||
     workspacePath.split(/[\\/]/).filter(Boolean).pop() ||
@@ -2387,210 +2641,245 @@ export function ACPSessionView({
           {hideThinking ? <EyeOff size={14} /> : <Eye size={14} />}
           <span>Thinking</span>
         </button>
-        <div
-          className="acp-session__activity-switch"
-          role="tablist"
-          aria-label="Activity view"
-        >
-          <button
-            className={activityView === 'artifacts' ? 'is-active' : ''}
-            type="button"
-            role="tab"
-            aria-selected={activityView === 'artifacts'}
-            onClick={() => setActivityView('artifacts')}
+        {activityMapOpen ? null : (
+          <div
+            className="acp-session__activity-switch"
+            role="tablist"
+            aria-label="Activity view"
           >
-            Artifacts
-          </button>
-          <button
-            className={activityView === 'tools' ? 'is-active' : ''}
-            type="button"
-            role="tab"
-            aria-selected={activityView === 'tools'}
-            onClick={() => setActivityView('tools')}
-          >
-            Tools
-          </button>
-        </div>
+            <button
+              className={activityView === 'artifacts' ? 'is-active' : ''}
+              type="button"
+              role="tab"
+              aria-selected={activityView === 'artifacts'}
+              onClick={() => setActivityView('artifacts')}
+            >
+              Artifacts
+            </button>
+            <button
+              className={activityView === 'tools' ? 'is-active' : ''}
+              type="button"
+              role="tab"
+              aria-selected={activityView === 'tools'}
+              onClick={() => setActivityView('tools')}
+            >
+              Tools
+            </button>
+          </div>
+        )}
       </header>
 
-      <div className="acp-session__workspace">
+      <div
+        className={`acp-session__workspace${activityMapOpen ? ' is-map-open' : ''}`}
+      >
         <div className="acp-session__main">
-          <div
-            className={`acp-session__chat-viewport${chatArtifactDrop.isDragOver ? ' is-artifact-drop-active' : ''}`}
-            ref={chatViewportRef}
-            {...chatArtifactDrop.dragHandlers}
-          >
-            {chatArtifactDrop.isDragOver ? (
-              <div className="acp-session__drop-overlay" role="status">
-                Drop to open and associate
-              </div>
-            ) : null}
-            {artifactPreview}
-            {filePreview}
+          <div className="acp-session__surface">
             <div
-              className="acp-session__messages"
-              role="log"
-              aria-live={selectedArtifact ? 'off' : 'polite'}
-              ref={messagesRef}
-              onScroll={handleMessagesScroll}
+              className={`acp-session__chat-viewport${chatArtifactDrop.isDragOver ? ' is-artifact-drop-active' : ''}${activityMapOpen ? ' is-map-hidden' : ''}`}
+              ref={chatViewportRef}
+              {...chatArtifactDrop.dragHandlers}
             >
-              <div className="acp-session__lane">
-                {messages.filter((message) => message.role !== 'tool')
-                  .length === 0 ? (
-                  <div className="acp-session__empty acp-session__empty--ready">
-                    <strong>
-                      {hasToolCalls ? 'Agent is working' : 'Pick model'}
-                    </strong>
-                    {hasToolCalls ? (
-                      <span>Live tool activity is listed in the panel.</span>
-                    ) : null}
-                    {!hasToolCalls &&
-                    modelSelection &&
-                    modelSelection.options.length > 0 ? (
-                      <div className="acp-session__model-picker">
-                        <ACPModelPicker
-                          disabled={isPrompting}
-                          error={modelError}
-                          onChange={(model) => onModelChange?.(model)}
-                          selection={modelSelection}
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {messages.map((message) => {
-                  const grouped = groupedMessageIds.has(message.id);
-                  switch (message.role) {
-                    case 'user':
-                      return (
-                        <div
-                          className={`acp-session__row acp-session__row--user${grouped ? ' is-grouped' : ''}`}
-                          key={message.id}
-                        >
-                          <div className="acp-session__message-stack">
-                            <div className="acp-session__bubble acp-session__bubble--user">
-                              {message.text}
-                              {message.reference ? (
-                                isAcpTopicReference(message.reference) ? (
-                                  <div className="acp-session__message-reference">
-                                    <TopicsIcon size={13} strokeWidth={1.5} />
-                                    <span>
-                                      Reference · {message.reference.topicTitle}
-                                    </span>
-                                    <blockquote>
-                                      {message.reference.anchor.exact}
-                                    </blockquote>
-                                  </div>
-                                ) : isAcpModelReference(message.reference) ? (
-                                  <div className="acp-session__message-reference">
-                                    <Network size={13} strokeWidth={1.5} />
-                                    <span>
-                                      Reference · {message.reference.trailTitle}
-                                    </span>
-                                    <blockquote>
-                                      {message.reference.stepSummary}
-                                    </blockquote>
-                                  </div>
-                                ) : (
-                                  <div className="acp-session__message-reference">
-                                    <PenTool size={13} strokeWidth={1.5} />
-                                    <span>
-                                      Reference ·{' '}
-                                      {message.reference.drawingName}
-                                    </span>
-                                    <blockquote>
-                                      {message.reference.elementSummary}
-                                    </blockquote>
-                                  </div>
-                                )
-                              ) : null}
-                            </div>
-                            <div className="acp-session__message-meta">
-                              <AcpMessageCopyButton text={message.text} />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    case 'agent':
-                      return (
-                        <div
-                          className={`acp-session__row acp-session__row--agent${grouped ? ' is-grouped' : ''}`}
-                          key={message.id}
-                        >
-                          <div className="acp-session__message-stack">
-                            <div className="acp-session__bubble acp-session__bubble--agent">
-                              <StreamdownMarkdown
-                                className="acp-session__text"
-                                streaming={
-                                  message.id === streamingAgentMessageId
-                                }
-                                text={message.text}
-                              />
-                            </div>
-                            <div className="acp-session__message-meta">
-                              <AcpMessageCopyButton text={message.text} />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    case 'thought':
-                      if (hideThinking) return null;
-                      return (
-                        <div className="acp-session__thought" key={message.id}>
-                          <PrincipalMark size={12} />
-                          <span>{message.text}</span>
-                        </div>
-                      );
-                    case 'tool':
-                      return null;
-                    case 'notice':
-                      return (
-                        <div
-                          className={`acp-session__notice acp-session__notice--${message.level ?? 'info'}`}
-                          key={message.id}
-                        >
-                          {message.text}
-                        </div>
-                      );
-                    default:
-                      return null;
-                  }
-                })}
-
-                {hideThinking ? (
-                  <ACPThinkingSummary
-                    active={isPrompting}
-                    activeToolTitle={activeToolCall?.title}
-                    permissionPending={permissions.length > 0}
-                    thoughtCount={currentPromptThoughtCount}
-                    toolCallCount={currentPromptToolCallCount}
-                  />
-                ) : activityStatus ? (
-                  <div
-                    className="acp-session__activity-status"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <Loader2
-                      className="acp-client__spinning"
-                      size={13}
-                      aria-hidden="true"
-                    />
-                    <span>{activityStatus}</span>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            {showJumpToLatest ? (
-              <button
-                className="acp-session__jump-latest"
-                onClick={jumpToLatest}
-                type="button"
+              {chatArtifactDrop.isDragOver ? (
+                <div className="acp-session__drop-overlay" role="status">
+                  Drop to open and associate
+                </div>
+              ) : null}
+              {artifactPreview}
+              {filePreview}
+              <div
+                className="acp-session__messages"
+                role="log"
+                aria-live={selectedArtifact ? 'off' : 'polite'}
+                ref={messagesRef}
+                onScroll={handleMessagesScroll}
               >
-                <ArrowDown size={13} aria-hidden="true" />
-                Latest
-              </button>
+                <div className="acp-session__lane">
+                  {messages.filter((message) => message.role !== 'tool')
+                    .length === 0 ? (
+                    <div className="acp-session__empty acp-session__empty--ready">
+                      <strong>
+                        {hasToolCalls ? 'Agent is working' : 'Pick model'}
+                      </strong>
+                      {hasToolCalls ? (
+                        <span>Live tool activity is listed in the panel.</span>
+                      ) : null}
+                      {!hasToolCalls &&
+                      modelSelection &&
+                      modelSelection.options.length > 0 ? (
+                        <div className="acp-session__model-picker">
+                          <ACPModelPicker
+                            disabled={isPrompting}
+                            error={modelError}
+                            onChange={(model) => onModelChange?.(model)}
+                            selection={modelSelection}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {messages.map((message) => {
+                    const grouped = groupedMessageIds.has(message.id);
+                    switch (message.role) {
+                      case 'user':
+                        return (
+                          <div
+                            className={`acp-session__row acp-session__row--user${grouped ? ' is-grouped' : ''}`}
+                            key={message.id}
+                          >
+                            <div className="acp-session__message-stack">
+                              <div className="acp-session__bubble acp-session__bubble--user">
+                                {message.text}
+                                {message.reference ? (
+                                  isAcpTopicReference(message.reference) ? (
+                                    <div className="acp-session__message-reference">
+                                      <TopicsIcon size={13} strokeWidth={1.5} />
+                                      <span>
+                                        Reference ·{' '}
+                                        {message.reference.topicTitle}
+                                      </span>
+                                      <blockquote>
+                                        {message.reference.anchor.exact}
+                                      </blockquote>
+                                    </div>
+                                  ) : isAcpModelReference(message.reference) ? (
+                                    <div className="acp-session__message-reference">
+                                      <Network size={13} strokeWidth={1.5} />
+                                      <span>
+                                        Reference ·{' '}
+                                        {message.reference.trailTitle}
+                                      </span>
+                                      <blockquote>
+                                        {message.reference.stepSummary}
+                                      </blockquote>
+                                    </div>
+                                  ) : (
+                                    <div className="acp-session__message-reference">
+                                      <PenTool size={13} strokeWidth={1.5} />
+                                      <span>
+                                        Reference ·{' '}
+                                        {message.reference.drawingName}
+                                      </span>
+                                      <blockquote>
+                                        {message.reference.elementSummary}
+                                      </blockquote>
+                                    </div>
+                                  )
+                                ) : null}
+                              </div>
+                              <div className="acp-session__message-meta">
+                                <AcpMessageCopyButton text={message.text} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      case 'agent':
+                        return (
+                          <div
+                            className={`acp-session__row acp-session__row--agent${grouped ? ' is-grouped' : ''}`}
+                            key={message.id}
+                          >
+                            <div className="acp-session__message-stack">
+                              <div className="acp-session__bubble acp-session__bubble--agent">
+                                <StreamdownMarkdown
+                                  className="acp-session__text"
+                                  streaming={
+                                    message.id === streamingAgentMessageId
+                                  }
+                                  text={message.text}
+                                />
+                              </div>
+                              <div className="acp-session__message-meta">
+                                <AcpMessageCopyButton text={message.text} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      case 'thought':
+                        if (hideThinking) return null;
+                        return (
+                          <div
+                            className="acp-session__thought"
+                            key={message.id}
+                          >
+                            <PrincipalMark size={12} />
+                            <span>{message.text}</span>
+                          </div>
+                        );
+                      case 'tool':
+                        return null;
+                      case 'notice':
+                        return (
+                          <div
+                            className={`acp-session__notice acp-session__notice--${message.level ?? 'info'}`}
+                            key={message.id}
+                          >
+                            {message.text}
+                          </div>
+                        );
+                      default:
+                        return null;
+                    }
+                  })}
+
+                  {hideThinking ? (
+                    <ACPThinkingSummary
+                      active={isPrompting}
+                      activeToolTitle={activeToolCall?.title}
+                      permissionPending={permissions.length > 0}
+                      thoughtCount={currentPromptThoughtCount}
+                      toolCallCount={currentPromptToolCallCount}
+                      expanded={activityMapOpen}
+                      onExpand={() => setActivityMapOpen(true)}
+                    />
+                  ) : activityStatus ? (
+                    <button
+                      className="acp-session__activity-status acp-session__activity-status--interactive"
+                      type="button"
+                      onClick={() => setActivityMapOpen(true)}
+                      aria-label={`${activityStatus} — open activity map`}
+                      title="Open the activity map"
+                    >
+                      <Loader2
+                        className="acp-client__spinning"
+                        size={13}
+                        aria-hidden="true"
+                      />
+                      <span>{activityStatus}</span>
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              {showJumpToLatest ? (
+                <button
+                  className="acp-session__jump-latest"
+                  onClick={jumpToLatest}
+                  type="button"
+                >
+                  <ArrowDown size={13} aria-hidden="true" />
+                  Latest
+                </button>
+              ) : null}
+            </div>
+
+            {activityMapOpen ? (
+              <ACPActivityMapOverlay
+                calls={activityMapCalls}
+                cityData={workspaceCityData}
+                error={workspaceCityError}
+                fileCount={activityMapFileCount}
+                highlightLayers={activityMapHighlightLayers}
+                isLoading={workspaceCityLoading}
+                onClose={() => setActivityMapOpen(false)}
+                onCloseFilePreview={closeFilePreview}
+                onOpenFilePreview={(relPath) => {
+                  // The map covers the transcript, so selecting a file returns
+                  // to the chat where the preview is rendered.
+                  setActivityMapOpen(false);
+                  openFilePreview(relPath);
+                }}
+                workspacePath={workspacePath}
+              />
             ) : null}
           </div>
 
@@ -2824,24 +3113,29 @@ export function ACPSessionView({
             </div>
           </div>
         </div>
-        <ACPToolCallsPanel
-          calls={messages}
-          workspacePath={workspacePath}
-          workspaceName={workspaceName}
-          repository={repository}
-          activityView={activityView}
-          selectedArtifact={selectedArtifact}
-          sessionArtifacts={sessionArtifacts}
-          pullRequest={pullRequest}
-          onLinkPullRequest={onLinkPullRequest}
-          onUnlinkPullRequest={onUnlinkPullRequest}
-          onRemoveArtifact={onRemoveArtifact}
-          onOpenArtifact={openArtifactPreview}
-          onOpenFilePreview={openFilePreview}
-          onCloseFilePreview={closeFilePreview}
-          artifactDropHandlers={panelArtifactDrop.dragHandlers}
-          isArtifactDropActive={panelArtifactDrop.isDragOver}
-        />
+        {activityMapOpen ? null : (
+          <ACPToolCallsPanel
+            calls={messages}
+            workspacePath={workspacePath}
+            workspaceName={workspaceName}
+            repository={repository}
+            cityData={workspaceCityData}
+            cityError={workspaceCityError}
+            cityLoading={workspaceCityLoading}
+            activityView={activityView}
+            selectedArtifact={selectedArtifact}
+            sessionArtifacts={sessionArtifacts}
+            pullRequest={pullRequest}
+            onLinkPullRequest={onLinkPullRequest}
+            onUnlinkPullRequest={onUnlinkPullRequest}
+            onRemoveArtifact={onRemoveArtifact}
+            onOpenArtifact={openArtifactPreview}
+            onOpenFilePreview={openFilePreview}
+            onCloseFilePreview={closeFilePreview}
+            artifactDropHandlers={panelArtifactDrop.dragHandlers}
+            isArtifactDropActive={panelArtifactDrop.isDragOver}
+          />
+        )}
       </div>
     </main>
   );
