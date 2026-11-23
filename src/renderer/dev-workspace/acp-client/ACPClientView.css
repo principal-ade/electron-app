@@ -770,6 +770,14 @@
   backdrop-filter: blur(14px);
 }
 
+.acp-session__topbar-toggles {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  align-self: center;
+  gap: 8px;
+}
+
 .acp-session__thinking-toggle {
   display: inline-flex;
   height: 28px;
@@ -807,6 +815,11 @@
 
 .acp-session__thinking-toggle svg {
   flex: 0 0 auto;
+}
+
+.acp-session__model-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .acp-session__identity,
@@ -969,12 +982,15 @@
   flex-direction: column;
 }
 
-.acp-session__chat-viewport.is-map-hidden {
+.acp-session__chat-viewport.is-map-hidden,
+.acp-session__chat-viewport.is-model-hidden {
   display: none;
 }
 
-/* Map mode hides the tool panel and gives the map the full workspace width. */
-.acp-session__workspace.is-map-open {
+/* Map and model modes hide the tool panel and give the overlay the full
+   workspace width; the composer stays mounted below it. */
+.acp-session__workspace.is-map-open,
+.acp-session__workspace.is-model-open {
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -1226,8 +1242,45 @@
   text-align: left;
 }
 
-.acp-session__artifact-open.has-remove {
-  padding-right: 34px;
+.acp-session__artifact-open.has-actions {
+  padding-right: 104px;
+}
+
+.acp-session__artifact-actions {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transform: translateY(-50%);
+}
+
+.acp-session__artifact-expand {
+  display: inline-flex;
+  height: 22px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border: 1px solid var(--acp-border);
+  border-radius: 999px;
+  color: var(--acp-muted);
+  background: var(--acp-surface-soft);
+  cursor: pointer;
+  font-size: var(--acp-font-size-0) !important;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.acp-session__artifact-expand:hover {
+  border-color: var(--acp-accent);
+  color: var(--acp-text);
+}
+
+.acp-session__artifact-expand:focus-visible {
+  outline: 2px solid var(--acp-accent);
+  outline-offset: 2px;
 }
 
 .acp-session__artifact-open:hover {
@@ -2398,9 +2451,12 @@
 .acp-session__thinking-summary {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 7px;
   align-self: flex-start;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   margin-top: 10px;
   margin-left: -8px;
   padding: 4px 8px;
@@ -2441,6 +2497,8 @@
 .acp-session__thinking-expand {
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
+  white-space: nowrap;
   gap: 3px;
   margin-left: 2px;
   color: var(--acp-faint);
@@ -2462,6 +2520,11 @@
 .acp-session__thinking-label {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--acp-text);
   font-style: italic;
 }
@@ -2485,6 +2548,8 @@
 }
 
 .acp-session__thinking-counts {
+  flex: 0 0 auto;
+  white-space: nowrap;
   color: var(--acp-faint);
 }
 
@@ -2605,6 +2670,19 @@
 .acp-session__activity-map-close:focus-visible {
   outline: 2px solid var(--acp-accent);
   outline-offset: 2px;
+}
+
+.acp-session__model-emphasis-count {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 4px 9px;
+  border: 1px solid var(--acp-border);
+  border-radius: 999px;
+  color: var(--acp-accent);
+  background: var(--acp-surface-soft);
+  font-size: var(--acp-font-size-0);
+  white-space: nowrap;
 }
 
 .acp-session__activity-map-body {
@@ -2737,6 +2815,21 @@
   padding: 24px;
   color: var(--acp-muted);
   font-size: var(--acp-font-size-1);
+}
+
+/* The model view reuses the map's full-surface shell but gives its one canvas
+   all the room (and all the overflow) the graph needs. */
+.acp-session__model-view {
+  overflow: hidden;
+}
+
+.acp-session__model-view .acp-session__activity-map-canvas {
+  overflow: hidden;
+}
+
+.acp-session__model-view .acp-session__activity-map-canvas > * {
+  height: 100%;
+  overflow: hidden;
 }
 
 @keyframes acp-thinking-dot {
@@ -3273,4 +3366,10 @@
   top: 50%;
   right: 9px;
   transform: translateY(-50%);
+}
+
+.acp-session__artifact-actions .acp-session__artifact-remove {
+  position: static;
+  right: auto;
+  transform: none;
 }
